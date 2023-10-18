@@ -31,6 +31,11 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
+def _get_selected_ares(user_input: dict[str, Any]):
+    """Read and normalize the list of selected areas."""
+    return [area.strip() for area in user_input.get(CONF_AREAS, [])]
+
+
 class RetryConfigFlow(ConfigFlow, domain=DOMAIN):
     """Config flow."""
 
@@ -46,7 +51,7 @@ class RetryConfigFlow(ConfigFlow, domain=DOMAIN):
                 title=DOMAIN.replace("_", " ").title(),
                 data={},
                 options={
-                    CONF_AREAS: user_input.get(CONF_AREAS, []),
+                    CONF_AREAS: _get_selected_ares(user_input),
                     CONF_ALERT_MAX_AGE: user_input.get(
                         CONF_ALERT_MAX_AGE, DEFAULT_ALERT_MAX_AGE
                     ),
@@ -75,7 +80,7 @@ class OptionsFlowHandler(OptionsFlow):
             return self.async_create_entry(
                 title="",
                 data={
-                    CONF_AREAS: user_input.get(CONF_AREAS, []),
+                    CONF_AREAS: _get_selected_ares(user_input),
                     CONF_ALERT_MAX_AGE: user_input.get(
                         CONF_ALERT_MAX_AGE, DEFAULT_ALERT_MAX_AGE
                     ),
