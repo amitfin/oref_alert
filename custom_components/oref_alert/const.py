@@ -5,6 +5,10 @@ from typing import Final
 DOMAIN: Final = "oref_alert"
 LOGGER = logging.getLogger(__package__)
 
-CONF_CITIES: FINAL = "cities"
-CONF_ALERT_MAX_AGE: FINAL = "alert_max_age"
-DEFAULT_ALERT_MAX_AGE: FINAL = 300
+ATTR_COUNTRY_ALERTS: Final = "country_alerts"
+ATTR_COUNTRY_ACTIVE_ALERTS: Final = "country_active_alerts"
+ATTR_SELECTED_AREAS_ALERTS: Final = "selected_areas_alerts"
+ATTR_SELECTED_AREAS_ACTIVE_ALERTS: Final = "selected_areas_active_alerts"
+CONF_AREAS: Final = "areas"
+CONF_ALERT_MAX_AGE: Final = "alert_max_age"
+DEFAULT_ALERT_MAX_AGE: Final = 10

@@ -1,8 +1,6 @@
 # https://www.home-assistant.io/integrations/default_config/
 default_config:
 
-oref_alert:
-
 # https://www.home-assistant.io/integrations/logger/
 logger:
   default: info

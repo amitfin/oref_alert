@@ -1,2 +1,28 @@
 {
+    "title": "Oref Alert",
+    "config": {
+        "step": {
+            "user": {
+                "title": "Setup Oref Alert",
+                "data": {
+                    "areas": "Select areas to monitor (Hebrew only)",
+                    "alert_max_age": "Alert's active time period (minutes)"
+                }
+            }
+        },
+        "abort": {
+            "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Configure Oref Alert",
+                "data": {
+                    "areas": "Select areas to monitor (Hebrew only)",
+                    "alert_max_age": "Alert's active time period (minutes)"
+                }
+            }
+        }
+    }
 }
