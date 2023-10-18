@@ -19,7 +19,6 @@ AREAS_CONFIG = selector.SelectSelectorConfig(
     mode=selector.SelectSelectorMode.DROPDOWN,
     multiple=True,
     custom_value=True,
-    sort=True,
 )
 CONFIG_SCHEMA = vol.Schema(
     {
