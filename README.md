@@ -25,7 +25,7 @@ The integration should also be added to the configuration. This can be done via 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=oref_alert)
 
 There are 2 configuration fields:
-1. Selected areas: list of areas to monitor. NOTE: the name(s) must be in Hebrew and should be taken from the the [Israeli National Emergency Portakl](https://www.oref.org.il//12481-he/Pakar.aspx). The page has instructions on how to find an area by supplying an address. This name is the one that should be provided to this field.
+1. Selected areas: list of areas to monitor. NOTE: the name(s) must be in Hebrew and should be taken from the the [Israeli National Emergency Portakl](https://www.oref.org.il//12481-he/Pakar.aspx). The page has instructions on how to find an area by supplying an address. This name is the one that should be provided to this field. There is a long list of areas already populated, but it's possible to add any other area name. It doesn't need to be on the pre-populated list.
 2. Max age of an alert: this is the alert's active time period (in minutes). The default is 10 minutes.
 
 ## Additional Attributes
@@ -40,8 +40,9 @@ In addition to the entity's state (on or off), the entity has the following attr
 
 ## Additional Information
 
-1. The integration monitors the published data every 10 seconds. This means that there is a small delay till the state changes.
+1. The integration monitors the published data every second.
 2. The purpose of the binary sensor is to be used by automation rules.
+3. For advanced users, it's also possible to use the attirbutes of the sensor in templates.
 
 ## Contributions are welcome!
 
