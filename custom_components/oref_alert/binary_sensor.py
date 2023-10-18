@@ -66,6 +66,10 @@ class AlertSenosr(BinarySensorEntity):
         self._http_client = aiohttp.ClientSession(raise_for_status=True)
         self._alerts = []
 
+    async def async_will_remove_from_hass(self) -> None:
+        """Run when entity will be removed from hass."""
+        await self._http_client.close()
+
     @property
     def is_on(self) -> bool:
         """Return True is sensor is on."""
