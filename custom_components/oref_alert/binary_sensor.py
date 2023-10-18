@@ -23,7 +23,7 @@ from .const import (
     ATTR_SELECTED_AREAS_ALERTS,
 )
 
-SCAN_INTERVAL = timedelta(seconds=1)
+SCAN_INTERVAL = timedelta(seconds=2)
 
 OREF_URL = "https://www.oref.org.il/WarningMessages/History/AlertsHistory.json"
 OREF_HEADERS = {
