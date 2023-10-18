@@ -1,4 +1,4 @@
 aiohttp
 homeassistant
 pytest-homeassistant-custom-component
-ruff==0.0.292
+ruff==0.1.0
