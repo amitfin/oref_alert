@@ -25,8 +25,8 @@ The integration should also be added to the configuration. This can be done via 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=oref_alert)
 
 There are 2 configuration fields:
-1. Selected areas: list of areas to monitor. NOTE: the name(s) must be in Hebrew and should be taken from the the [Israeli National Emergency Portakl](https://www.oref.org.il//12481-he/Pakar.aspx). The page has instructions on how to find an area by supplying an address. This name is the one that should be provided to this field. There is a long list of areas already populated, but it's possible to add any other area name. It doesn't need to be on the pre-populated list.
-2. Max age of an alert: this is the alert's active time period (in minutes). The default is 10 minutes.
+1. Selected areas: list of areas to monitor. **NOTE: the name(s) must be in Hebrew and should be taken from the the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx). The page has instructions on how to find an area by supplying an address. This name is the one that should be provided to the field. There is a long list of areas already populated, but it's possible to add any other area name. It doesn't need to be on the pre-populated list. But it has to be the exact name (including dashes and spaces) as it appears when the alert is raised by the Pikud Haoref.**
+4. Max age of an alert: this is the alert's active time period (in minutes). The default is 10 minutes.
 
 ## Additional Attributes
 
@@ -48,4 +48,3 @@ In addition to the entity's state (on or off), the entity has the following attr
 
 If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
 
-[Link to post in Home Assistant's community forum](https://community.home-assistant.io/t/improving-automation-reliability/558627)
