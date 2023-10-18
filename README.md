@@ -38,6 +38,11 @@ In addition to the entity's state (on or off), the entity has the following attr
 5. `Country active alerts`: all active alerts in Israel.
 6. `Country alerts`: all alerts in Israel.
 
+## Additional Information
+
+1. The integration monitors the published data every 10 seconds. This means that there is a small delay till the state changes.
+2. The purpose of the binary sensor is to be used by automation rules.
+
 ## Contributions are welcome!
 
 If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
