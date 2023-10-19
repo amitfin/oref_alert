@@ -46,6 +46,46 @@ In addition to the entity's state (on or off), the entity has the following attr
 2. The purpose of the binary sensor is to be used by automation rules.
 3. For advanced users, it's also possible to use the attributes of the sensor in templates.
 
+## Advanced Scenarios (Templates)
+
+It's possible to use templates for creating additional entities or as conditions in automation rules. _Note: this is not needed for the common use case of running automation rule inside your house when there is an alert in your area._
+
+The basic block is:
+```
+{{ 'פתח תקווה' in (state_attr('binary_sensor.oref_alert', 'selected_areas_active_alerts') | map(attribute='data')) }}
+```
+There are 4 state attributes (with identical format) which can be used:
+1. `selected_areas_active_alerts`
+2. `country_active_alerts`
+3. `selected_areas_alerts`
+4. `country_alerts`
+
+Here is an example for a binary sensor:
+```
+template:
+  - binary_sensor:
+      - name: Petah Tikva Oref Alert
+        unique_id: petah_tikva_oref_alret
+        state: "{{ 'פתח תקווה' in (state_attr('binary_sensor.oref_alert', 'selected_areas_active_alerts') | map(attribute='data')) }}"
+        availability: "{{ has_value('binary_sensor.oref_alert') }}"
+```
+
+And here is an example for an automation rule's condition:
+```
+description: Petah Tikva Alert
+trigger:
+  - platform: state
+    entity_id:
+      - binary_sensor.oref_alert
+    from: "off"
+    to: "on"
+condition:
+  - condition: template
+    value_template: "{{ 'פתח תקווה' in (state_attr('binary_sensor.oref_alert', 'selected_areas_active_alerts') | map(attribute='data')) }}"
+action:
+...
+```
+
 ## Contributions are welcome!
 
 If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
