@@ -41,15 +41,9 @@ In addition to the entity's state (on or off), the entity has the following attr
 5. `Country active alerts`: all active alerts in Israel.
 6. `Country alerts`: all alerts in Israel.
 
-## Additional Information
-
-1. The integration monitors the published data every second.
-2. The purpose of the binary sensor is to be used by automation rules.
-3. For advanced users, it's also possible to use the attributes of the sensor in templates.
-
 ## Advanced Scenarios (Templates)
 
-It's possible to use templates for creating additional entities or as conditions in automation rules. _Note: this is not needed for the common use case of running automation rule inside your house when there is an alert in your area._
+It's possible to use templates for creating additional entities or as conditions in automation rules. _Note: this is not needed for the common use case of running automation rules inside the house when there is an alert in the area._
 
 The basic block is:
 ```
