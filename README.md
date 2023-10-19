@@ -65,6 +65,8 @@ template:
         availability: "{{ has_value('binary_sensor.oref_alert') }}"
 ```
 
+There is no need to edit YAML files for creating the above binary sensor. It's possible to create a template binary sensor using the UI only. See the "UI configuration" section in the [Template documentation](https://www.home-assistant.io/integrations/template/).
+
 And here is an example for an automation rule's condition:
 ```
 description: Petah Tikva Alert
@@ -80,6 +82,8 @@ condition:
 action:
 ...
 ```
+
+There is no need to edit YAML files for creating the above automation rule. It's possible to create it directly from the UI.
 
 ## Contributions are welcome!
 
