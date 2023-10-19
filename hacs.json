@@ -2,6 +2,7 @@
     "name": "Oref Alert",
     "filename": "oref_alert.zip",
     "hide_default_branch": true,
+    "homeassistant": "2023.1.0",
     "render_readme": true,
     "zip_release": true
 }
