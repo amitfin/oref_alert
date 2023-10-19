@@ -67,6 +67,9 @@ template:
 
 There is no need to edit YAML files for creating the above binary sensor. It's possible to create a template binary sensor using the UI only. See the "UI configuration" section in the [Template documentation](https://www.home-assistant.io/integrations/template/).
 
+<kbd>![image](https://github.com/amitfin/oref_alert/assets/19599059/a42dcf15-4e24-40db-ae18-d4272af46cdb)</kbd>
+
+
 And here is an example for an automation rule's condition:
 ```
 description: Petah Tikva Alert
