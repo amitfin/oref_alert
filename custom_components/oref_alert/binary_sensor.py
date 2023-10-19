@@ -17,10 +17,14 @@ import homeassistant.util.dt as dt_util
 from .const import (
     CONF_AREAS,
     CONF_ALERT_MAX_AGE,
+    CONF_OFF_ICON,
+    CONF_ON_ICON,
     ATTR_COUNTRY_ACTIVE_ALERTS,
     ATTR_COUNTRY_ALERTS,
     ATTR_SELECTED_AREAS_ACTIVE_ALERTS,
     ATTR_SELECTED_AREAS_ALERTS,
+    DEFAULT_OFF_ICON,
+    DEFAULT_ON_ICON,
 )
 
 SCAN_INTERVAL = timedelta(seconds=2)
@@ -63,6 +67,8 @@ class AlertSenosr(BinarySensorEntity):
     def __init__(self, config_entry: ConfigEntry) -> None:
         """Initialize object with defaults."""
         self._config_entry = config_entry
+        self._on_icon = self._config_entry.options.get(CONF_ON_ICON, DEFAULT_ON_ICON)
+        self._off_icon = self._config_entry.options.get(CONF_OFF_ICON, DEFAULT_OFF_ICON)
         self._http_client = aiohttp.ClientSession(raise_for_status=True)
         self._alerts = []
 
@@ -81,7 +87,7 @@ class AlertSenosr(BinarySensorEntity):
     @property
     def icon(self):
         """Return the sensor icon."""
-        return "mdi:home-alert-outline" if self.is_on else "mdi:home-outline"
+        return self._on_icon if self.is_on else self._off_icon
 
     @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:

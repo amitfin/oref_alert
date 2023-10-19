@@ -12,7 +12,16 @@ from homeassistant.helpers import selector
 import homeassistant.helpers.config_validation as cv
 
 from .areas import AREAS
-from .const import CONF_AREAS, CONF_ALERT_MAX_AGE, DEFAULT_ALERT_MAX_AGE, DOMAIN
+from .const import (
+    CONF_AREAS,
+    CONF_ALERT_MAX_AGE,
+    CONF_OFF_ICON,
+    CONF_ON_ICON,
+    DEFAULT_ALERT_MAX_AGE,
+    DOMAIN,
+    DEFAULT_OFF_ICON,
+    DEFAULT_ON_ICON,
+)
 
 AREAS_CONFIG = selector.SelectSelectorConfig(
     options=AREAS,
@@ -22,17 +31,14 @@ AREAS_CONFIG = selector.SelectSelectorConfig(
 )
 CONFIG_SCHEMA = vol.Schema(
     {
-        vol.Optional(CONF_AREAS): selector.SelectSelector(AREAS_CONFIG),
+        vol.Required(CONF_AREAS, default=[]): selector.SelectSelector(AREAS_CONFIG),
         vol.Required(
             CONF_ALERT_MAX_AGE, default=DEFAULT_ALERT_MAX_AGE
         ): cv.positive_int,
+        vol.Required(CONF_ON_ICON, default=DEFAULT_ON_ICON): selector.IconSelector(),
+        vol.Required(CONF_OFF_ICON, default=DEFAULT_OFF_ICON): selector.IconSelector(),
     }
 )
-
-
-def _get_selected_ares(user_input: dict[str, Any]):
-    """Read and normalize the list of selected areas."""
-    return [area.strip() for area in user_input.get(CONF_AREAS, [])]
 
 
 class RetryConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -49,12 +55,7 @@ class RetryConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(
                 title=DOMAIN.replace("_", " ").title(),
                 data={},
-                options={
-                    CONF_AREAS: _get_selected_ares(user_input),
-                    CONF_ALERT_MAX_AGE: user_input.get(
-                        CONF_ALERT_MAX_AGE, DEFAULT_ALERT_MAX_AGE
-                    ),
-                },
+                options=user_input,
             )
 
         return self.async_show_form(step_id="user", data_schema=CONFIG_SCHEMA)
@@ -78,25 +79,32 @@ class OptionsFlowHandler(OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(
                 title="",
-                data={
-                    CONF_AREAS: _get_selected_ares(user_input),
-                    CONF_ALERT_MAX_AGE: user_input.get(
-                        CONF_ALERT_MAX_AGE, DEFAULT_ALERT_MAX_AGE
-                    ),
-                },
+                data=user_input,
             )
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(
+                    vol.Required(
                         CONF_AREAS, default=self._config_entry.options[CONF_AREAS]
                     ): selector.SelectSelector(AREAS_CONFIG),
                     vol.Required(
                         CONF_ALERT_MAX_AGE,
                         default=self._config_entry.options[CONF_ALERT_MAX_AGE],
                     ): cv.positive_int,
+                    vol.Required(
+                        CONF_ON_ICON,
+                        default=self._config_entry.options.get(
+                            CONF_ON_ICON, DEFAULT_ON_ICON
+                        ),
+                    ): selector.IconSelector(),
+                    vol.Required(
+                        CONF_OFF_ICON,
+                        default=self._config_entry.options.get(
+                            CONF_OFF_ICON, DEFAULT_OFF_ICON
+                        ),
+                    ): selector.IconSelector(),
                 }
             ),
         )

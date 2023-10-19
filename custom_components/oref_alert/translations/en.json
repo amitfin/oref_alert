@@ -6,7 +6,9 @@
                 "title": "Setup Oref Alert",
                 "data": {
                     "areas": "Select areas to monitor (Hebrew only)",
-                    "alert_max_age": "Alert's active time period (minutes)"
+                    "alert_max_age": "Alert's active time period (minutes)",
+                    "on_icon": "Active alerts in selected areas icon",
+                    "off_icon": "Normal time icon"
                 }
             }
         },
@@ -20,7 +22,9 @@
                 "title": "Configure Oref Alert",
                 "data": {
                     "areas": "Select areas to monitor (Hebrew only)",
-                    "alert_max_age": "Alert's active time period (minutes)"
+                    "alert_max_age": "Alert's active time period (minutes)",
+                    "on_icon": "Active alerts in selected areas icon",
+                    "off_icon": "Normal time icon"
                 }
             }
         }
