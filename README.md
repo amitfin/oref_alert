@@ -49,6 +49,9 @@ The basic block is:
 ```
 {{ 'פתח תקווה' in (state_attr('binary_sensor.oref_alert', 'country_active_alerts') | map(attribute='data')) }}
 ```
+
+The name ('פתח תקווה' in the example) should be a name on the list of areas as listed in the configuration's first field (but doesn't need to be a selected area). In particular, names with 'כל האזורים' suffix (e.g. 'תל אביב - כל האזורים') are not valid and don't exist on the list of areas. The specific sub-area in the city should be used (e.g. 'תל אביב - מזרח').
+
 There are 4 state attributes (with identical format) which can be used based on the need:
 1. `country_active_alerts`: this is probably the one that should be used.
 2. `selected_areas_active_alerts`
