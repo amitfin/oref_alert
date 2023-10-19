@@ -83,7 +83,7 @@ class AlertSenosr(BinarySensorEntity):
         self._unsub_update: Callable[[], None] | None = None
 
     async def _async_fetch_url(self, url: str) -> Any:
-        """A single HTTP request to Oref servers."""
+        """Fetch data from Oref servers."""
         async with self._http_client.get(url, headers=OREF_HEADERS) as response:
             try:
                 return await response.json(encoding="utf-8-sig")
