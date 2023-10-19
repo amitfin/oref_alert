@@ -1,7 +1,9 @@
 """Support for representing daily schedule as binary sensors."""
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
+from json import JSONDecodeError
 from typing import Any
 import zoneinfo
 
@@ -28,9 +30,11 @@ from .const import (
     DEFAULT_OFF_ICON,
     DEFAULT_ON_ICON,
     DEFAULT_POLL_INTERVAL,
+    LOGGER,
 )
 
-OREF_URL = "https://www.oref.org.il/WarningMessages/History/AlertsHistory.json"
+OREF_ALERTS_URL = "https://www.oref.org.il/WarningMessages/alert/alerts.json"
+OREF_HISTORY_URL = "https://www.oref.org.il/WarningMessages/History/AlertsHistory.json"
 OREF_HEADERS = {
     "Referer": "https://www.oref.org.il/",
     "X-Requested-With": "XMLHttpRequest",
@@ -77,6 +81,42 @@ class AlertSenosr(BinarySensorEntity):
         self._http_client = aiohttp.ClientSession(raise_for_status=True)
         self._alerts = []
         self._unsub_update: Callable[[], None] | None = None
+
+    async def _async_fetch_url(self, url: str) -> Any:
+        """A single HTTP request to Oref servers."""
+        async with self._http_client.get(url, headers=OREF_HEADERS) as response:
+            try:
+                return await response.json(encoding="utf-8-sig")
+            except JSONDecodeError:
+                # Empty file is a valid return but not a valid JSON file
+                return None
+
+    async def _async_update(self) -> None:
+        """Request the data and update the entity."""
+        current, history = await asyncio.gather(
+            *[self._async_fetch_url(url) for url in (OREF_ALERTS_URL, OREF_HISTORY_URL)]
+        )
+        alerts = self._current_alerts_to_history_format(current) if current else []
+        alerts.extend(history or [])
+        if alerts == self._alerts:
+            return
+        self._alerts = alerts
+        self.async_write_ha_state()
+
+    def _current_alerts_to_history_format(
+        self, current: dict[str, str]
+    ) -> list[dict[str, str]]:
+        """Convert current alerts payload to history format."""
+        now = dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+        return [
+            {
+                "alertDate": now,
+                "title": current["title"],
+                "data": data,
+                "category": current["cat"],
+            }
+            for data in current["data"]
+        ]
 
     @property
     def is_on(self) -> bool:
@@ -141,14 +181,11 @@ class AlertSenosr(BinarySensorEntity):
     async def _async_update_and_schedule(self, *_) -> None:
         """Update entity and schedule next update."""
         self._clean_up_listener()
-        async with self._http_client.get(OREF_URL, headers=OREF_HEADERS) as response:
-            if response.content_length > 5:
-                alerts = await response.json()
-            else:
-                alerts = []
-        if alerts != self._alerts:
-            self._alerts = alerts
-            self.async_write_ha_state()
+        try:
+            await self._async_update()
+        except Exception:  # pylint: disable=broad-except
+            # An update error shouldn't stop the polling
+            LOGGER.exception("Update failed")
         self._unsub_update = event_helper.async_track_point_in_time(
             self.hass,
             self._async_update_and_schedule,
