@@ -8,8 +8,8 @@
 
 ![Project Maintenance](https://img.shields.io/badge/maintainer-Amit%20Finkelstein-blue.svg?style=for-the-badge)
 
-The integrartion provides a single binary sensor: `binary_sensor.oref_alert`. The sensor truns on when an alert is reported by the [Israeli National Emergency Portakl](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud Haoref). The sensor monitors the alrets in the user selected areas. An alert is considered active for a certain period of time as configured by the user (10 minutes by default).
-The integraion is installed and configured only via the user interface. There is YAML or template invovled.
+The integrartion provides a single binary sensor: `binary_sensor.oref_alert`. The sensor truns on when an alert is reported by the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud Haoref). The sensor monitors the alerts in the user selected areas. An alert is considered active for a certain period of time as configured by the user (10 minutes by default).
+The integraion is installed and configured only via the user interface. There is no YAML or templates involved.
 
 ## Install
 [HACS](https://hacs.xyz/) is the preferred and easier way to install the component. When HACS is installed, the integration can be installed using this My button:
@@ -42,9 +42,8 @@ In addition to the entity's state (on or off), the entity has the following attr
 
 1. The integration monitors the published data every second.
 2. The purpose of the binary sensor is to be used by automation rules.
-3. For advanced users, it's also possible to use the attirbutes of the sensor in templates.
+3. For advanced users, it's also possible to use the attributes of the sensor in templates.
 
 ## Contributions are welcome!
 
 If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
-
