@@ -47,46 +47,21 @@ It's possible to use templates for creating additional entities or as conditions
 
 The basic block is:
 ```
-{{ 'פתח תקווה' in (state_attr('binary_sensor.oref_alert', 'selected_areas_active_alerts') | map(attribute='data')) }}
+{{ 'פתח תקווה' in (state_attr('binary_sensor.oref_alert', 'country_active_alerts') | map(attribute='data')) }}
 ```
-There are 4 state attributes (with identical format) which can be used:
-1. `selected_areas_active_alerts`
-2. `country_active_alerts`
+There are 4 state attributes (with identical format) which can be used based on the need:
+1. `country_active_alerts`: this is probably the one that should be used.
+2. `selected_areas_active_alerts`
 3. `selected_areas_alerts`
 4. `country_alerts`
 
-Here is an example for a binary sensor:
-```
-template:
-  - binary_sensor:
-      - name: Petah Tikva Oref Alert
-        unique_id: petah_tikva_oref_alret
-        state: "{{ 'פתח תקווה' in (state_attr('binary_sensor.oref_alert', 'selected_areas_active_alerts') | map(attribute='data')) }}"
-        availability: "{{ has_value('binary_sensor.oref_alert') }}"
-```
-
-There is no need to edit YAML files for creating the above binary sensor. It's possible to create a template binary sensor using the UI only. See the "UI configuration" section in the [Template documentation](https://www.home-assistant.io/integrations/template/).
+There is no need to edit YAML files for creating a template binary sensor. See the "UI configuration" section in the [Template documentation](https://www.home-assistant.io/integrations/template/).
 
 <kbd>![image](https://github.com/amitfin/oref_alert/assets/19599059/a42dcf15-4e24-40db-ae18-d4272af46cdb)</kbd>
 
-
 And here is an example for an automation rule's condition:
-```
-description: Petah Tikva Alert
-trigger:
-  - platform: state
-    entity_id:
-      - binary_sensor.oref_alert
-    from: "off"
-    to: "on"
-condition:
-  - condition: template
-    value_template: "{{ 'פתח תקווה' in (state_attr('binary_sensor.oref_alert', 'selected_areas_active_alerts') | map(attribute='data')) }}"
-action:
-...
-```
 
-There is no need to edit YAML files for creating the above automation rule. It's possible to create it directly from the UI.
+<kbd>![image](https://github.com/amitfin/oref_alert/assets/19599059/a583710f-0819-4f61-9419-99a4e0392cbc)</kbd>
 
 ## Contributions are welcome!
 
