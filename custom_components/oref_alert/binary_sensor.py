@@ -96,14 +96,11 @@ class AlertSenosr(BinarySensorEntity):
         current, history = await asyncio.gather(
             *[self._async_fetch_url(url) for url in (OREF_ALERTS_URL, OREF_HISTORY_URL)]
         )
-        alerts = self._current_alerts_to_history_format(current) if current else []
-        alerts.extend(history or [])
-        if alerts == self._alerts:
-            return
-        self._alerts = alerts
+        self._alerts = self._current_to_history_format(current) if current else []
+        self._alerts.extend(history or [])
         self.async_write_ha_state()
 
-    def _current_alerts_to_history_format(
+    def _current_to_history_format(
         self, current: dict[str, str]
     ) -> list[dict[str, str]]:
         """Convert current alerts payload to history format."""
