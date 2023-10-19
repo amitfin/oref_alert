@@ -24,9 +24,11 @@ The integration should also be added to the configuration. This can be done via 
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=oref_alert)
 
-There are 2 configuration fields:
+There are 4 configuration fields, but only the first one doesn't have a good default:
 1. Selected areas: list of areas to monitor. The [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) has instructions on how to find an area by supplying an address.
-4. Max age of an alert: this is the alert's active time period (in minutes). The default is 10 minutes.
+2. Max age of an alert: this is the alert's active time period (in minutes). The default is 10 minutes.
+3. On icon: the icon to be used when there are active alerts in one of the selected areas. This is the icon which is displayed when the state of the binary sensor is "on".
+4. Off icon: the icon to  be used when the state of the binary sensor is "off".
 
 ## Additional Attributes
 
