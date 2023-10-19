@@ -17,10 +17,12 @@ from .const import (
     CONF_ALERT_MAX_AGE,
     CONF_OFF_ICON,
     CONF_ON_ICON,
+    CONF_POLL_INTERVAL,
     DEFAULT_ALERT_MAX_AGE,
     DOMAIN,
     DEFAULT_OFF_ICON,
     DEFAULT_ON_ICON,
+    DEFAULT_POLL_INTERVAL,
 )
 
 AREAS_CONFIG = selector.SelectSelectorConfig(
@@ -34,6 +36,9 @@ CONFIG_SCHEMA = vol.Schema(
         vol.Required(CONF_AREAS, default=[]): selector.SelectSelector(AREAS_CONFIG),
         vol.Required(
             CONF_ALERT_MAX_AGE, default=DEFAULT_ALERT_MAX_AGE
+        ): cv.positive_int,
+        vol.Required(
+            CONF_POLL_INTERVAL, default=DEFAULT_POLL_INTERVAL
         ): cv.positive_int,
         vol.Required(CONF_ON_ICON, default=DEFAULT_ON_ICON): selector.IconSelector(),
         vol.Required(CONF_OFF_ICON, default=DEFAULT_OFF_ICON): selector.IconSelector(),
@@ -92,6 +97,12 @@ class OptionsFlowHandler(OptionsFlow):
                     vol.Required(
                         CONF_ALERT_MAX_AGE,
                         default=self._config_entry.options[CONF_ALERT_MAX_AGE],
+                    ): cv.positive_int,
+                    vol.Required(
+                        CONF_POLL_INTERVAL,
+                        default=self._config_entry.options.get(
+                            CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL
+                        ),
                     ): cv.positive_int,
                     vol.Required(
                         CONF_ON_ICON,
