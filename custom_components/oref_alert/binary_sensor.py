@@ -41,6 +41,7 @@ OREF_HEADERS = {
     "Content-Type": "application/json",
 }
 IST = zoneinfo.ZoneInfo("Asia/Jerusalem")
+UPDATE_RETRIES = 3
 
 
 async def async_setup_entry(
@@ -178,11 +179,18 @@ class AlertSenosr(BinarySensorEntity):
     async def _async_update_and_schedule(self, *_) -> None:
         """Update entity and schedule next update."""
         self._clean_up_listener()
-        try:
-            await self._async_update()
-        except Exception:  # pylint: disable=broad-except
-            # An update error shouldn't stop the polling
-            LOGGER.exception("Update failed")
+        exc_info = None
+        for _ in range(UPDATE_RETRIES):
+            try:
+                await self._async_update()
+                break
+            except Exception as ex:  # pylint: disable=broad-except
+                # An update error shouldn't stop the polling
+                exc_info = ex
+        else:
+            LOGGER.warning(
+                "Update failed after %d retries", UPDATE_RETRIES, exc_info=exc_info
+            )
         self._unsub_update = event_helper.async_track_point_in_time(
             self.hass,
             self._async_update_and_schedule,
