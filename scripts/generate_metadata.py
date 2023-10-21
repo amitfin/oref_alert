@@ -35,29 +35,27 @@ class OrefMetadata:
         assert len(self._areas_and_groups) == len(set(self._areas_and_groups))
 
     def _get_areas(self) -> list[str]:
-        """Returns the list of areas."""
+        """Return the list of areas."""
         cities_mix = requests.get(CITIES_MIX_URL, timeout=5).json()
         areas = list(
-            set(
-                map(
-                    lambda area: area["label_he"].replace(
-                        CITY_ALL_ARES_SUFFIX_TYPO, CITY_ALL_ARES_SUFFIX
-                    ),
-                    cities_mix,
+            {
+                area["label_he"].replace(
+                    CITY_ALL_ARES_SUFFIX_TYPO, CITY_ALL_ARES_SUFFIX
                 )
-            )
+                for area in cities_mix
+            }
         )
         areas.sort()
         return areas
 
     def _get_cities_with_all_areas(self) -> list[str]:
         """Return the list of cities with 'all area'."""
-        cities = list(
-            map(
-                lambda area: area.replace(CITY_ALL_ARES_SUFFIX, ""),
-                filter(lambda area: area.endswith(CITY_ALL_ARES_SUFFIX), self._areas),
+        cities = [
+            area.replace(CITY_ALL_ARES_SUFFIX, "")
+            for area in filter(
+                lambda area: area.endswith(CITY_ALL_ARES_SUFFIX), self._areas
             )
-        )
+        ]
         cities.sort()
         return cities
 
@@ -76,7 +74,7 @@ class OrefMetadata:
         return city_to_areas
 
     def _get_districts(self) -> list:
-        """Returns the list of districts."""
+        """Return the list of districts."""
         districts = requests.get(DISTRICTS_URL, timeout=5).json()
         return list(filter(lambda area: area["value"] is not None, districts))
 
@@ -84,7 +82,7 @@ class OrefMetadata:
         """Build the map between districts and their areas."""
         districts = self._get_districts()
         district_to_areas = {}
-        district_names = list(map(lambda district: district["areaname"], districts))
+        district_names = [district["areaname"] for district in districts]
         district_names.sort()
         for district in district_names:
             district_areas = []
@@ -99,7 +97,7 @@ class OrefMetadata:
         return district_to_areas
 
     def generate(self) -> None:
-        """Main entry point."""
+        """Generate the output files."""
         with open(
             AREAS_AND_GROUPS_OUTPUT,
             "w",
@@ -127,4 +125,3 @@ class OrefMetadata:
 
 if __name__ == "__main__":
     OrefMetadata().generate()
-    print("Done.\nOutput files require formatting.")
