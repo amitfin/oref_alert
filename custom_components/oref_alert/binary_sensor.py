@@ -99,6 +99,7 @@ class AlertSenosr(BinarySensorEntity):
         )
         self._alerts = self._current_to_history_format(current) if current else []
         self._alerts.extend(history or [])
+        self._alerts.sort(reverse=True, key=lambda alert: alert["alertDate"])
         self.async_write_ha_state()
 
     def _current_to_history_format(
