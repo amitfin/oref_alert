@@ -17,6 +17,7 @@ from homeassistant.helpers import event as event_helper
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 import homeassistant.util.dt as dt_util
 
+from .area_utils import expand_areas_and_groups
 from .const import (
     CONF_AREAS,
     CONF_ALERT_MAX_AGE,
@@ -74,6 +75,7 @@ class AlertSenosr(BinarySensorEntity):
     def __init__(self, config_entry: ConfigEntry) -> None:
         """Initialize object with defaults."""
         self._config_entry = config_entry
+        self._areas = expand_areas_and_groups(self._config_entry.options[CONF_AREAS])
         self._on_icon = self._config_entry.options.get(CONF_ON_ICON, DEFAULT_ON_ICON)
         self._off_icon = self._config_entry.options.get(CONF_OFF_ICON, DEFAULT_OFF_ICON)
         self._poll_interval = self._config_entry.options.get(
@@ -137,7 +139,7 @@ class AlertSenosr(BinarySensorEntity):
             alert for alert in self._alerts if self.is_selected_area(alert)
         ]
         return {
-            CONF_AREAS: self._config_entry.options[CONF_AREAS],
+            CONF_AREAS: self._areas,
             CONF_ALERT_MAX_AGE: self._config_entry.options[CONF_ALERT_MAX_AGE],
             ATTR_SELECTED_AREAS_ACTIVE_ALERTS: [
                 alert for alert in selected_areas_alerts if self.is_active(alert)
@@ -159,7 +161,7 @@ class AlertSenosr(BinarySensorEntity):
 
     def is_selected_area(self, alert: dict[str, str]) -> bool:
         """Check is the alert is among the selected areas."""
-        return alert["data"] in self._config_entry.options[CONF_AREAS]
+        return alert["data"] in self._areas
 
     async def async_added_to_hass(self) -> None:
         """Run when entity about to be added to hass."""

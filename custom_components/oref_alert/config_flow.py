@@ -11,7 +11,6 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 import homeassistant.helpers.config_validation as cv
 
-from .areas import AREAS
 from .const import (
     CONF_AREAS,
     CONF_ALERT_MAX_AGE,
@@ -24,9 +23,10 @@ from .const import (
     DEFAULT_ON_ICON,
     DEFAULT_POLL_INTERVAL,
 )
+from .metadata.areas_and_groups import AREAS_AND_GROUPS
 
 AREAS_CONFIG = selector.SelectSelectorConfig(
-    options=AREAS,
+    options=AREAS_AND_GROUPS,
     mode=selector.SelectSelectorMode.DROPDOWN,
     multiple=True,
     custom_value=False,
