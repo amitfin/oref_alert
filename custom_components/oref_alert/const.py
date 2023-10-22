@@ -3,6 +3,7 @@ import logging
 from typing import Final
 
 DOMAIN: Final = "oref_alert"
+TITLE: Final = "Oref Alert"
 LOGGER = logging.getLogger(__package__)
 
 ATTR_COUNTRY_ALERTS: Final = "country_alerts"
@@ -20,3 +21,6 @@ DEFAULT_ALERT_MAX_AGE: Final = 10
 DEFAULT_ON_ICON: Final = "mdi:home-alert-outline"
 DEFAULT_OFF_ICON: Final = "mdi:home-outline"
 DEFAULT_POLL_INTERVAL: Final = 5
+
+ADD_SENSOR_SERVICE: Final = "add_sensor"
+OREF_ALERT_UNIQUE_ID: Final = "oref_alert"

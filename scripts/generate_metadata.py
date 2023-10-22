@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Generate the metadata files."""
 import requests
+import yaml
 
 OUTPUT_DIRECTORY = "/workspaces/oref_alert/custom_components/oref_alert/metadata/"
 AREAS_AND_GROUPS_OUTPUT = OUTPUT_DIRECTORY + "areas_and_groups.py"
 CITY_ALL_AREAS_OUTPUT = OUTPUT_DIRECTORY + "city_all_areas.py"
 DISTRICT_TO_AREAS_OUTPUT = OUTPUT_DIRECTORY + "district_to_areas.py"
+SERVICES_YAML = "/workspaces/oref_alert/custom_components/oref_alert/services.yaml"
 CITIES_MIX_URL = "https://www.oref.org.il/Shared/Ajax/GetCitiesMix.aspx"
 DISTRICTS_URL = "https://www.oref.org.il/Shared/Ajax/GetDistricts.aspx"
 CITY_ALL_ARES_SUFFIX = " - כל האזורים"
@@ -105,6 +107,21 @@ class OrefMetadata:
         ) as output:
             output.write('"""List of areas and group of areas in Israel."""\n\n')
             output.write(f"AREAS_AND_GROUPS = {self._areas_and_groups}")
+
+        with open(
+            SERVICES_YAML,
+            encoding="utf-8",
+        ) as services_yaml:
+            services = yaml.load(services_yaml, Loader=yaml.SafeLoader)
+        services["add_sensor"]["fields"]["areas"]["selector"]["select"][
+            "options"
+        ] = self._areas_and_groups
+        with open(
+            SERVICES_YAML,
+            "w",
+            encoding="utf-8",
+        ) as output:
+            yaml.dump(services, output, sort_keys=False, indent=2, allow_unicode=True)
 
         with open(
             CITY_ALL_AREAS_OUTPUT,

@@ -30,5 +30,21 @@
                 }
             }
         }
+    },
+    "services": {
+        "add_sensor": {
+            "name": "Add Sensor",
+            "description": "Add a new sensor for selected areas",
+            "fields": {
+                "name": {
+                    "name": "Name",
+                    "description": "The name of the sensor"
+                },
+                "areas": {
+                    "name": "Areas",
+                    "description": "The selected areas (Hebrew only)"
+                }
+            }
+        }
     }
 }

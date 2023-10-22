@@ -22,6 +22,7 @@ from .const import (
     DEFAULT_OFF_ICON,
     DEFAULT_ON_ICON,
     DEFAULT_POLL_INTERVAL,
+    TITLE,
 )
 from .metadata.areas_and_groups import AREAS_AND_GROUPS
 
@@ -46,7 +47,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-class RetryConfigFlow(ConfigFlow, domain=DOMAIN):
+class OrefAlertConfigFlow(ConfigFlow, domain=DOMAIN):
     """Config flow."""
 
     async def async_step_user(
@@ -58,7 +59,7 @@ class RetryConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             return self.async_create_entry(
-                title=DOMAIN.replace("_", " ").title(),
+                title=TITLE,
                 data={},
                 options=user_input,
             )

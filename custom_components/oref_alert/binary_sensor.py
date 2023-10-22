@@ -32,6 +32,7 @@ from .const import (
     DEFAULT_ON_ICON,
     DEFAULT_POLL_INTERVAL,
     LOGGER,
+    OREF_ALERT_UNIQUE_ID,
 )
 
 OREF_ALERTS_URL = "https://www.oref.org.il/WarningMessages/alert/alerts.json"
@@ -60,7 +61,7 @@ class AlertSenosr(BinarySensorEntity):
     _attr_has_entity_name = True
     _attr_should_poll = False
     _attr_name = "Oref Alert"
-    _attr_unique_id = "oref_alert"
+    _attr_unique_id = OREF_ALERT_UNIQUE_ID
     _entity_component_unrecorded_attributes = frozenset(
         {
             ATTR_COUNTRY_ACTIVE_ALERTS,
