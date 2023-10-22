@@ -8,10 +8,11 @@
 
 ![Project Maintenance](https://img.shields.io/badge/maintainer-Amit%20Finkelstein-blue.svg?style=for-the-badge)
 
-The integrartion provides a single binary sensor: `binary_sensor.oref_alert`. The sensor truns on when an alert is reported by the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud Haoref). The sensor monitors the alerts in the user selected areas. An alert is considered active for a certain period of time as configured by the user (10 minutes by default).
-The integraion is installed and configured only via the user interface. There is no YAML or templates involved.
+The integrartion provides `binary_sensor.oref_alert` which truns on when an alert is reported by the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud Haoref). The sensor monitors the alerts in the user selected areas. An alert is considered active for a certain period of time as configured by the user (10 minutes by default).
+The integraion is installed and configured via the user interface. There is no YAML or templates involved.
 
 ## Install
+
 [HACS](https://hacs.xyz/) is the preferred and easier way to install the component. When HACS is installed, the integration can be installed using this My button:
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=amitfin&repository=oref_alert&category=integration)
@@ -25,15 +26,23 @@ The integration should also be added to the configuration. This can be done via 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=oref_alert)
 
 There are 5 configuration fields, but only the first one doesn't have a good default:
-1. Selected areas: list of areas to monitor. The [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) has instructions on how to find an area by supplying an address. It's also possible to select a district (מחוז) and all-areas (כל האזורים) for cities with sub-areas.
+1. Selected areas: list of areas to monitor. It's also possible to select a district (מחוז) and all-areas (כל האזורים) for cities with sub-areas.
 2. Max age of an alert: this is the alert's active time period (in minutes). The default is 10 minutes.
 3. Update frequency: the time to wait between updates of the sensor (in seconds). The default is 5 seconds.
 4. On icon: the icon to be used when there are active alerts in one of the selected areas. This is the icon which is displayed when the state of the binary sensor is "on".
 5. Off icon: the icon to  be used when the state of the binary sensor is "off".
 
+## Additional Sensors
+
+It's possible to create additional sensors using the service `oref_alert.add_sensor`. The service can be accessed via this My button:
+
+[![Open your Home Assistant instance and show your service developer tools with a specific service selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.add_sensor)
+
+The selected areas of an additional sensor can be different (non overlapping) than the primary sensor. Additional sensors can be re-created for changing their configuration (there is no edit page).
+
 ## Additional Attributes
 
-In addition to the entity's state (on or off), the entity has the following attributes:
+`binary_sensor.oref_alert` has the following extra attributes:
 1. `Areas`: the list of areas provided by the user.
 2. `Alert max age`: as configured by the user.
 3. `Selected areas active alerts`: when the sensor is `on`, the alerts are listed here. 
@@ -41,30 +50,7 @@ In addition to the entity's state (on or off), the entity has the following attr
 5. `Country active alerts`: all active alerts in Israel.
 6. `Country alerts`: all alerts in Israel.
 
-## Advanced Scenarios (Templates)
-
-It's possible to use templates for creating additional entities or as conditions in automation rules. _Note: this is not needed for the common use case of running automation rules inside the house when there is an alert in the area._
-
-The basic block is:
-```
-{{ 'פתח תקווה' in (state_attr('binary_sensor.oref_alert', 'country_active_alerts') | map(attribute='data')) }}
-```
-
-The name ('פתח תקווה' in the example) should be a name on the list of areas as listed in the configuration's first field (but doesn't need to be a selected area). In particular, names with 'כל האזורים' suffix (e.g. 'תל אביב - כל האזורים') are not valid and don't exist on the list of areas. The specific sub-area in the city should be used (e.g. 'תל אביב - מזרח').
-
-There are 4 state attributes (with identical format) which can be used based on the need:
-1. `country_active_alerts`: this is probably the one that should be used.
-2. `selected_areas_active_alerts`
-3. `selected_areas_alerts`
-4. `country_alerts`
-
-There is no need to edit YAML files for creating a template binary sensor. See the "UI configuration" section in the [Template documentation](https://www.home-assistant.io/integrations/template/).
-
-<kbd>![image](https://github.com/amitfin/oref_alert/assets/19599059/a42dcf15-4e24-40db-ae18-d4272af46cdb)</kbd>
-
-And here is an example for an automation rule's condition:
-
-<kbd>![image](https://github.com/amitfin/oref_alert/assets/19599059/a583710f-0819-4f61-9419-99a4e0392cbc)</kbd>
+Additional sensors have no extra attributes.
 
 ## Contributions are welcome!
 
