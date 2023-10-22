@@ -9,7 +9,8 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/amitfin/oref_alert/issues",
   "requirements": [
-    "aiohttp"
+    "aiohttp",
+    "template"
   ],
   "version": "1.0.0"
 }
