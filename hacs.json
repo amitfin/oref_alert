@@ -1,6 +1,9 @@
 {
     "name": "Oref Alert",
     "filename": "oref_alert.zip",
+    "country": [
+        "IL"
+    ],
     "hide_default_branch": true,
     "homeassistant": "2023.1.0",
     "render_readme": true,
