@@ -23,14 +23,13 @@ class OrefMetadata:
     def __init__(self) -> None:
         """Initialize the object."""
         self._areas: list[str] = self._get_areas()
+        self._areas_no_group = list(
+            filter(lambda area: not area.endswith(CITY_ALL_ARES_SUFFIX), self._areas)
+        )
         self._city_to_areas: dict[str, list[str]] = self._city_to_areas_map()
         self._district_to_areas = self._district_to_areas_map()
         self._areas_and_groups = (
-            list(
-                filter(
-                    lambda area: not area.endswith(CITY_ALL_ARES_SUFFIX), self._areas
-                )
-            )
+            self._areas_no_group
             + list(self._city_to_areas.keys())
             + list(self._district_to_areas.keys())
         )
@@ -67,9 +66,9 @@ class OrefMetadata:
         city_to_areas = {}
         for city in self._get_cities_with_all_areas():
             city_areas = []
-            for area in self._areas:
+            for area in self._areas_no_group:
                 if area.startswith(city):
-                    assert area in self._areas
+                    assert area in self._areas_no_group
                     city_areas.append(area)
             city_areas = list(set(city_areas))
             city_areas.sort()
@@ -91,7 +90,7 @@ class OrefMetadata:
             district_areas = []
             for area in districts:
                 if area["areaname"] == district:
-                    assert area["label_he"] in self._areas
+                    assert area["label_he"] in self._areas_no_group
                     assert area["label_he"] not in self._city_to_areas
                     district_areas.append(area["label_he"])
             district_areas = list(set(district_areas))
