@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate the metadata files."""
 import requests
+import subprocess
 import yaml
 
 OUTPUT_DIRECTORY = "/workspaces/oref_alert/custom_components/oref_alert/metadata/"
@@ -138,6 +139,8 @@ class OrefMetadata:
         ) as output:
             output.write('"""Map of districts to their areas."""\n\n')
             output.write(f"DISTRICT_AREAS = {self._district_to_areas}")
+
+        subprocess.run(["/usr/local/py-utils/bin/black", OUTPUT_DIRECTORY], check=False)
 
 
 if __name__ == "__main__":
