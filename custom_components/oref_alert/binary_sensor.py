@@ -8,12 +8,12 @@ from typing import Any
 import zoneinfo
 
 from collections.abc import Callable, Mapping
-import aiohttp
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import event as event_helper
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 import homeassistant.util.dt as dt_util
 
@@ -47,12 +47,12 @@ UPDATE_RETRIES = 3
 
 
 async def async_setup_entry(
-    _: HomeAssistant,
+    hass: HomeAssistant,
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize config entry."""
-    async_add_entities([AlertSenosr(config_entry)])
+    async_add_entities([AlertSenosr(hass, config_entry)])
 
 
 class AlertSenosr(BinarySensorEntity):
@@ -73,7 +73,7 @@ class AlertSenosr(BinarySensorEntity):
         }
     )
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         """Initialize object with defaults."""
         self._config_entry = config_entry
         self._areas = expand_areas_and_groups(self._config_entry.options[CONF_AREAS])
@@ -82,7 +82,7 @@ class AlertSenosr(BinarySensorEntity):
         self._poll_interval = self._config_entry.options.get(
             CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL
         )
-        self._http_client = aiohttp.ClientSession(raise_for_status=True)
+        self._http_client = async_get_clientsession(hass)
         self._alerts = []
         self._unsub_update: Callable[[], None] | None = None
 
@@ -172,7 +172,6 @@ class AlertSenosr(BinarySensorEntity):
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
         self._clean_up_listener()
-        await self._http_client.close()
 
     def _clean_up_listener(self):
         """Remove the update timer."""
