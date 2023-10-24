@@ -34,6 +34,7 @@ from .const import (
     LOGGER,
     OREF_ALERT_UNIQUE_ID,
 )
+from .metadata.areas import AREAS
 
 OREF_ALERTS_URL = "https://www.oref.org.il/WarningMessages/alert/alerts.json"
 OREF_HISTORY_URL = "https://www.oref.org.il/WarningMessages/History/AlertsHistory.json"
@@ -104,6 +105,10 @@ class AlertSenosr(BinarySensorEntity):
         self._alerts.extend(history or [])
         self._alerts.sort(reverse=True, key=lambda alert: alert["alertDate"])
         self.async_write_ha_state()
+        for unrecognized_area in set(
+            map(lambda alert: alert["data"], self._alerts)
+        ).difference(AREAS):
+            LOGGER.error("Alert has an unrecognized area: %s", unrecognized_area)
 
     def _current_to_history_format(
         self, current: dict[str, str]

@@ -1,4 +1,4 @@
-"""Map of districts to their areas."""
+"""DISTRICT_AREAS metadata constant."""
 
 DISTRICT_AREAS = {
     "מחוז אילת": ["אזור תעשייה שחורת", "אילות", "אילת"],

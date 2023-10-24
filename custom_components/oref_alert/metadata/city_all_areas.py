@@ -1,4 +1,4 @@
-"""Map of cities to their sub-areas."""
+"""CITY_ALL_AREAS metadata constant."""
 
 CITY_ALL_AREAS = {
     "אשדוד - כל האזורים": [

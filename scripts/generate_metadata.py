@@ -5,6 +5,7 @@ import subprocess
 import yaml
 
 OUTPUT_DIRECTORY = "/workspaces/oref_alert/custom_components/oref_alert/metadata/"
+AREAS_OUTPUT = OUTPUT_DIRECTORY + "areas.py"
 AREAS_AND_GROUPS_OUTPUT = OUTPUT_DIRECTORY + "areas_and_groups.py"
 CITY_ALL_AREAS_OUTPUT = OUTPUT_DIRECTORY + "city_all_areas.py"
 DISTRICT_TO_AREAS_OUTPUT = OUTPUT_DIRECTORY + "district_to_areas.py"
@@ -22,9 +23,12 @@ class OrefMetadata:
 
     def __init__(self) -> None:
         """Initialize the object."""
-        self._areas: list[str] = self._get_areas()
+        self._backend_areas: list[str] = self._get_areas()
         self._areas_no_group = list(
-            filter(lambda area: not area.endswith(CITY_ALL_ARES_SUFFIX), self._areas)
+            filter(
+                lambda area: not area.endswith(CITY_ALL_ARES_SUFFIX),
+                self._backend_areas,
+            )
         )
         self._city_to_areas: dict[str, list[str]] = self._city_to_areas_map()
         self._district_to_areas = self._district_to_areas_map()
@@ -55,7 +59,7 @@ class OrefMetadata:
         cities = [
             area.replace(CITY_ALL_ARES_SUFFIX, "")
             for area in filter(
-                lambda area: area.endswith(CITY_ALL_ARES_SUFFIX), self._areas
+                lambda area: area.endswith(CITY_ALL_ARES_SUFFIX), self._backend_areas
             )
         ]
         cities.sort()
@@ -100,13 +104,23 @@ class OrefMetadata:
 
     def generate(self) -> None:
         """Generate the output files."""
-        with open(
-            AREAS_AND_GROUPS_OUTPUT,
-            "w",
-            encoding="utf-8",
-        ) as output:
-            output.write('"""List of areas and group of areas in Israel."""\n\n')
-            output.write(f"AREAS_AND_GROUPS = {self._areas_and_groups}")
+        for file_name, variable_name, variable_data in (
+            (AREAS_AND_GROUPS_OUTPUT, "AREAS_AND_GROUPS", self._areas_and_groups),
+            (CITY_ALL_AREAS_OUTPUT, "CITY_ALL_AREAS", self._city_to_areas),
+            (DISTRICT_TO_AREAS_OUTPUT, "DISTRICT_AREAS", self._district_to_areas),
+            (
+                AREAS_OUTPUT,
+                "AREAS",
+                str(self._areas_no_group).replace("[", "{").replace("]", "}"),
+            ),
+        ):
+            with open(
+                file_name,
+                "w",
+                encoding="utf-8",
+            ) as output:
+                output.write(f'"""{variable_name} metadata constant."""\n\n')
+                output.write(f"{variable_name} = {variable_data}")
 
         with open(
             SERVICES_YAML,
@@ -122,22 +136,6 @@ class OrefMetadata:
             encoding="utf-8",
         ) as output:
             yaml.dump(services, output, sort_keys=False, indent=2, allow_unicode=True)
-
-        with open(
-            CITY_ALL_AREAS_OUTPUT,
-            "w",
-            encoding="utf-8",
-        ) as output:
-            output.write('"""Map of cities to their sub-areas."""\n\n')
-            output.write(f"CITY_ALL_AREAS = {self._city_to_areas}")
-
-        with open(
-            DISTRICT_TO_AREAS_OUTPUT,
-            "w",
-            encoding="utf-8",
-        ) as output:
-            output.write('"""Map of districts to their areas."""\n\n')
-            output.write(f"DISTRICT_AREAS = {self._district_to_areas}")
 
         subprocess.run(["/usr/local/py-utils/bin/black", OUTPUT_DIRECTORY], check=False)
 
