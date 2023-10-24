@@ -32,6 +32,9 @@ There are 5 configuration fields, but only the first one doesn't have a good def
 4. On icon: the icon to be used when there are active alerts in one of the selected areas. This is the icon which is displayed when the state of the binary sensor is "on".
 5. Off icon: the icon to  be used when the state of the binary sensor is "off".
 
+<kbd><img src="https://github.com/amitfin/oref_alert/assets/19599059/2422d891-15f5-4393-b713-59d09f20c308" width="400"></kbd>
+
+
 ## Additional Sensors
 
 It's possible to create additional sensors using the service `oref_alert.add_sensor`. The service can be accessed via this My button:
@@ -65,7 +68,7 @@ trigger:
     attribute: country_active_alerts
 action:
   - variables:
-      current: "{{ state_attr('binary_sensor.oref_alert', 'country_active_alerts') | map(attribute='data') | list }}"
+      current: "{{ state_attr('binary_sensor.oref_alert', 'country_active_alerts') | map(attribute='data') | unique | list }}"
       previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | list }}"
       alerts: "{{ current | reject('in', previous) | list }}"
   - condition: "{{ alerts | length > 0 }}"
