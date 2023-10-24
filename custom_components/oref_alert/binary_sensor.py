@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import timedelta
+from functools import cmp_to_key
 from json import JSONDecodeError
 from typing import Any
 import zoneinfo
@@ -56,6 +57,19 @@ async def async_setup_entry(
     async_add_entities([AlertSenosr(hass, config_entry)])
 
 
+def _compare_alerts(item1: dict[str, any], item2: dict[str, any]) -> int:
+    """Compare by descending-order "date" and then ascending-order "name"."""
+    if item1["alertDate"] < item2["alertDate"]:
+        return 1
+    if item1["alertDate"] > item2["alertDate"]:
+        return -1
+    if item1["data"] > item2["data"]:
+        return 1
+    if item1["data"] < item2["data"]:
+        return -1
+    return 0
+
+
 class AlertSenosr(BinarySensorEntity):
     """Representation of the alert sensor."""
 
@@ -103,11 +117,11 @@ class AlertSenosr(BinarySensorEntity):
         )
         self._alerts = self._current_to_history_format(current) if current else []
         self._alerts.extend(history or [])
-        self._alerts.sort(reverse=True, key=lambda alert: alert["alertDate"])
+        self._alerts.sort(key=cmp_to_key(_compare_alerts))
         self.async_write_ha_state()
-        for unrecognized_area in set(
-            map(lambda alert: alert["data"], self._alerts)
-        ).difference(AREAS):
+        for unrecognized_area in {alert["data"] for alert in self._alerts}.difference(
+            AREAS
+        ):
             LOGGER.error("Alert has an unrecognized area: %s", unrecognized_area)
 
     def _current_to_history_format(
@@ -120,7 +134,7 @@ class AlertSenosr(BinarySensorEntity):
                 "alertDate": now,
                 "title": current["title"],
                 "data": data,
-                "category": current["cat"],
+                "category": int(current["cat"]),
             }
             for data in current["data"]
         ]
@@ -144,15 +158,16 @@ class AlertSenosr(BinarySensorEntity):
         selected_areas_alerts = [
             alert for alert in self._alerts if self.is_selected_area(alert)
         ]
+        active_alerts = [alert for alert in self._alerts if self.is_active(alert)]
         return {
             CONF_AREAS: self._areas,
             CONF_ALERT_MAX_AGE: self._config_entry.options[CONF_ALERT_MAX_AGE],
             ATTR_SELECTED_AREAS_ACTIVE_ALERTS: [
-                alert for alert in selected_areas_alerts if self.is_active(alert)
+                alert for alert in selected_areas_alerts if alert in active_alerts
             ],
             ATTR_SELECTED_AREAS_ALERTS: selected_areas_alerts,
             ATTR_COUNTRY_ACTIVE_ALERTS: [
-                alert for alert in self._alerts if self.is_active(alert)
+                alert for alert in self._alerts if alert in active_alerts
             ],
             ATTR_COUNTRY_ALERTS: self._alerts,
         }
