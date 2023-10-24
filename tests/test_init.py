@@ -67,7 +67,7 @@ async def test_add_sensor_service(hass: HomeAssistant) -> None:
     assert template_config_entry.options["template_type"] == Platform.BINARY_SENSOR
     assert template_config_entry.options[CONF_STATE] == (
         r"{{[]|select('in',(state_attr('binary_sensor.oref_alert','country_active_alerts')|"
-        r"map(attribute='data')))|list|length>0}}"
+        r"map(attribute='data')|list))|list|length>0}}"
     )
     assert await hass.config_entries.async_remove(config_entry.entry_id)
     await hass.async_block_till_done()

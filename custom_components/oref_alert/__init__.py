@@ -42,7 +42,7 @@ def _compose_template(areas: list[str]) -> str:
                     '{Platform.BINARY_SENSOR}.{OREF_ALERT_UNIQUE_ID}',
                     '{ATTR_COUNTRY_ACTIVE_ALERTS}'
                 )
-                | map(attribute='data')
+                | map(attribute='data') | list
             ))
             | list | length > 0
         {'}}'}

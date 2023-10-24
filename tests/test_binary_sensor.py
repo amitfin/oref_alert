@@ -5,7 +5,7 @@ import datetime
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.const import Platform, STATE_OFF, STATE_ON
+from homeassistant.const import CONF_NAME, Platform, STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 
 from pytest_homeassistant_custom_component.common import (
@@ -17,6 +17,7 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClien
 
 from custom_components.oref_alert.binary_sensor import OREF_ALERTS_URL, OREF_HISTORY_URL
 from custom_components.oref_alert.const import (
+    ADD_SENSOR_SERVICE,
     ATTR_COUNTRY_ALERTS,
     ATTR_COUNTRY_ACTIVE_ALERTS,
     ATTR_SELECTED_AREAS_ALERTS,
@@ -199,3 +200,22 @@ async def test_unrecognized_area(
     await async_shutdown(hass, config_id)
     assert "Alert has an unrecognized area: שכם" in caplog.text
     assert "Alert has an unrecognized area: סעד" not in caplog.text
+
+
+async def test_additional_sensor(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """Test state of an additional sensor."""
+    mock_urls(aioclient_mock, "single_alert_real_time.json", None)
+    config_id = await async_setup(hass)
+    assert hass.states.get(ENTITY_ID).state == STATE_OFF
+    await hass.services.async_call(
+        DOMAIN,
+        ADD_SENSOR_SERVICE,
+        {CONF_NAME: "test", CONF_AREAS: ["תל אביב - כל האזורים"]},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+    assert hass.states.get(f"{ENTITY_ID}_test").state == STATE_ON
+    await async_shutdown(hass, config_id)
