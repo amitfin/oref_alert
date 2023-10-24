@@ -52,6 +52,29 @@ The selected areas of an additional sensor can be different (non overlapping) th
 
 Additional sensors have no extra attributes.
 
+## Usages
+
+The basic usage is to trigger an automation rule when the binary sensor is changing from `off` to `on`. Some ideas for the `actions` section can be: play a song in smart speakers (less stressful), open the lights and TV in the shelter, etc'. It's also possible to trigger an alert when the sensor is getting back from `on` to `off` for getting an indication when it's safe to get out of the shelter.
+
+Here is an advance usage for getting mobile notifications on any alert in the country (can also be created via the UI):
+```
+id: Oref Alert Country Notifications
+trigger:
+  - platform: state
+    entity_id: binary_sensor.oref_alert
+    attribute: country_active_alerts
+action:
+  - variables:
+      current: "{{ state_attr('binary_sensor.oref_alert', 'country_active_alerts') | map(attribute='data') | list }}"
+      previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | list }}"
+      alerts: "{{ current | reject('in', previous) | list }}"
+  - condition: "{{ alerts | length > 0 }}"
+  - service: notify.mobile_app_amits_iphone
+    data:
+      message: "התרעות פיקוד העורף: {{ alerts | join(' | ') }}"
+mode: queued
+```
+
 ## Contributions are welcome!
 
 If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
