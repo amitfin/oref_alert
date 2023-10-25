@@ -47,6 +47,8 @@ The service `oref_alert.remove_sensor` can be used for deleting an additioanl se
 
 [![Open your Home Assistant instance and show your service developer tools with a specific service selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.remove_sensor)
 
+Note: additional sensros created before v2.2.0 use a different implementaiton. It's better to delete such entities and to create new sensors using the new functionality (old sensors are not broken and can be used).
+
 ## Additional Attributes
 
 All sensors have the following extra attributes:
