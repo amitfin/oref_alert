@@ -5,4 +5,4 @@ default_config:
 logger:
   default: info
   logs:
-    custom_components.oref_alert: debug
+    custom_components.oref_alert: info

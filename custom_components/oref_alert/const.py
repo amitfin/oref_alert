@@ -19,6 +19,7 @@ CONF_ALERT_MAX_AGE: Final = "alert_max_age"
 CONF_OFF_ICON: Final = "off_icon"
 CONF_ON_ICON: Final = "on_icon"
 CONF_POLL_INTERVAL: Final = "poll_interval"
+CONF_SENSORS: Final = "sensors"
 
 DEFAULT_ALERT_MAX_AGE: Final = 10
 DEFAULT_ON_ICON: Final = "mdi:home-alert-outline"
@@ -26,4 +27,5 @@ DEFAULT_OFF_ICON: Final = "mdi:home-outline"
 DEFAULT_POLL_INTERVAL: Final = 5
 
 ADD_SENSOR_SERVICE: Final = "add_sensor"
+REMOVE_SENSOR_SERVICE: Final = "remove_sensor"
 OREF_ALERT_UNIQUE_ID: Final = "oref_alert"

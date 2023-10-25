@@ -85,7 +85,7 @@ class OptionsFlowHandler(OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(
                 title="",
-                data=user_input,
+                data={**self._config_entry.options, **user_input},
             )
 
         return self.async_show_form(

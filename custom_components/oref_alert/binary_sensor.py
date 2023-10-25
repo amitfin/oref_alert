@@ -21,6 +21,7 @@ from .const import (
     CONF_ALERT_MAX_AGE,
     CONF_OFF_ICON,
     CONF_ON_ICON,
+    CONF_SENSORS,
     ATTR_COUNTRY_ACTIVE_ALERTS,
     ATTR_COUNTRY_ALERTS,
     ATTR_SELECTED_AREAS_ACTIVE_ALERTS,
@@ -40,7 +41,12 @@ async def async_setup_entry(
 ) -> None:
     """Initialize config entry."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
-    async_add_entities([AlertSenosr(coordinator, config_entry)])
+    async_add_entities(
+        [
+            AlertSenosr(name, config_entry, coordinator)
+            for name in [None] + list(config_entry.options.get(CONF_SENSORS, {}).keys())
+        ]
+    )
 
 
 class AlertSenosr(
@@ -49,8 +55,6 @@ class AlertSenosr(
     """Representation of the alert sensor."""
 
     _attr_has_entity_name = True
-    _attr_name = TITLE
-    _attr_unique_id = OREF_ALERT_UNIQUE_ID
     _entity_component_unrecorded_attributes = frozenset(
         {
             ATTR_COUNTRY_ACTIVE_ALERTS,
@@ -63,15 +67,29 @@ class AlertSenosr(
     )
 
     def __init__(
-        self, coordinator: OrefAlertDataUpdateCoordinator, config_entry: ConfigEntry
+        self,
+        name: str | None,
+        config_entry: ConfigEntry,
+        coordinator: OrefAlertDataUpdateCoordinator,
     ) -> None:
         """Initialize object with defaults."""
         super().__init__(coordinator)
         self._config_entry = config_entry
-        self._areas = expand_areas_and_groups(self._config_entry.options[CONF_AREAS])
         self._on_icon = self._config_entry.options.get(CONF_ON_ICON, DEFAULT_ON_ICON)
         self._off_icon = self._config_entry.options.get(CONF_OFF_ICON, DEFAULT_OFF_ICON)
         self._alerts = coordinator.data
+        if not name:
+            self._attr_name = TITLE
+            self._attr_unique_id = OREF_ALERT_UNIQUE_ID
+            self._areas = expand_areas_and_groups(
+                self._config_entry.options[CONF_AREAS]
+            )
+        else:
+            self._attr_name = name
+            self._attr_unique_id = name.lower().replace(" ", "_")
+            self._areas = expand_areas_and_groups(
+                self._config_entry.options[CONF_SENSORS][name]
+            )
 
     @callback
     def _handle_coordinator_update(self) -> None:

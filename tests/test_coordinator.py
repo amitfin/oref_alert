@@ -32,10 +32,10 @@ async def test_updates(
         nonlocal updates
         updates += 1
 
-    coordinator = OrefAlertDataUpdateCoordinator(hass, 2)
+    coordinator = OrefAlertDataUpdateCoordinator(hass, 100)
     coordinator.async_add_listener(update)
     for _ in range(10):
-        freezer.tick(timedelta(seconds=1))
+        freezer.tick(timedelta(seconds=50))
         async_fire_time_changed(hass)
         await hass.async_block_till_done()
     assert updates == 5
