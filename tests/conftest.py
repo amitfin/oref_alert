@@ -16,10 +16,19 @@
 # pytest includes fixtures OOB which you can use as defined on this page)
 import pytest
 
+from .utils import mock_urls
+
 
 # This fixture enables loading custom integrations in all tests.
 # Remove to enable selective use of this fixture
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(enable_custom_integrations):
     """Enable loading custom components."""
+    yield
+
+
+@pytest.fixture(autouse=True)
+def auto_aioclient_mock(aioclient_mock):
+    """Mock aiohttp with empty result relevant URLs."""
+    mock_urls(aioclient_mock, None, None)
     yield

@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import datetime
+from typing import Any
+
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
@@ -11,11 +13,9 @@ from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
-    load_fixture,
 )
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
-from custom_components.oref_alert.binary_sensor import OREF_ALERTS_URL, OREF_HISTORY_URL
 from custom_components.oref_alert.const import (
     ADD_SENSOR_SERVICE,
     ATTR_COUNTRY_ALERTS,
@@ -31,14 +31,14 @@ from custom_components.oref_alert.const import (
     OREF_ALERT_UNIQUE_ID,
 )
 
-from .utils import load_json_fixture
+from .utils import load_json_fixture, mock_urls
 
 DEFAULT_OPTIONS = {CONF_AREAS: ["בארי"], CONF_ALERT_MAX_AGE: 10}
 ENTITY_ID = f"{Platform.BINARY_SENSOR}.{OREF_ALERT_UNIQUE_ID}"
 
 
 async def async_setup(
-    hass: HomeAssistant, options: dict[str, any] | None = None
+    hass: HomeAssistant, options: dict[str, Any] | None = None
 ) -> str:
     """Integration setup."""
     options = options or {}
@@ -55,23 +55,6 @@ async def async_shutdown(hass: HomeAssistant, config_id: str) -> None:
     """Shutdown by removing the integration."""
     assert await hass.config_entries.async_remove(config_id)
     await hass.async_block_till_done()
-
-
-def mock_urls(
-    aioclient_mock: AiohttpClientMocker,
-    real_time_fixture: str | None,
-    history_fixture: str | None,
-) -> None:
-    """Mock the URLs."""
-    aioclient_mock.clear_requests()
-    aioclient_mock.get(
-        OREF_ALERTS_URL,
-        text=load_fixture(real_time_fixture) if real_time_fixture else "",
-    )
-    aioclient_mock.get(
-        OREF_HISTORY_URL,
-        text=load_fixture(history_fixture) if history_fixture else "",
-    )
 
 
 async def test_state(
@@ -146,18 +129,26 @@ async def test_interval(
         hass,
         {
             CONF_AREAS: ["תל אביב - כל האזורים"],
-            CONF_POLL_INTERVAL: 25,
         },
     )
+
+    # Test the "update" path which is more invovled than initial configuration.
+    config_entry = hass.config_entries.async_get_entry(config_id)
+    hass.config_entries.async_update_entry(
+        config_entry,
+        options={**config_entry.options, **{CONF_POLL_INTERVAL: 125}},
+    )
+    await hass.async_block_till_done()
+
     assert hass.states.get(ENTITY_ID).state == STATE_ON
     mock_urls(aioclient_mock, None, None)
 
-    freezer.tick(datetime.timedelta(seconds=24))
+    freezer.tick(datetime.timedelta(seconds=120))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     assert hass.states.get(ENTITY_ID).state == STATE_ON
 
-    freezer.tick(datetime.timedelta(seconds=2))
+    freezer.tick(datetime.timedelta(seconds=10))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     assert hass.states.get(ENTITY_ID).state == STATE_OFF

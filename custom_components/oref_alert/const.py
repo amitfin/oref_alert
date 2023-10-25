@@ -1,10 +1,13 @@
 """Constants for the oref_alert integration."""
 import logging
 from typing import Final
+import zoneinfo
 
 DOMAIN: Final = "oref_alert"
 TITLE: Final = "Oref Alert"
 LOGGER = logging.getLogger(__package__)
+DATA_COORDINATOR: Final = "coordinator"
+IST = zoneinfo.ZoneInfo("Asia/Jerusalem")
 
 ATTR_COUNTRY_ALERTS: Final = "country_alerts"
 ATTR_COUNTRY_ACTIVE_ALERTS: Final = "country_active_alerts"

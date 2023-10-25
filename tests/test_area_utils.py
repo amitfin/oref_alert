@@ -32,6 +32,6 @@ from custom_components.oref_alert.area_utils import expand_areas_and_groups
     ),
     ids=("single no expantion", "all areas", "district", "mix"),
 )
-def test_single_area(input_list: list[str], output_list: list[str]) -> None:
+async def test_single_area(input_list: list[str], output_list: list[str]) -> None:
     """Test a single area, no expantion."""
     assert expand_areas_and_groups(input_list) == output_list
