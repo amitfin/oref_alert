@@ -1,4 +1,4 @@
-"""Utilits for metadata information."""
+"""Utilities for metadata information."""
 
 from .metadata.city_all_areas import CITY_ALL_AREAS
 from .metadata.district_to_areas import DISTRICT_AREAS
