@@ -87,10 +87,10 @@ async def test_state(
     ((["תל אביב - כל האזורים"],), (["מחוז דן"],)),
     ids=("City all areas", "District"),
 )
-async def test_real_time_alert_area_expantion(
+async def test_real_time_alert_area_expansion(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, areas: list[str]
 ) -> None:
-    """Test real time alert and city expantion."""
+    """Test real time alert and city expansion."""
     mock_urls(aioclient_mock, "single_alert_real_time.json", None)
     config_id = await async_setup(hass, {CONF_AREAS: areas})
     assert hass.states.get(ENTITY_ID).state == STATE_ON
@@ -132,7 +132,7 @@ async def test_interval(
         },
     )
 
-    # Test the "update" path which is more invovled than initial configuration.
+    # Test the "update" path which is more involved than initial configuration.
     config_entry = hass.config_entries.async_get_entry(config_id)
     hass.config_entries.async_update_entry(
         config_entry,

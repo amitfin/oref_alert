@@ -40,10 +40,10 @@ async def async_setup_entry(
 ) -> None:
     """Initialize config entry."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
-    async_add_entities([AlertSenosr(coordinator, config_entry)])
+    async_add_entities([AlertSensor(coordinator, config_entry)])
 
 
-class AlertSenosr(
+class AlertSensor(
     CoordinatorEntity[OrefAlertDataUpdateCoordinator], BinarySensorEntity
 ):
     """Representation of the alert sensor."""
