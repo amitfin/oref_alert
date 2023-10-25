@@ -45,6 +45,16 @@
                     "description": "The selected areas (Hebrew only)"
                 }
             }
+        },
+        "remove_sensor": {
+            "name": "Remove Sensor",
+            "description": "Remove a sensor",
+            "fields": {
+                "entity_id": {
+                    "name": "Entity",
+                    "description": "The entity to remove"
+                }
+            }
         }
     }
 }
