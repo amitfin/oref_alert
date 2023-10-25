@@ -41,19 +41,21 @@ It's possible to create additional sensors using the service `oref_alert.add_sen
 
 [![Open your Home Assistant instance and show your service developer tools with a specific service selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.add_sensor)
 
-The selected areas of an additional sensor can be different (non overlapping) than the primary sensor. Additional sensors can be re-created for changing their configuration (there is no edit page).
+The selected areas of an additional sensor can be different (non overlapping) than the primary sensor. Additional sensors can be re-added (with the same name) for overriding their configuration (there is no edit page).
+
+The service `oref_alert.remove_sensor` can be used for deleting an additioanl sensor. The service can be accessed via this My button:
+
+[![Open your Home Assistant instance and show your service developer tools with a specific service selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.remove_sensor)
 
 ## Additional Attributes
 
-`binary_sensor.oref_alert` has the following extra attributes:
+All sensors have the following extra attributes:
 1. `Areas`: the list of areas provided by the user.
 2. `Alert max age`: as configured by the user.
 3. `Selected areas active alerts`: when the sensor is `on`, the alerts are listed here. 
 4. `Selected areas alerts`: active and inactive alerts in the selected areas.
 5. `Country active alerts`: all active alerts in Israel.
 6. `Country alerts`: all alerts in Israel.
-
-Additional sensors have no extra attributes.
 
 ## Usages
 
