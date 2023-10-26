@@ -73,7 +73,7 @@ trigger:
 action:
   - variables:
       current: "{{ state_attr('binary_sensor.oref_alert', 'country_active_alerts') | map(attribute='data') | list }}"
-      previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | list }}"
+      previous: "{{ (trigger.from_state.attributes.country_active_alerts if trigger is defined else []) | map(attribute='data') | list }}"
       alerts: "{{ current | reject('in', previous) | unique | sort | list }}"
   - condition: "{{ alerts | length > 0 }}"
   - service: notify.mobile_app_amits_iphone
