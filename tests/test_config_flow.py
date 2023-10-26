@@ -28,7 +28,7 @@ DEFAULT_OPTIONS = {
     CONF_ON_ICON: DEFAULT_ON_ICON,
     CONF_OFF_ICON: DEFAULT_OFF_ICON,
 }
-DEFAULT_SENSORS = {"dummy": ["dummt"]}
+DEFAULT_SENSORS = {"dummy": ["dummy"]}
 
 
 async def test_config_flow_defaults(hass: HomeAssistant) -> None:
