@@ -8,6 +8,8 @@
 
 ![Project Maintenance](https://img.shields.io/badge/maintainer-Amit%20Finkelstein-blue.svg?style=for-the-badge)
 
+***A demo (in Hebrew) of the installation, configuration and usage can be found [here](https://youtu.be/uT77BKvOSyw).***
+
 The integrartion provides `binary_sensor.oref_alert` which truns on when an alert is reported by the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud Haoref). The sensor monitors the alerts in the user selected areas. An alert is considered active for a certain period of time as configured by the user (10 minutes by default).
 The integraion is installed and configured via the user interface. There is no YAML or templates involved.
 
@@ -73,7 +75,7 @@ trigger:
 action:
   - variables:
       current: "{{ state_attr('binary_sensor.oref_alert', 'country_active_alerts') | map(attribute='data') | list }}"
-      previous: "{{ (trigger.from_state.attributes.country_active_alerts if trigger is defined else []) | map(attribute='data') | list }}"
+      previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | list }}"
       alerts: "{{ current | reject('in', previous) | unique | sort | list }}"
   - condition: "{{ alerts | length > 0 }}"
   - service: notify.mobile_app_amits_iphone
