@@ -1,4 +1,4 @@
-"""AREAS metadata constant."""
+"""GENERATED FILE. DO NOT EDIT MANUALLY."""
 
 AREAS = {
     "אבו סנאן",

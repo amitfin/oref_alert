@@ -1,4 +1,4 @@
-"""CITY_ALL_AREAS metadata constant."""
+"""GENERATED FILE. DO NOT EDIT MANUALLY."""
 
 CITY_ALL_AREAS = {
     "אשדוד - כל האזורים": [

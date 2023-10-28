@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """Generate the metadata files."""
-import requests
 import subprocess
+from typing import Any
 import yaml
+
+import requests
 
 OUTPUT_DIRECTORY = "/workspaces/oref_alert/custom_components/oref_alert/metadata/"
 AREAS_OUTPUT = OUTPUT_DIRECTORY + "areas.py"
 AREAS_AND_GROUPS_OUTPUT = OUTPUT_DIRECTORY + "areas_and_groups.py"
 CITY_ALL_AREAS_OUTPUT = OUTPUT_DIRECTORY + "city_all_areas.py"
+AREA_TO_MIGUN_TIME_OUTPUT = OUTPUT_DIRECTORY + "area_to_migun_time.py"
 DISTRICT_TO_AREAS_OUTPUT = OUTPUT_DIRECTORY + "district_to_areas.py"
 SERVICES_YAML = "/workspaces/oref_alert/custom_components/oref_alert/services.yaml"
 CITIES_MIX_URL = "https://www.oref.org.il/Shared/Ajax/GetCitiesMix.aspx"
@@ -23,6 +26,7 @@ class OrefMetadata:
 
     def __init__(self) -> None:
         """Initialize the object."""
+        self._cities_mix: list[Any] = requests.get(CITIES_MIX_URL, timeout=5).json()
         self._backend_areas: list[str] = self._get_areas()
         self._areas_no_group = list(
             filter(
@@ -31,6 +35,7 @@ class OrefMetadata:
             )
         )
         self._city_to_areas: dict[str, list[str]] = self._city_to_areas_map()
+        self._area_to_migun_time: dict[str, int] = self._area_to_migun_time_map()
         self._district_to_areas = self._district_to_areas_map()
         self._areas_and_groups = (
             self._areas_no_group
@@ -42,13 +47,12 @@ class OrefMetadata:
 
     def _get_areas(self) -> list[str]:
         """Return the list of areas."""
-        cities_mix = requests.get(CITIES_MIX_URL, timeout=5).json()
         areas = list(
             {
                 area["label_he"].replace(
                     CITY_ALL_ARES_SUFFIX_TYPO, CITY_ALL_ARES_SUFFIX
                 )
-                for area in cities_mix
+                for area in self._cities_mix
             }
         )
         areas.sort()
@@ -79,6 +83,16 @@ class OrefMetadata:
             city_to_areas[city + CITY_ALL_ARES_SUFFIX] = city_areas
         return city_to_areas
 
+    def _area_to_migun_time_map(self) -> dict[str, int]:
+        """Build a mpa between a city and the migun time."""
+        migun_time = {
+            area["label_he"].replace(
+                CITY_ALL_ARES_SUFFIX_TYPO, CITY_ALL_ARES_SUFFIX
+            ): int(area["migun_time"])
+            for area in self._cities_mix
+        }
+        return {area: migun_time[area] for area in sorted(migun_time.keys())}
+
     def _get_districts(self) -> list:
         """Return the list of districts."""
         districts = requests.get(DISTRICTS_URL, timeout=5).json()
@@ -88,7 +102,7 @@ class OrefMetadata:
         """Build the map between districts and their areas."""
         districts = self._get_districts()
         district_to_areas = {}
-        district_names = [district["areaname"] for district in districts]
+        district_names = list({district["areaname"] for district in districts})
         district_names.sort()
         for district in district_names:
             district_areas = []
@@ -107,6 +121,7 @@ class OrefMetadata:
         for file_name, variable_name, variable_data in (
             (AREAS_AND_GROUPS_OUTPUT, "AREAS_AND_GROUPS", self._areas_and_groups),
             (CITY_ALL_AREAS_OUTPUT, "CITY_ALL_AREAS", self._city_to_areas),
+            (AREA_TO_MIGUN_TIME_OUTPUT, "AREA_TO_MIGUN_TIME", self._area_to_migun_time),
             (DISTRICT_TO_AREAS_OUTPUT, "DISTRICT_AREAS", self._district_to_areas),
             (
                 AREAS_OUTPUT,
@@ -119,7 +134,7 @@ class OrefMetadata:
                 "w",
                 encoding="utf-8",
             ) as output:
-                output.write(f'"""{variable_name} metadata constant."""\n\n')
+                output.write('"""GENERATED FILE. DO NOT EDIT MANUALLY."""\n\n')
                 output.write(f"{variable_name} = {variable_data}")
 
         with open(

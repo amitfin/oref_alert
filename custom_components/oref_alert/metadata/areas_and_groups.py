@@ -1,4 +1,4 @@
-"""AREAS_AND_GROUPS metadata constant."""
+"""GENERATED FILE. DO NOT EDIT MANUALLY."""
 
 AREAS_AND_GROUPS = [
     "אבו סנאן",
