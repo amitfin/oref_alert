@@ -103,7 +103,7 @@ action:
   - variables:
       current: "{{ states('sensor.oref_alert_time_to_shelter') | int(-1) }}"
       previous: "{{ trigger.from_state.state | int(-1) }}"
-  - condition: "{{ current > 0 and previous > 0 }}"
+  - condition: "{{ (current | int) > 0 and (previous | int) > 0 }}"
   - condition: "{{ ((current | int) // 5) != ((previous | int) // 5) }}"
   - service: tts.google_translate_say
     data:
