@@ -73,9 +73,10 @@ The integration creates an additional set of non-binary sensors holding the time
 
 The basic usage is to trigger an automation rule when the binary sensor is changing from `off` to `on`. Some ideas for the `actions` section can be: play a song in smart speakers (less stressful), open the lights and TV in the shelter, etc'. It's also possible to trigger an alert when the sensor is getting back from `on` to `off` for getting an indication when it's safe to get out of the shelter.
 
-Here is an advance usage for getting mobile notifications on any alert in the country (can also be created via the UI):
+Here is an advanced usage for getting mobile notifications on any alert in the country (can also be created via the UI):
 ```
-id: Oref Alert Country Notifications
+alias: Oref Alert Country Notifications
+id: oref_alert_country_notifications
 trigger:
   - platform: state
     entity_id: binary_sensor.oref_alert
@@ -92,9 +93,10 @@ action:
 mode: queued
 ```
 
-And here is another advance usage for counting down (every 5 seconds) the time to shelter:
+And here is another advanced usage for counting down (every 5 seconds) the time to shelter:
 ```
-id: Oref Alert Time To Shelter Countdown
+alias: Oref Alert Time To Shelter Countdown
+id: oref_alert_time_to_shelter_countdown
 trigger:
   - platform: state
     entity_id: sensor.oref_alert_time_to_shelter
