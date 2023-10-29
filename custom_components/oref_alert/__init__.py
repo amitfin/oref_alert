@@ -21,6 +21,8 @@ from .const import (
 from .config_flow import AREAS_CONFIG
 from .coordinator import OrefAlertDataUpdateCoordinator
 
+PLATFORMS = (Platform.BINARY_SENSOR, Platform.SENSOR)
+
 ADD_SENSOR_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_NAME): selector.TextSelector(),
@@ -51,9 +53,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         DATA_COORDINATOR: coordinator,
     }
-    await hass.config_entries.async_forward_entry_setups(
-        entry, (Platform.BINARY_SENSOR,)
-    )
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(config_entry_update_listener))
 
     async def add_sensor(service_call: ServiceCall) -> None:
@@ -114,6 +114,4 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     hass.data[DOMAIN].pop(entry.entry_id)
     hass.services.async_remove(DOMAIN, ADD_SENSOR_SERVICE)
-    return await hass.config_entries.async_unload_platforms(
-        entry, (Platform.BINARY_SENSOR,)
-    )
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
