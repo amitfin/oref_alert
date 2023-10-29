@@ -36,7 +36,6 @@ There are 5 configuration fields, but only the first one doesn't have a good def
 
 <kbd><img src="https://github.com/amitfin/oref_alert/assets/19599059/2422d891-15f5-4393-b713-59d09f20c308" width="400"></kbd>
 
-
 ## Additional Sensors
 
 It's possible to create additional sensors using the service `oref_alert.add_sensor`. The service can be accessed via this My button:
@@ -63,7 +62,7 @@ All sensors have the following extra attributes:
 
 ## Time To Shelter Sensors
 
-The integration creates an additional set of non-binary sensors holding the time to shelter. The initial `state` of this sensor is according to the instructions provided by Pikud Haoref for the selected area (e.g. 90 seconds in the middle of Israel). The `state` of the sensor decrements as time passes, and it becomes "unknown" once it reaches -60 seconds (one minute past due). The sensor has the following extra attributes:
+The integration creates an additional set of non-binary sensors holding the time to shelter. The initial `state` of the sensor is according to the instructions of Pikud Haoref for the selected area (e.g. 90 seconds in the middle of Israel). The `state` of the sensor decrements as time passes, and it becomes `unknown` once it reaches -60 seconds (one minute past due). The sensor has the following extra attributes:
 1. `Area`: the name of the area.
 2. `Time to shelter`: as provided by Pikud Haoref for the selected area (constant value).
 3. `Alert`: the active alert (when there is such).
@@ -95,21 +94,19 @@ mode: queued
 
 And here is another advance usage for counting down (every 5 seconds) the time to shelter:
 ```
-id: Oref Alert Shelter Countdown
+id: Oref Alert Time To Shelter Countdown
 trigger:
   - platform: state
     entity_id: sensor.oref_alert_time_to_shelter
 action:
   - variables:
-      current: "{{ states('sensor.oref_alert_time_to_shelter') | int(-1) }}"
-      previous: "{{ trigger.from_state.state | int(-1) }}"
-  - condition: "{{ (current | int) > 0 and (previous | int) > 0 }}"
-  - condition: "{{ ((current | int) // 5) != ((previous | int) // 5) }}"
+      time_to_shelter: "{{ states('sensor.oref_alert_time_to_shelter') | int(-1) }}"
+  - condition: "{{ time_to_shelter >= 0 and time_to_shelter % 5 == 0}}"
   - service: tts.google_translate_say
     data:
       entity_id: media_player.shelter_speaker
       language: iw
-      message: "{{ current }}"
+      message: "{{ time_to_shelter }}"
 mode: queued
 ```
 
