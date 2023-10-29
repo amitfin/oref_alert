@@ -71,7 +71,7 @@ The integration creates an additional set of non-binary sensors holding the time
 
 ## Usages
 
-The basic usage is to trigger an automation rule when the binary sensor is changing from `off` to `on`. Some ideas for the `actions` section can be: play a song in smart speakers (less stressful), open the lights and TV in the shelter, etc'. It's also possible to trigger an alert when the sensor is getting back from `on` to `off` for getting an indication when it's safe to get out of the shelter.
+The basic usage is to trigger an automation rule when the binary sensor is turning `on`. Some ideas for the `actions` section can be: play a song (less stressful), open the lights and TV in the shelter, etc'. It's also possible to trigger an alert when the sensor is turning `off` for getting an indication when it's safe to get out of the shelter.
 
 Here is an advanced usage for getting mobile notifications on any alert in the country (can also be created via the UI):
 ```
