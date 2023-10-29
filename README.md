@@ -61,6 +61,15 @@ All sensors have the following extra attributes:
 5. `Country active alerts`: all active alerts in Israel.
 6. `Country alerts`: all alerts in Israel.
 
+## Time To Shelter Sensors
+
+The integration creates an additional set of non-binary sensors holding the time to shelter. The initial `state` of this sensor is according to the instructions provided by Pikud Haoref for the selected area (e.g. 90 seconds in the middle of Israel). The `state` of the sensor decrements as time passes, and it becomes "unknown" once it reaches -60 seconds (one minute past due). The sensor has the following extra attributes:
+1. `Area`: the name of the area.
+2. `Time to shelter`: as provided by Pikud Haoref for the selected area (constant value).
+3. `Alert`: the active alert (when there is such).
+
+*Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest.*
+
 ## Usages
 
 The basic usage is to trigger an automation rule when the binary sensor is changing from `off` to `on`. Some ideas for the `actions` section can be: play a song in smart speakers (less stressful), open the lights and TV in the shelter, etc'. It's also possible to trigger an alert when the sensor is getting back from `on` to `off` for getting an indication when it's safe to get out of the shelter.
@@ -81,6 +90,26 @@ action:
   - service: notify.mobile_app_amits_iphone
     data:
       message: "התרעות פיקוד העורף: {{ alerts | join(' | ') }}"
+mode: queued
+```
+
+And here is another advance usage for counting down (every 5 seconds) the time to shelter:
+```
+id: Oref Alert Shelter Countdown
+trigger:
+  - platform: state
+    entity_id: sensor.oref_alert_time_to_shelter
+action:
+  - variables:
+      current: "{{ states('sensor.oref_alert_time_to_shelter') | int(-1) }}"
+      previous: "{{ trigger.from_state.state | int(-1) }}"
+  - condition: "{{ current > 0 and previous > 0 }}"
+  - condition: "{{ ((current | int) // 5) != ((previous | int) // 5) }}"
+  - service: tts.google_translate_say
+    data:
+      entity_id: media_player.shelter_speaker
+      language: iw
+      message: "{{ current }}"
 mode: queued
 ```
 
