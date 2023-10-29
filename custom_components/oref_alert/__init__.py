@@ -13,11 +13,9 @@ from .const import (
     ADD_SENSOR_SERVICE,
     REMOVE_SENSOR_SERVICE,
     CONF_AREAS,
-    CONF_POLL_INTERVAL,
     CONF_SENSORS,
     DATA_COORDINATOR,
     DOMAIN,
-    DEFAULT_POLL_INTERVAL,
     TITLE,
 )
 from .config_flow import AREAS_CONFIG
@@ -48,9 +46,7 @@ REMOVE_SENSOR_SCHEMA = vol.Schema(
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up entity from a config entry."""
-    coordinator = OrefAlertDataUpdateCoordinator(
-        hass, entry.options.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL)
-    )
+    coordinator = OrefAlertDataUpdateCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         DATA_COORDINATOR: coordinator,

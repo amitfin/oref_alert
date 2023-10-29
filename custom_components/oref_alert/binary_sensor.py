@@ -10,7 +10,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-import homeassistant.util.dt as dt_util
 
 from .area_utils import expand_areas_and_groups
 from .const import (
@@ -28,10 +27,9 @@ from .const import (
     ATTR_SELECTED_AREAS_ALERTS,
     DEFAULT_OFF_ICON,
     DEFAULT_ON_ICON,
-    IST,
     OREF_ALERT_UNIQUE_ID,
 )
-from .coordinator import OrefAlertDataUpdateCoordinator
+from .coordinator import OrefAlertCoordinatorData, OrefAlertDataUpdateCoordinator
 
 
 async def async_setup_entry(
@@ -77,7 +75,7 @@ class AlertSensor(
         self._config_entry = config_entry
         self._on_icon = self._config_entry.options.get(CONF_ON_ICON, DEFAULT_ON_ICON)
         self._off_icon = self._config_entry.options.get(CONF_OFF_ICON, DEFAULT_OFF_ICON)
-        self._alerts = coordinator.data
+        self._data: OrefAlertCoordinatorData = coordinator.data
         if not name:
             self._attr_name = TITLE
             self._attr_unique_id = OREF_ALERT_UNIQUE_ID
@@ -94,14 +92,14 @@ class AlertSensor(
     @callback
     def _handle_coordinator_update(self) -> None:
         """Take the data from the coordinator."""
-        self._alerts = self.coordinator.data
+        self._data = self.coordinator.data
         super()._handle_coordinator_update()
 
     @property
     def is_on(self) -> bool:
         """Return True is sensor is on."""
-        for alert in self._alerts:
-            if self.is_selected_area(alert) and self.is_active(alert):
+        for alert in self._data.active_alerts:
+            if self.is_selected_area(alert):
                 return True
         return False
 
@@ -113,30 +111,20 @@ class AlertSensor(
     @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return additional attributes."""
-        selected_areas_alerts = [
-            alert for alert in self._alerts if self.is_selected_area(alert)
-        ]
-        active_alerts = [alert for alert in self._alerts if self.is_active(alert)]
         return {
             CONF_AREAS: self._areas,
             CONF_ALERT_MAX_AGE: self._config_entry.options[CONF_ALERT_MAX_AGE],
             ATTR_SELECTED_AREAS_ACTIVE_ALERTS: [
-                alert for alert in selected_areas_alerts if alert in active_alerts
+                alert
+                for alert in self._data.active_alerts
+                if self.is_selected_area(alert)
             ],
-            ATTR_SELECTED_AREAS_ALERTS: selected_areas_alerts,
-            ATTR_COUNTRY_ACTIVE_ALERTS: [
-                alert for alert in self._alerts if alert in active_alerts
+            ATTR_SELECTED_AREAS_ALERTS: [
+                alert for alert in self._data.alerts if self.is_selected_area(alert)
             ],
-            ATTR_COUNTRY_ALERTS: self._alerts,
+            ATTR_COUNTRY_ACTIVE_ALERTS: self._data.active_alerts,
+            ATTR_COUNTRY_ALERTS: self._data.alerts,
         }
-
-    def is_active(self, alert: dict[str, str]) -> bool:
-        """Check the age of the alert."""
-        return dt_util.parse_datetime(alert["alertDate"]).replace(
-            tzinfo=IST
-        ).timestamp() > dt_util.now().timestamp() - (
-            self._config_entry.options[CONF_ALERT_MAX_AGE] * 60
-        )
 
     def is_selected_area(self, alert: dict[str, str]) -> bool:
         """Check is the alert is among the selected areas."""
