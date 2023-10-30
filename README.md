@@ -82,7 +82,7 @@ Here is a simple [markdown card](https://www.home-assistant.io/dashboards/markdo
 ```
 type: markdown
 content: >-
-  {% for alert in state_attr('binary_sensor.oref_alert', 'country_active_alerts') %}
+  {% for alert in (state_attr('binary_sensor.oref_alert', 'country_active_alerts') or []) %}
     <ha-alert alert-type="error">
       {{ alert['data'] }} 
       [{{ alert['title'] }}]
