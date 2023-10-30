@@ -71,7 +71,23 @@ The integration creates an additional set of non-binary sensors holding the time
 
 ## Usages
 
-The basic usage is to trigger an automation rule when the binary sensor is turning `on`. Some ideas for the `actions` section can be: play a song (less stressful), open the lights and TV in the shelter, etc'. It's also possible to trigger an alert when the sensor is turning `off` for getting an indication when it's safe to get out of the shelter.
+The basic usage is to trigger an automation rule when the binary sensor is turning `on`. Some ideas for the `actions` section can be: play a song (can be less stressful when choosing the right song and setting the volume properly), open the lights and TV in the shelter, etc'. It's also possible to trigger an alert when the sensor is turning `off` for getting an indication when it's safe to get out of the shelter.
+
+Here is a simple [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting all active alerts in Israel:
+
+```
+type: markdown
+content: >-
+  {% for alert in state_attr('binary_sensor.oref_alert', 'country_active_alerts') %}
+    <ha-alert alert-type="error">
+      {{ alert['data'] }} 
+      [{{ alert['title'] }}]
+      ({{ alert['alertDate'] | as_timestamp | timestamp_custom('%H:%M:%S') }})
+    </ha-alert>
+  {% endfor %}
+```
+
+<img width="291" alt="image" src="https://github.com/amitfin/oref_alert/assets/19599059/facc8ad9-431e-4f99-a1d1-e4488aa5be97">
 
 Here is an advanced usage for getting mobile notifications on any alert in the country (can also be created via the UI):
 ```
@@ -93,7 +109,7 @@ action:
 mode: queued
 ```
 
-And here is another advanced usage for counting down (every 5 seconds) the time to shelter:
+Here is another advanced usage for counting down (every 5 seconds) the time to shelter:
 ```
 alias: Oref Alert Time To Shelter Countdown
 id: oref_alert_time_to_shelter_countdown
