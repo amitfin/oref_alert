@@ -112,3 +112,39 @@ async def test_active_alerts(
     inactive_alert, active_alert = load_json_fixture("multi_alerts_history.json")
     assert coordinator.data.alerts == [active_alert, inactive_alert]
     assert coordinator.data.active_alerts == [active_alert]
+
+
+async def test_real_time_timestamp(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test real time timestamp."""
+    freezer.move_to("2023-10-07 06:30:00+03:00")
+    mock_urls(aioclient_mock, "single_alert_real_time.json", None)
+    coordinator = OrefAlertDataUpdateCoordinator(hass, DEFAULT_CONFIG_ENTRY)
+    await coordinator.async_config_entry_first_refresh()
+    coordinator.async_add_listener(lambda: None)
+    for _ in range(12):
+        # Timestamp should stay the same for the 1st minute.
+        assert coordinator.data.alerts[0]["alertDate"] == "2023-10-07 06:30:00"
+        freezer.tick(timedelta(seconds=5))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+    assert coordinator.data.alerts[0]["alertDate"] == "2023-10-07 06:31:00"
+    await coordinator.async_shutdown()
+
+
+async def test_real_time_in_history(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test de-dup of real time and history."""
+    freezer.move_to("2023-10-07 06:30:00+03:00")
+    mock_urls(
+        aioclient_mock, "single_alert_real_time.json", "history_same_as_real_time.json"
+    )
+    coordinator = OrefAlertDataUpdateCoordinator(hass, DEFAULT_CONFIG_ENTRY)
+    await coordinator.async_config_entry_first_refresh()
+    assert len(coordinator.data.alerts) == 1
