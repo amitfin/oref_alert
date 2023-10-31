@@ -125,13 +125,13 @@ async def test_real_time_timestamp(
     coordinator = OrefAlertDataUpdateCoordinator(hass, DEFAULT_CONFIG_ENTRY)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
-    for _ in range(12):
-        # Timestamp should stay the same for the 1st minute.
+    for _ in range(24):
+        # Timestamp should stay the same for the first 2 minutes.
         assert coordinator.data.alerts[0]["alertDate"] == "2023-10-07 06:30:00"
         freezer.tick(timedelta(seconds=5))
         async_fire_time_changed(hass)
         await hass.async_block_till_done()
-    assert coordinator.data.alerts[0]["alertDate"] == "2023-10-07 06:31:00"
+    assert coordinator.data.alerts[0]["alertDate"] == "2023-10-07 06:32:00"
     await coordinator.async_shutdown()
 
 

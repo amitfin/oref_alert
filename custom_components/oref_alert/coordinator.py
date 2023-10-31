@@ -32,6 +32,7 @@ OREF_HEADERS = {
     "Content-Type": "application/json",
 }
 REQUEST_RETRIES = 3
+REAL_TIME_ALERT_LOGIC_WINDOW = 2
 
 
 @dataclass
@@ -115,9 +116,13 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator):
         """Convert current alerts payload to history format."""
         now = dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S")
         category = int(current["cat"])
-        history_last_minute_alerts = self._recent_alerts(history, 1)
+        history_last_minute_alerts = self._recent_alerts(
+            history, REAL_TIME_ALERT_LOGIC_WINDOW
+        )
         previous_last_minute_alerts = (
-            self._recent_alerts(self.data.active_alerts, 1) if self.data else []
+            self._recent_alerts(self.data.active_alerts, REAL_TIME_ALERT_LOGIC_WINDOW)
+            if self.data
+            else []
         )
         alerts = []
         for area in current["data"]:
