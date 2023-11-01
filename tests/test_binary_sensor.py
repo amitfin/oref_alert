@@ -74,7 +74,7 @@ async def test_state(
     await hass.async_block_till_done()
     assert hass.states.get(ENTITY_ID).state == STATE_ON
 
-    freezer.move_to("2023-10-07 06:40:00+03:00")
+    freezer.move_to("2023-10-07 06:40:01+03:00")
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     assert hass.states.get(ENTITY_ID).state == STATE_OFF

@@ -154,13 +154,16 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator):
         )
 
     def _recent_alerts(self, alerts: list[Any], max_age: int) -> list[Any]:
-        """Return the list of recent alerts."""
+        """Return the list of recent alerts, assuming the input is sorted."""
         earliest_alert = dt_util.now().timestamp() - max_age * 60
-        return [
-            alert
-            for alert in alerts
-            if dt_util.parse_datetime(alert["alertDate"])
-            .replace(tzinfo=IST)
-            .timestamp()
-            > earliest_alert
-        ]
+        recent_alerts = []
+        for alert in alerts:
+            if (
+                dt_util.parse_datetime(alert["alertDate"])
+                .replace(tzinfo=IST)
+                .timestamp()
+                < earliest_alert
+            ):
+                break
+            recent_alerts.append(alert)
+        return recent_alerts
