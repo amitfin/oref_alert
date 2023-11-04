@@ -69,6 +69,14 @@ The integration creates an additional set of non-binary sensors which monitor th
 
 *Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the service `oref_alert.add_sensor`.*
 
+## Synthetic Alert
+
+Synthetic alerts are useful for testing purposes. The service `oref_alert.synthetic_alert` can be used to create a synthetic alert. The service can be accessed via this My button:
+
+[![Open your Home Assistant instance and show your service developer tools with a specific service selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.synthetic_alert)
+
+*Note: a synthetic alert is an additional alert. It doesn't override or hide any other alert. A synthetic alert disappears after the amount of seconds supplied to the custom service. This is different from a regular alert which disappears only after 24 hours.*
+
 ## Usages
 
 The basic usage is to trigger an automation rule when the binary sensor is turning `on`. Some ideas for the `actions` section can be: play a song (can be less stressful when choosing the right song and setting the volume properly), open the lights and TV in the shelter, etc'. It's also possible to trigger an alert when the sensor is turning `off` for getting an indication when it's safe to get out of the shelter.
