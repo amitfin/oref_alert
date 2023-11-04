@@ -55,6 +55,20 @@
                     "description": "The entity to remove"
                 }
             }
+        },
+        "synthetic_alert": {
+            "name": "Create Synthetic Alert",
+            "description": "Create a synthetic alert for testing purposes",
+            "fields": {
+                "area": {
+                    "name": "Area",
+                    "description": "The area of the alert"
+                },
+                "duration": {
+                    "name": "Duration",
+                    "description": "Alert's existence time (seconds)"
+                }
+            }
         }
     }
 }

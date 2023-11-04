@@ -145,6 +145,9 @@ class OrefMetadata:
         services["add_sensor"]["fields"]["areas"]["selector"]["select"][
             "options"
         ] = self._areas_and_groups
+        services["synthetic_alert"]["fields"]["area"]["selector"]["select"][
+            "options"
+        ] = self._areas_no_group
         with open(
             SERVICES_YAML,
             "w",

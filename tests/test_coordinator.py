@@ -4,6 +4,7 @@ import pytest
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+import homeassistant.util.dt as dt_util
 
 from freezegun.api import FrozenDateTimeFactory
 from pytest_homeassistant_custom_component.common import (
@@ -17,6 +18,7 @@ from custom_components.oref_alert.const import (
     CONF_ALERT_MAX_AGE,
     CONF_POLL_INTERVAL,
     DEFAULT_ALERT_MAX_AGE,
+    IST,
 )
 from custom_components.oref_alert.coordinator import OrefAlertDataUpdateCoordinator
 
@@ -148,3 +150,34 @@ async def test_real_time_in_history(
     coordinator = OrefAlertDataUpdateCoordinator(hass, DEFAULT_CONFIG_ENTRY)
     await coordinator.async_config_entry_first_refresh()
     assert len(coordinator.data.alerts) == 1
+
+
+async def test_synthetic_alert(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test synthetic alert."""
+    coordinator = OrefAlertDataUpdateCoordinator(
+        hass,
+        MockConfigEntry(
+            domain=DOMAIN, options={CONF_POLL_INTERVAL: 1, CONF_ALERT_MAX_AGE: 100}
+        ),
+    )
+    await coordinator.async_config_entry_first_refresh()
+    coordinator.async_add_listener(lambda: None)
+    assert len(coordinator.data.alerts) == 0
+    synthetic_alert_time = dt_util.now(IST)
+    coordinator.add_synthetic_alert("קריית שמונה", 40)
+    freezer.tick(timedelta(seconds=39))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert len(coordinator.data.alerts) == 1
+    assert coordinator.data.alerts[0]["data"] == "קריית שמונה"
+    assert coordinator.data.alerts[0]["alertDate"] == synthetic_alert_time.strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+    freezer.tick(timedelta(seconds=2))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert len(coordinator.data.alerts) == 0
+    await coordinator.async_shutdown()

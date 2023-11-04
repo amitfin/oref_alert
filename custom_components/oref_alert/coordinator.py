@@ -76,8 +76,9 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator):
                 )
             ),
         )
-        self._config_entry = config_entry
+        self._config_entry: ConfigEntry = config_entry
         self._http_client = async_get_clientsession(hass)
+        self._synthetic_alerts: dict[int, dict[Any]] = {}
 
     async def _async_update_data(self) -> OrefAlertCoordinatorData:
         """Request the data from Oref servers.."""
@@ -87,6 +88,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator):
         history = history or []
         alerts = self._current_to_history_format(current, history) if current else []
         alerts.extend(history)
+        alerts.extend(self._get_synthetic_alerts())
         alerts.sort(key=cmp_to_key(_sort_alerts))
         for unrecognized_area in {alert["data"] for alert in alerts}.difference(AREAS):
             LOGGER.error("Alert has an unrecognized area: %s", unrecognized_area)
@@ -167,3 +169,22 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator):
                 break
             recent_alerts.append(alert)
         return recent_alerts
+
+    def add_synthetic_alert(self, area: str, duration: int) -> None:
+        """Add a synthetic alert for testing purposes."""
+        now = dt_util.now(IST)
+        self._synthetic_alerts[int(now.timestamp()) + duration] = {
+            "alertDate": now.strftime("%Y-%m-%d %H:%M:%S"),
+            "title": "התרעה סינטטית לצורכי בדיקות",
+            "data": area,
+            "category": 1,
+        }
+
+    def _get_synthetic_alerts(self) -> list[dict[Any]]:
+        """Return the list of synthetic alerts."""
+        now = dt_util.now().timestamp()
+        for expired in [
+            timestamp for timestamp in self._synthetic_alerts if timestamp < now
+        ]:
+            del self._synthetic_alerts[expired]
+        return self._synthetic_alerts.values()

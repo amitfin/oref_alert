@@ -1,17 +1,32 @@
 """The tests for the init file."""
 from __future__ import annotations
 
-from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, Platform, STATE_OFF
+from datetime import timedelta
+
+from homeassistant.const import (
+    CONF_ENTITY_ID,
+    CONF_NAME,
+    Platform,
+    STATE_OFF,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry
 
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from freezegun.api import FrozenDateTimeFactory
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    async_fire_time_changed,
+)
 
 from custom_components.oref_alert.const import (
     ADD_SENSOR_SERVICE,
     REMOVE_SENSOR_SERVICE,
+    SYNTHETIC_ALERT_SERVICE,
+    ATTR_COUNTRY_ALERTS,
     CONF_ALERT_MAX_AGE,
+    CONF_AREA,
     CONF_AREAS,
+    CONF_DURATION,
     CONF_SENSORS,
     DOMAIN,
     TITLE,
@@ -78,3 +93,26 @@ async def test_add_remove_sensor_service(hass: HomeAssistant) -> None:
     await hass.async_block_till_done()
     assert hass.states.get(entity_id) is None
     assert entity_reg.async_get(entity_id) is None
+
+
+async def test_synthetic_alert_service(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test synthetic_alert custom service."""
+    config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+    await hass.services.async_call(
+        DOMAIN,
+        SYNTHETIC_ALERT_SERVICE,
+        {CONF_AREA: "קריית שמונה", CONF_DURATION: 20},
+        blocking=True,
+    )
+    freezer.tick(timedelta(seconds=10))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    state = hass.states.get(ENTITY_ID)
+    assert len(state.attributes[ATTR_COUNTRY_ALERTS]) == 1
+    assert state.attributes[ATTR_COUNTRY_ALERTS][0]["data"] == "קריית שמונה"

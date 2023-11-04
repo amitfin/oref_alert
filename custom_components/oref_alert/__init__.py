@@ -7,12 +7,16 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import entity_registry, selector
+import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.service import async_register_admin_service
 
 from .const import (
     ADD_SENSOR_SERVICE,
     REMOVE_SENSOR_SERVICE,
+    SYNTHETIC_ALERT_SERVICE,
     CONF_AREAS,
+    CONF_AREA,
+    CONF_DURATION,
     CONF_SENSORS,
     DATA_COORDINATOR,
     DOMAIN,
@@ -20,6 +24,7 @@ from .const import (
 )
 from .config_flow import AREAS_CONFIG
 from .coordinator import OrefAlertDataUpdateCoordinator
+from .metadata.areas import AREAS
 
 PLATFORMS = (Platform.BINARY_SENSOR, Platform.SENSOR)
 
@@ -41,6 +46,14 @@ REMOVE_SENSOR_SCHEMA = vol.Schema(
                 ),
             )
         ),
+    },
+    extra=vol.ALLOW_EXTRA,
+)
+
+SYNTHETIC_ALERT_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_AREA): vol.All(cv.string, vol.In(AREAS)),
+        vol.Required(CONF_DURATION, default=10): cv.positive_int,
     },
     extra=vol.ALLOW_EXTRA,
 )
@@ -100,6 +113,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         REMOVE_SENSOR_SERVICE,
         remove_sensor,
         REMOVE_SENSOR_SCHEMA,
+    )
+
+    async def synthetic_alert(service_call: ServiceCall) -> None:
+        """Add a synthetic alert for testing purposes."""
+        coordinator.add_synthetic_alert(
+            service_call.data[CONF_AREA], service_call.data[CONF_DURATION]
+        )
+
+    async_register_admin_service(
+        hass,
+        DOMAIN,
+        SYNTHETIC_ALERT_SERVICE,
+        synthetic_alert,
+        SYNTHETIC_ALERT_SCHEMA,
     )
 
     return True

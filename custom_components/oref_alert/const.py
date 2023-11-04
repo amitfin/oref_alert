@@ -17,8 +17,10 @@ ATTR_SELECTED_AREAS_ALERTS: Final = "selected_areas_alerts"
 ATTR_SELECTED_AREAS_ACTIVE_ALERTS: Final = "selected_areas_active_alerts"
 ATTR_TIME_TO_SHELTER: Final = "time_to_shelter"
 
+CONF_AREA: Final = "area"
 CONF_AREAS: Final = "areas"
 CONF_ALERT_MAX_AGE: Final = "alert_max_age"
+CONF_DURATION: Final = "duration"
 CONF_OFF_ICON: Final = "off_icon"
 CONF_ON_ICON: Final = "on_icon"
 CONF_POLL_INTERVAL: Final = "poll_interval"
@@ -31,6 +33,7 @@ DEFAULT_POLL_INTERVAL: Final = 5
 
 ADD_SENSOR_SERVICE: Final = "add_sensor"
 REMOVE_SENSOR_SERVICE: Final = "remove_sensor"
+SYNTHETIC_ALERT_SERVICE: Final = "synthetic_alert"
 OREF_ALERT_UNIQUE_ID: Final = "oref_alert"
 TIME_TO_SHELTER_ID_SUFFIX: Final = "time_to_shelter"
 TIME_TO_SHELTER_NAME_SUFFIX: Final = "Time To Shelter"
