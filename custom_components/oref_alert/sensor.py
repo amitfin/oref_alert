@@ -24,10 +24,13 @@ from .const import (
     IST,
     TITLE,
     ATTR_ALERT,
+    CONF_ALERT_MAX_AGE,
     CONF_AREAS,
     CONF_SENSORS,
     ATTR_AREA,
     ATTR_TIME_TO_SHELTER,
+    END_TIME_ID_SUFFIX,
+    END_TIME_NAME_SUFFIX,
     TIME_TO_SHELTER_ID_SUFFIX,
     TIME_TO_SHELTER_NAME_SUFFIX,
 )
@@ -43,48 +46,45 @@ async def async_setup_entry(
 ) -> None:
     """Initialize config entry."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
+    entities = [
+        (name, areas[0])
+        for name, areas in [(TITLE, config_entry.options[CONF_AREAS])]
+        + list(config_entry.options.get(CONF_SENSORS, {}).items())
+        if len(areas) == 1 and areas[0] in AREAS
+    ]
     async_add_entities(
         [
-            TimeToShelterSensor(name, areas[0], coordinator)
-            for name, areas in [(TITLE, config_entry.options[CONF_AREAS])]
-            + list(config_entry.options.get(CONF_SENSORS, {}).items())
-            if len(areas) == 1 and areas[0] in AREAS
+            TimeToShelterSensor(name, area, coordinator, config_entry)
+            for name, area in entities
+        ]
+        + [
+            AlertEndTimeSensor(name, area, coordinator, config_entry)
+            for name, area in entities
         ]
     )
 
 
-class TimeToShelterSensor(
+class OrefAlertTimerSensor(
     CoordinatorEntity[OrefAlertDataUpdateCoordinator], SensorEntity
 ):
-    """Representation of the time to shelter sensor."""
+    """Representation of a timer sensor."""
 
     _attr_has_entity_name = True
-    _entity_component_unrecorded_attributes = frozenset(
-        {
-            ATTR_AREA,
-            ATTR_TIME_TO_SHELTER,
-            ATTR_ALERT,
-        }
-    )
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_native_unit_of_measurement = UnitOfTime.SECONDS
     _attr_icon = "mdi:timer-sand"
 
     def __init__(
         self,
-        name: str,
         area: str,
         coordinator: OrefAlertDataUpdateCoordinator,
+        config_entry: ConfigEntry,
     ) -> None:
         """Initialize object with defaults."""
         super().__init__(coordinator)
         self._data: OrefAlertCoordinatorData = coordinator.data
+        self._config_entry = config_entry
         self._area: str = area
-        self._migun_time: int = AREA_TO_MIGUN_TIME[area]
-        self._attr_name = f"{name} {TIME_TO_SHELTER_NAME_SUFFIX}"
-        self._attr_unique_id = (
-            f"{name.lower().replace(' ', '_')}_" f"{TIME_TO_SHELTER_ID_SUFFIX}"
-        )
         self._unsub_update: Callable[[], None] | None = None
 
     @callback
@@ -93,37 +93,21 @@ class TimeToShelterSensor(
         self._data = self.coordinator.data
         super()._handle_coordinator_update()
 
-    @property
-    def native_value(self) -> int | None:
-        """Return the remaning seconds to shelter."""
-        if alert := self._get_alert():
-            alert_timestamp = (
-                dt_util.parse_datetime(alert["alertDate"])
-                .replace(tzinfo=IST)
-                .timestamp()
-            )
-            alert_age = dt_util.now().timestamp() - alert_timestamp
-            time_to_shelter = int(self._migun_time - alert_age)
-            # Count till "-60" (a minute past the time to shelter).
-            if time_to_shelter > -60:
-                self._update_in_1_second()
-                return time_to_shelter
-        return None
-
-    @property
-    def extra_state_attributes(self) -> Mapping[str, Any] | None:
-        """Return additional attributes."""
-        return {
-            ATTR_AREA: self._area,
-            ATTR_TIME_TO_SHELTER: self._migun_time,
-            ATTR_ALERT: self._get_alert(),
-        }
-
     def _get_alert(self) -> dict[str, Any] | None:
         """Return the latest active alert in the area."""
         for alert in self._data.active_alerts:
             if alert["data"] == self._area:
                 return alert
+        return None
+
+    def _get_alert_timestamp(self) -> float | None:
+        """Return the timestamp of the latest active alert in the area."""
+        if alert := self._get_alert():
+            return (
+                dt_util.parse_datetime(alert["alertDate"])
+                .replace(tzinfo=IST)
+                .timestamp()
+            )
         return None
 
     async def async_will_remove_from_hass(self) -> None:
@@ -149,3 +133,97 @@ class TimeToShelterSensor(
             self._async_update,
             dt_util.now() + timedelta(seconds=1),
         )
+
+
+class TimeToShelterSensor(OrefAlertTimerSensor):
+    """Representation of the time to shelter sensor."""
+
+    _entity_component_unrecorded_attributes = frozenset(
+        {
+            ATTR_AREA,
+            ATTR_TIME_TO_SHELTER,
+            ATTR_ALERT,
+        }
+    )
+
+    def __init__(
+        self,
+        name: str,
+        area: str,
+        coordinator: OrefAlertDataUpdateCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        """Initialize object with defaults."""
+        super().__init__(area, coordinator, config_entry)
+        self._migun_time: int = AREA_TO_MIGUN_TIME[area]
+        self._attr_name = f"{name} {TIME_TO_SHELTER_NAME_SUFFIX}"
+        self._attr_unique_id = (
+            f"{name.lower().replace(' ', '_')}_" f"{TIME_TO_SHELTER_ID_SUFFIX}"
+        )
+
+    @property
+    def native_value(self) -> int | None:
+        """Return the remaning seconds to shelter."""
+        if alert_timestamp := self._get_alert_timestamp():
+            alert_age = dt_util.now().timestamp() - alert_timestamp
+            time_to_shelter = int(self._migun_time - alert_age)
+            # Count till "-60" (a minute past the time to shelter).
+            if time_to_shelter > -60:
+                self._update_in_1_second()
+                return time_to_shelter
+        return None
+
+    @property
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
+        """Return additional attributes."""
+        return {
+            ATTR_AREA: self._area,
+            ATTR_TIME_TO_SHELTER: self._migun_time,
+            ATTR_ALERT: self._get_alert(),
+        }
+
+
+class AlertEndTimeSensor(OrefAlertTimerSensor):
+    """Representation of the alert end time sensor."""
+
+    _entity_component_unrecorded_attributes = frozenset(
+        {
+            ATTR_AREA,
+            CONF_ALERT_MAX_AGE,
+            ATTR_ALERT,
+        }
+    )
+
+    def __init__(
+        self,
+        name: str,
+        area: str,
+        coordinator: OrefAlertDataUpdateCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        """Initialize object with defaults."""
+        super().__init__(area, coordinator, config_entry)
+        self._max_age: int = self._config_entry.options[CONF_ALERT_MAX_AGE]
+        self._attr_name = f"{name} {END_TIME_NAME_SUFFIX}"
+        self._attr_unique_id = (
+            f"{name.lower().replace(' ', '_')}_" f"{END_TIME_ID_SUFFIX}"
+        )
+
+    @property
+    def native_value(self) -> int | None:
+        """Return the remaning seconds till the end of the alert."""
+        if alert_timestamp := self._get_alert_timestamp():
+            alert_age = dt_util.now().timestamp() - alert_timestamp
+            alert_end_time = int(self._max_age * 60 - alert_age)
+            self._update_in_1_second()
+            return alert_end_time
+        return None
+
+    @property
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
+        """Return additional attributes."""
+        return {
+            ATTR_AREA: self._area,
+            CONF_ALERT_MAX_AGE: self._max_age,
+            ATTR_ALERT: self._get_alert(),
+        }
