@@ -107,9 +107,6 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator):
                         return None
             except Exception as ex:  # pylint: disable=broad-except
                 exc_info = ex
-        LOGGER.warning(
-            "Update failed after %d retries", REQUEST_RETRIES, exc_info=exc_info
-        )
         raise exc_info
 
     def _current_to_history_format(
