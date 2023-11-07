@@ -75,11 +75,11 @@ async def test_server_down_during_init(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test errors on HTTP requests during initialization."""
-    mock_urls(aioclient_mock, None, None, exc=Exception("test"))
+    mock_urls(aioclient_mock, None, None, exc=Exception("dummy log for testing"))
     coordinator = OrefAlertDataUpdateCoordinator(hass, DEFAULT_CONFIG_ENTRY)
     with pytest.raises(ConfigEntryNotReady):
         await coordinator.async_config_entry_first_refresh()
-    assert "Update failed after 3 retries" in caplog.text
+    assert "dummy log for testing" in caplog.text
 
 
 async def test_alerts_processing(
