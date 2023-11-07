@@ -8,5 +8,8 @@
   "documentation": "https://github.com/amitfin/oref_alert",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/amitfin/oref_alert/issues",
+  "requirements": [
+    "shapely==2.0.2"
+  ],
   "version": "1.0.0"
 }

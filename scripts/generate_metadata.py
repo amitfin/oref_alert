@@ -1,20 +1,26 @@
 #!/usr/bin/env python3
 """Generate the metadata files."""
+import json
 import subprocess
 from typing import Any
 import yaml
+import zipfile
 
 import requests
 
 OUTPUT_DIRECTORY = "/workspaces/oref_alert/custom_components/oref_alert/metadata/"
-AREAS_OUTPUT = OUTPUT_DIRECTORY + "areas.py"
-AREAS_AND_GROUPS_OUTPUT = OUTPUT_DIRECTORY + "areas_and_groups.py"
-CITY_ALL_AREAS_OUTPUT = OUTPUT_DIRECTORY + "city_all_areas.py"
-AREA_TO_MIGUN_TIME_OUTPUT = OUTPUT_DIRECTORY + "area_to_migun_time.py"
-DISTRICT_TO_AREAS_OUTPUT = OUTPUT_DIRECTORY + "district_to_areas.py"
+AREAS_OUTPUT = "areas.py"
+AREAS_AND_GROUPS_OUTPUT = "areas_and_groups.py"
+CITY_ALL_AREAS_OUTPUT = "city_all_areas.py"
+AREA_TO_MIGUN_TIME_OUTPUT = "area_to_migun_time.py"
+DISTRICT_TO_AREAS_OUTPUT = "district_to_areas.py"
+AREA_TO_POLYGON_OUTPUT = "area_to_polygon.json"
 SERVICES_YAML = "/workspaces/oref_alert/custom_components/oref_alert/services.yaml"
 CITIES_MIX_URL = "https://www.oref.org.il/Shared/Ajax/GetCitiesMix.aspx"
 DISTRICTS_URL = "https://www.oref.org.il/Shared/Ajax/GetDistricts.aspx"
+TZEVAADOM_VERSIONS_URL = "https://api.tzevaadom.co.il/lists-versions"
+TZEVAADOM_CITIES_URL = "https://www.tzevaadom.co.il/static/cities.json?v="
+TZEVAADOM_POLYGONS_URL = "https://www.tzevaadom.co.il/static/polygons.json?v="
 CITY_ALL_ARES_SUFFIX = " - כל האזורים"
 # "Hadera all areas" is listed with this typo:
 CITY_ALL_ARES_SUFFIX_TYPO = " כל - האזורים"
@@ -44,6 +50,7 @@ class OrefMetadata:
         )
         self._areas_and_groups.sort()
         assert len(self._areas_and_groups) == len(set(self._areas_and_groups))
+        self._area_to_polygon = self._get_tzevaadom_polygons()
 
     def _get_areas(self) -> list[str]:
         """Return the list of areas."""
@@ -118,6 +125,21 @@ class OrefMetadata:
             district_to_areas[DISTRICT_PREFIX + district] = district_areas
         return district_to_areas
 
+    def _get_tzevaadom_polygons(self) -> dict[str, list[list[float]]]:
+        """Get area polygons from tzevaadom."""
+        versions = requests.get(TZEVAADOM_VERSIONS_URL, timeout=5).json()
+        cities = requests.get(
+            f"{TZEVAADOM_CITIES_URL}{versions['cities']}", timeout=5
+        ).json()["cities"]
+        polygons = requests.get(TZEVAADOM_POLYGONS_URL, timeout=5).json()
+        city_list = list(set(cities.keys()).intersection(set(self._areas_no_group)))
+        city_list.sort()
+        return {
+            city: polygons[str(cities[city]["id"])]
+            for city in city_list
+            if str(cities[city]["id"]) in polygons
+        }
+
     def generate(self) -> None:
         """Generate the output files."""
         for file_name, variable_name, variable_data in (
@@ -132,7 +154,7 @@ class OrefMetadata:
             ),
         ):
             with open(
-                file_name,
+                f"{OUTPUT_DIRECTORY}{file_name}",
                 "w",
                 encoding="utf-8",
             ) as output:
@@ -156,6 +178,23 @@ class OrefMetadata:
             encoding="utf-8",
         ) as output:
             yaml.dump(services, output, sort_keys=False, indent=2, allow_unicode=True)
+
+        with zipfile.ZipFile(
+            f"{OUTPUT_DIRECTORY}{AREA_TO_POLYGON_OUTPUT}.zip",
+        ) as zip_file, zip_file.open(AREA_TO_POLYGON_OUTPUT) as json_file:
+            previous_area_to_polygon = json.load(json_file)
+
+        if self._area_to_polygon != previous_area_to_polygon:
+            with zipfile.ZipFile(
+                f"{OUTPUT_DIRECTORY}{AREA_TO_POLYGON_OUTPUT}.zip",
+                "w",
+                compression=zipfile.ZIP_DEFLATED,
+                compresslevel=9,
+            ) as zip_file:
+                zip_file.writestr(
+                    AREA_TO_POLYGON_OUTPUT,
+                    json.dumps(self._area_to_polygon, ensure_ascii=False),
+                )
 
         subprocess.run(["/usr/local/py-utils/bin/black", OUTPUT_DIRECTORY], check=False)
 
