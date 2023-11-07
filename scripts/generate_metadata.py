@@ -107,8 +107,7 @@ class OrefMetadata:
         for district in district_names:
             district_areas = []
             for area in districts:
-                if area["areaname"] == district:
-                    assert area["label_he"] in self._areas_no_group
+                if area["areaname"] == district and area["label_he"] in self._areas_no_group:
                     assert area["label_he"] not in self._city_to_areas
                     district_areas.append(area["label_he"])
             district_areas = list(set(district_areas))
