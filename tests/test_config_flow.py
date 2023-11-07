@@ -44,7 +44,7 @@ async def test_config_flow_defaults(hass: HomeAssistant) -> None:
 
     result2 = await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        user_input=DEFAULT_OPTIONS,
+        user_input={CONF_AREAS: []},
     )
 
     assert result2["type"] == FlowResultType.CREATE_ENTRY

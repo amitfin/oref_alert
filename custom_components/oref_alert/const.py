@@ -29,7 +29,7 @@ CONF_SENSORS: Final = "sensors"
 DEFAULT_ALERT_MAX_AGE: Final = 10
 DEFAULT_ON_ICON: Final = "mdi:home-alert-outline"
 DEFAULT_OFF_ICON: Final = "mdi:home-outline"
-DEFAULT_POLL_INTERVAL: Final = 5
+DEFAULT_POLL_INTERVAL: Final = 2
 
 ADD_SENSOR_SERVICE: Final = "add_sensor"
 REMOVE_SENSOR_SERVICE: Final = "remove_sensor"

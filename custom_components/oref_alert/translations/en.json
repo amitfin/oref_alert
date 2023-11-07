@@ -5,12 +5,11 @@
             "user": {
                 "title": "Setup Oref Alert",
                 "data": {
-                    "areas": "Select areas to monitor (Hebrew only)",
-                    "alert_max_age": "Alert's active time period (minutes)",
-                    "poll_interval": "Update frequency (seconds)",
-                    "on_icon": "Active alerts in selected areas icon",
-                    "off_icon": "Normal time icon"
+                    "areas": "Select areas to monitor (Hebrew only)"
                 }
+            },
+            "confirm": {
+                "description": "Do you want to start setup?"
             }
         },
         "abort": {
