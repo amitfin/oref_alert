@@ -27,10 +27,16 @@ The integration should also be added to the configuration. This can be done via 
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=oref_alert)
 
-There are 5 configuration fields, but only the first one doesn't have a good default:
+The setup identifies the area according to the [Home location in the Zones settings](https://my.home-assistant.io/redirect/zones/) (the latitude and longitude coordinates). If the detection fails, the user is asked to select the area manually.
+
+Once the component is installed, it's possible to control additional parameters using the Configure dialog which can be accessed via this My button:
+
+[![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=oref_alert)
+
+There are 5 configuration fields:
 1. Selected areas: list of areas to monitor. It's also possible to select a district (מחוז) and all-areas (כל האזורים) for cities with sub-areas.
 2. Max age of an alert: this is the alert's active time period (in minutes). The default is 10 minutes.
-3. Update frequency: the time to wait between updates of the sensor (in seconds). The default is 5 seconds.
+3. Update frequency: the time to wait between updates of the sensor (in seconds). The default is 2 seconds.
 4. On icon: the icon to be used when there are active alerts in one of the selected areas. This is the icon which is displayed when the state of the binary sensor is "on".
 5. Off icon: the icon to  be used when the state of the binary sensor is "off".
 
