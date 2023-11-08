@@ -84,6 +84,20 @@ The integration creates an additional set of sensors which monitor the time to t
 
 *Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the service `oref_alert.add_sensor`.*
 
+## Geo Location Entities
+
+Geo-location entities are created for every active alert in Israel (regardless of the selected areas). These entities exist while the corresponding alert is active (10 minutes by default). The [map card](https://www.home-assistant.io/dashboards/map) can be used to present the entities on a map. `oref_alert` should be added to [geo_location_sources](https://www.home-assistant.io/dashboards/map/#geo_location_sources), and [auto_fit](https://www.home-assistant.io/dashboards/map/#auto_fit) should be set to true:
+
+```
+type: map
+entities: []
+auto_fit: true
+geo_location_sources:
+  - oref_alert
+```
+
+This will create a map presenting all active alerts in Israel. (Below you can find an explanation on how to add a textual element for the data.)
+
 ## Synthetic Alert
 
 Synthetic alerts are useful for testing purposes. The service `oref_alert.synthetic_alert` can be used to create a synthetic alert. The service can be accessed via this My button:
