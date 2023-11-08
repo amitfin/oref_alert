@@ -86,7 +86,10 @@ class OrefAlertConfigFlow(ConfigFlow, domain=DOMAIN):
                     CONF_OFF_ICON: DEFAULT_OFF_ICON,
                 },
             )
-        return self.async_show_form(step_id="confirm")
+        return self.async_show_form(
+            step_id="confirm",
+            description_placeholders={"area": self._auto_detected_area},
+        )
 
     @staticmethod
     @callback

@@ -66,6 +66,31 @@ async def test_second_config_flow(hass: HomeAssistant) -> None:
     assert result["reason"] == "single_instance_allowed"
 
 
+async def test_area_auto_detect(hass: HomeAssistant) -> None:
+    """Test area auto detect flow."""
+    hass.config.latitude = 32.072
+    hass.config.longitude = 34.879
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": SOURCE_USER},
+    )
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "confirm"
+    assert result["description_placeholders"] == {"area": "פתח תקווה"}
+    assert "flow_id" in result
+
+    result2 = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        user_input={},
+    )
+
+    assert result2["type"] == FlowResultType.CREATE_ENTRY
+    assert result2["title"] == TITLE
+    assert result2["options"] == {**DEFAULT_OPTIONS, **{CONF_AREAS: ["פתח תקווה"]}}
+
+
 async def test_options_flow(hass: HomeAssistant) -> None:
     """Test the options flow."""
     options = {**DEFAULT_OPTIONS, **{CONF_SENSORS: DEFAULT_SENSORS}}
