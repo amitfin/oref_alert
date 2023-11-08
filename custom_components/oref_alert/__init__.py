@@ -26,7 +26,7 @@ from .config_flow import AREAS_CONFIG
 from .coordinator import OrefAlertDataUpdateCoordinator
 from .metadata.areas import AREAS
 
-PLATFORMS = (Platform.BINARY_SENSOR, Platform.SENSOR)
+PLATFORMS = (Platform.BINARY_SENSOR, Platform.SENSOR, Platform.GEO_LOCATION)
 
 ADD_SENSOR_SCHEMA = vol.Schema(
     {

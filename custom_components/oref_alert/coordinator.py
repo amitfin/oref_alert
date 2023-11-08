@@ -61,7 +61,7 @@ def _compare_fields(alert: dict[str, Any], area: str, catgoery: int) -> bool:
     return alert["data"] == area and alert["category"] == catgoery
 
 
-class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator):
+class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorData]):
     """Class to manage fetching Oref Alert data."""
 
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry):

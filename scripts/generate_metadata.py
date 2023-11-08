@@ -15,6 +15,7 @@ CITY_ALL_AREAS_OUTPUT = "city_all_areas.py"
 AREA_TO_MIGUN_TIME_OUTPUT = "area_to_migun_time.py"
 DISTRICT_TO_AREAS_OUTPUT = "district_to_areas.py"
 AREA_TO_POLYGON_OUTPUT = "area_to_polygon.json"
+AREA_INFO_OUTPUT = "area_info.py"
 SERVICES_YAML = "/workspaces/oref_alert/custom_components/oref_alert/services.yaml"
 CITIES_MIX_URL = "https://www.oref.org.il/Shared/Ajax/GetCitiesMix.aspx"
 DISTRICTS_URL = "https://www.oref.org.il/Shared/Ajax/GetDistricts.aspx"
@@ -25,6 +26,22 @@ CITY_ALL_ARES_SUFFIX = " - כל האזורים"
 # "Hadera all areas" is listed with this typo:
 CITY_ALL_ARES_SUFFIX_TYPO = " כל - האזורים"
 DISTRICT_PREFIX = "מחוז "
+
+MISSING_CITIES = {
+    "ביר הדאג'": {"lat": 31.0237, "long": 34.7091, "en": "Bir Hadaj"},
+    "גני מודיעין": {"lat": 31.9304, "long": 35.0177, "en": "Ganei Modi'in"},
+    "גבעון החדשה": {"lat": 31.8482, "long": 35.1580, "en": "Giv'on HaHadasha"},
+    "מלאה": {"lat": 32.5629, "long": 35.2366, "en": "Mle'a"},
+    "כרם בן שמן": {"lat": 31.9585, "long": 34.9340, "en": "Kerem Ben Shemen"},
+    "ניר יפה": {"lat": 32.5698, "long": 35.2448, "en": "Nir Yafeh"},
+    "נאות חובב": {"lat": 31.1336, "long": 34.7898, "en": "Ne'ot Hovav"},
+    "גדיש": {"lat": 32.5588, "long": 35.2444, "en": "Gadish"},
+    "רמת רחל": {"lat": 31.7395, "long": 35.2178, "en": "Ramat Rachel"},
+    "פקיעין החדשה": {"lat": 32.9852, "long": 35.3215, "en": "Peki'in HaHadasha"},
+    'בסמ"ה': {"lat": 32.5307, "long": 35.1025, "en": "Basma"},
+    "מרכז אומן": {"lat": 32.5638, "long": 35.2425, "en": "Merkaz Omen"},
+    "עין חרוד איחוד": {"lat": 32.5631, "long": 35.3917, "en": "Ein Harod"},
+}
 
 
 class OrefMetadata:
@@ -50,7 +67,9 @@ class OrefMetadata:
         )
         self._areas_and_groups.sort()
         assert len(self._areas_and_groups) == len(set(self._areas_and_groups))
-        self._area_to_polygon = self._get_tzevaadom_polygons()
+        self._tzeva_cities, self._tzeva_polygons = self._get_tzevaadom_data()
+        self._area_to_polygon = self._get_area_to_polygon()
+        self._area_info = self._get_area_info()
 
     def _get_areas(self) -> list[str]:
         """Return the list of areas."""
@@ -125,20 +144,48 @@ class OrefMetadata:
             district_to_areas[DISTRICT_PREFIX + district] = district_areas
         return district_to_areas
 
-    def _get_tzevaadom_polygons(self) -> dict[str, list[list[float]]]:
-        """Get area polygons from tzevaadom."""
+    def _get_tzevaadom_data(self) -> (Any, Any):
+        """Get tzevaadom metadata content."""
         versions = requests.get(TZEVAADOM_VERSIONS_URL, timeout=5).json()
-        cities = requests.get(
-            f"{TZEVAADOM_CITIES_URL}{versions['cities']}", timeout=5
-        ).json()["cities"]
-        polygons = requests.get(TZEVAADOM_POLYGONS_URL, timeout=5).json()
-        city_list = list(set(cities.keys()).intersection(set(self._areas_no_group)))
+        return (
+            requests.get(
+                f"{TZEVAADOM_CITIES_URL}{versions['cities']}", timeout=5
+            ).json()["cities"],
+            requests.get(TZEVAADOM_POLYGONS_URL, timeout=5).json(),
+        )
+
+    def _get_area_to_polygon(self) -> dict[str, list[list[float]]]:
+        """Get area polygons from tzevaadom."""
+        city_list = list(
+            set(self._tzeva_cities.keys()).intersection(set(self._areas_no_group))
+        )
         city_list.sort()
         return {
-            city: polygons[str(cities[city]["id"])]
+            city: self._tzeva_polygons[str(self._tzeva_cities[city]["id"])]
             for city in city_list
-            if str(cities[city]["id"]) in polygons
+            if str(self._tzeva_cities[city]["id"]) in self._tzeva_polygons
         }
+
+    def _get_area_info(self) -> dict[str, list[list[float]]]:
+        """Get area additional information from tzevaadom."""
+        areas = {}
+        assert (
+            len(
+                set(self._areas_no_group)
+                - set(self._tzeva_cities.keys())
+                - set(MISSING_CITIES.keys())
+            )
+        ) == 0
+        for area in self._areas_no_group:
+            if area in self._tzeva_cities:
+                areas[area] = {
+                    "lat": self._tzeva_cities[area]["lat"],
+                    "long": self._tzeva_cities[area]["lng"],
+                    "en": self._tzeva_cities[area]["en"],
+                }
+            else:
+                areas[area] = MISSING_CITIES[area]
+        return areas
 
     def generate(self) -> None:
         """Generate the output files."""
@@ -152,6 +199,7 @@ class OrefMetadata:
                 "AREAS",
                 str(self._areas_no_group).replace("[", "{").replace("]", "}"),
             ),
+            (AREA_INFO_OUTPUT, "AREA_INFO", self._area_info),
         ):
             with open(
                 f"{OUTPUT_DIRECTORY}{file_name}",
