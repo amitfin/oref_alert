@@ -8,7 +8,7 @@
 
 ![Project Maintenance](https://img.shields.io/badge/maintainer-Amit%20Finkelstein-blue.svg?style=for-the-badge)
 
-***Hebrew demos of the installation, configuration and usage can be found here: [part1](https://youtu.be/uT77BKvOSyw), [part2](https://youtu.be/rFkKvkv3JuQ). A blogpost with Hebrew instructions can be found [here](https://homeusmart.blogspot.com/2023/10/haoref-heb.html). A blogpost with Russian instructions can be found [here](https://homeusmart.blogspot.com/2023/10/haidf.html).***
+***Hebrew demos of the installation, configuration and usage can be found here: [part1](https://youtu.be/uT77BKvOSyw), [part2](https://youtu.be/rFkKvkv3JuQ), [part3](https://youtu.be/xZpMudcdZv8). A blogpost with Hebrew instructions can be found [here](https://homeusmart.blogspot.com/2023/10/haoref-heb.html). A blogpost with Russian instructions can be found [here](https://homeusmart.blogspot.com/2023/10/haidf.html).***
 
 The integrartion provides `binary_sensor.oref_alert` which truns on when an alert is reported by the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud Haoref). The sensor monitors the alerts in the user selected areas. An alert is considered active for a certain period of time as configured by the user (10 minutes by default).
 The integraion is installed and configured via the user interface. There is no YAML or templates involved.
