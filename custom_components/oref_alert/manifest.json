@@ -9,6 +9,7 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/amitfin/oref_alert/issues",
   "requirements": [
+    "haversine==2.8.0",
     "shapely==2.0.2"
   ],
   "version": "1.0.0"

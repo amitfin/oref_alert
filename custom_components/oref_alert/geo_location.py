@@ -1,9 +1,11 @@
 """Support for oref alerts geo location events."""
 from __future__ import annotations
 
+from haversine import haversine
+
 from homeassistant.components.geo_location import GeolocationEvent
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
+from homeassistant.const import Platform, UnitOfLength
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -32,6 +34,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
 
     def __init__(
         self,
+        hass: HomeAssistant,
         area: str,
     ) -> None:
         """Initialize entity."""
@@ -39,6 +42,11 @@ class OrefAlertLocationEvent(GeolocationEvent):
         self._attr_unique_id = f"{OREF_ALERT_UNIQUE_ID}_{LOCATION_ID_SUFFIX}_{slugify(AREA_INFO[area]['en'])}"
         self._attr_latitude = AREA_INFO[area]["lat"]
         self._attr_longitude = AREA_INFO[area]["long"]
+        self._attr_unit_of_measurement = UnitOfLength.KILOMETERS
+        self._attr_distance = haversine(
+            (hass.config.latitude, hass.config.longitude),
+            (self._attr_latitude, self._attr_longitude),
+        )
 
     @property
     def suggested_object_id(self) -> str | None:
@@ -89,6 +97,10 @@ class OrefAlertLocationEventManager:
         for to_delete in previous - current:
             self._location_events[to_delete]._async_remove_self()
             del self._location_events[to_delete]
-        to_add = {area: OrefAlertLocationEvent(area) for area in current - previous}
+        to_add = {
+            area: OrefAlertLocationEvent(self._hass, area)
+            for area in current - previous
+            if area in AREA_INFO
+        }
         self._async_add_entities(to_add.values())
         self._location_events.update(to_add)

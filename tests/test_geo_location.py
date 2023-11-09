@@ -62,11 +62,13 @@ async def test_entity(
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test entity state."""
+    hass.config.latitude = 32.072
+    hass.config.longitude = 34.879
     freezer.move_to("2023-10-07 06:30:00+03:00")
     mock_urls(aioclient_mock, None, "single_alert_history.json")
     config_id = await async_setup(hass)
     state = hass.states.get(f"{ENTITY_ID}_be_eri")
-    assert state.state == "unknown"
+    assert state.state == "80.7"
     assert state.name == "בארי"
     assert state.attributes[CONF_SOURCE] == DOMAIN
     assert state.attributes[ATTR_LATITUDE] == 31.4245
