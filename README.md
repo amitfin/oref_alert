@@ -96,7 +96,11 @@ geo_location_sources:
   - oref_alert
 ```
 
-This will create a map presenting all active alerts in Israel. (Below you can find an explanation on how to add a textual element for the data.)
+This will create a map presenting all active alerts in Israel:
+
+<kbd><img width="625" alt="image" src="https://github.com/amitfin/oref_alert/assets/19599059/6e5345c5-ba6e-45c0-a8fb-e194ba178e63"></kbd>
+
+(Below you can find a another explanation on how to add a textual element for the data.)
 
 ## Synthetic Alert
 
