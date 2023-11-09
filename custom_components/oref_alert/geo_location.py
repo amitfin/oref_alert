@@ -5,7 +5,8 @@ from haversine import haversine
 
 from homeassistant.components.geo_location import GeolocationEvent
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform, UnitOfLength
+from homeassistant.components.geo_location import ATTR_SOURCE
+from homeassistant.const import ATTR_LATITUDE, ATTR_LONGITUDE, Platform, UnitOfLength
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -31,6 +32,13 @@ class OrefAlertLocationEvent(GeolocationEvent):
     _attr_should_poll = False
     _attr_source = DOMAIN
     _attr_has_entity_name = True
+    _entity_component_unrecorded_attributes = frozenset(
+        {
+            ATTR_SOURCE,
+            ATTR_LATITUDE,
+            ATTR_LONGITUDE,
+        }
+    )
 
     def __init__(
         self,
