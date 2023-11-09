@@ -1,18 +1,33 @@
 """Support for oref alerts geo location events."""
 from __future__ import annotations
 
+from datetime import datetime
+
 from haversine import haversine
 
 from homeassistant.components.geo_location import GeolocationEvent
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.geo_location import ATTR_SOURCE
-from homeassistant.const import ATTR_LATITUDE, ATTR_LONGITUDE, Platform, UnitOfLength
+from homeassistant.const import (
+    ATTR_DATE,
+    ATTR_LATITUDE,
+    ATTR_LONGITUDE,
+    Platform,
+    UnitOfLength,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import slugify
+import homeassistant.util.dt as dt_util
 
-from .const import DATA_COORDINATOR, DOMAIN, OREF_ALERT_UNIQUE_ID, LOCATION_ID_SUFFIX
+from .const import (
+    DATA_COORDINATOR,
+    DOMAIN,
+    IST,
+    OREF_ALERT_UNIQUE_ID,
+    LOCATION_ID_SUFFIX,
+)
 from .coordinator import OrefAlertDataUpdateCoordinator
 from .metadata.area_info import AREA_INFO
 
@@ -37,6 +52,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
             ATTR_SOURCE,
             ATTR_LATITUDE,
             ATTR_LONGITUDE,
+            ATTR_DATE,
         }
     )
 
@@ -44,6 +60,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
         self,
         hass: HomeAssistant,
         area: str,
+        date: datetime | None,
     ) -> None:
         """Initialize entity."""
         self._attr_name = area
@@ -55,6 +72,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
             (hass.config.latitude, hass.config.longitude),
             (self._attr_latitude, self._attr_longitude),
         )
+        self._attr_extra_state_attributes = {ATTR_DATE: date}
 
     @property
     def suggested_object_id(self) -> str | None:
@@ -97,6 +115,13 @@ class OrefAlertLocationEventManager:
             if entry.domain == Platform.GEO_LOCATION:
                 entity_registry.async_remove(entry.entity_id)
 
+    def _alert_date(self, area: str) -> datetime | None:
+        """Return the alert time as a datetime object."""
+        for alert in self._coordinator.data.active_alerts:
+            if alert["data"] == area:
+                return dt_util.parse_datetime(alert["alertDate"]).replace(tzinfo=IST)
+        return None
+
     @callback
     def _async_update(self) -> None:
         """Add and/or remove entities according to the new active alerts list."""
@@ -106,7 +131,7 @@ class OrefAlertLocationEventManager:
             self._location_events[to_delete]._async_remove_self()
             del self._location_events[to_delete]
         to_add = {
-            area: OrefAlertLocationEvent(self._hass, area)
+            area: OrefAlertLocationEvent(self._hass, area, self._alert_date(area))
             for area in current - previous
             if area in AREA_INFO
         }

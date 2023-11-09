@@ -7,6 +7,7 @@ from typing import Any
 from freezegun.api import FrozenDateTimeFactory
 
 from homeassistant.const import (
+    ATTR_DATE,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     CONF_SOURCE,
@@ -14,6 +15,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntryDisabler
+import homeassistant.util.dt as dt_util
 
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
@@ -73,6 +75,9 @@ async def test_entity(
     assert state.attributes[CONF_SOURCE] == DOMAIN
     assert state.attributes[ATTR_LATITUDE] == 31.4245
     assert state.attributes[ATTR_LONGITUDE] == 34.4926
+    assert state.attributes[ATTR_DATE] == dt_util.parse_datetime(
+        "2023-10-07 06:30:00+03:00"
+    )
     await async_shutdown(hass, config_id)
 
 
