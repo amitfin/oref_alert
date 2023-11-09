@@ -15,6 +15,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntryDisabler
+from homeassistant.helpers import entity_registry as er
 import homeassistant.util.dt as dt_util
 
 from pytest_homeassistant_custom_component.common import (
@@ -90,22 +91,25 @@ async def test_add_remove(
     freezer.move_to("2023-10-07 06:29:00+03:00")
     config_id = await async_setup(hass, {CONF_POLL_INTERVAL: 1})
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 0
+    entity_registry = er.async_get(hass)
+    assert len(er.async_entries_for_config_entry(entity_registry, config_id)) == 3
     mock_urls(aioclient_mock, None, "single_alert_history.json")
     freezer.move_to("2023-10-07 06:30:01+03:00")
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 1
+    assert len(er.async_entries_for_config_entry(entity_registry, config_id)) == 4
     freezer.tick(timedelta(minutes=10))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 0
+    assert len(er.async_entries_for_config_entry(entity_registry, config_id)) == 3
     await async_shutdown(hass, config_id)
 
 
 async def test_clean_start(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
-    freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test cleaning old entities."""
     mock_urls(aioclient_mock, "single_alert_real_time.json", None)

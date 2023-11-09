@@ -123,13 +123,25 @@ class OrefAlertLocationEventManager:
         return None
 
     @callback
+    async def _cleanup_entity_registry(self, ids_to_delete: list[str]) -> None:
+        """Remove entities from the entity registry."""
+        entity_registry = er.async_get(self._hass)
+        for entity_id in ids_to_delete:
+            entity_registry.async_remove(entity_id)
+
+    @callback
     def _async_update(self) -> None:
         """Add and/or remove entities according to the new active alerts list."""
         current = {alert["data"] for alert in self._coordinator.data.active_alerts}
         previous = set(self._location_events.keys())
-        for to_delete in previous - current:
-            self._location_events[to_delete]._async_remove_self()
-            del self._location_events[to_delete]
+
+        to_delete = []
+        for area in previous - current:
+            self._location_events[area]._async_remove_self()
+            to_delete.append(self._location_events[area].entity_id)
+            del self._location_events[area]
+        self._hass.async_create_task(self._cleanup_entity_registry(to_delete))
+
         to_add = {
             area: OrefAlertLocationEvent(self._hass, area, self._alert_date(area))
             for area in current - previous
