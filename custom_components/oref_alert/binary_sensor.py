@@ -5,7 +5,7 @@ from typing import Any
 
 from collections.abc import Mapping
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.components import binary_sensor
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -48,11 +48,12 @@ async def async_setup_entry(
 
 
 class AlertSensor(
-    CoordinatorEntity[OrefAlertDataUpdateCoordinator], BinarySensorEntity
+    CoordinatorEntity[OrefAlertDataUpdateCoordinator], binary_sensor.BinarySensorEntity
 ):
     """Representation of the alert sensor."""
 
     _attr_has_entity_name = True
+    _attr_device_class = binary_sensor.BinarySensorDeviceClass.SAFETY
     _entity_component_unrecorded_attributes = frozenset(
         {
             ATTR_COUNTRY_ACTIVE_ALERTS,
