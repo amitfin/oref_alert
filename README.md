@@ -139,9 +139,34 @@ Here is a simple [markdown card](https://www.home-assistant.io/dashboards/markdo
 ```
 type: markdown
 content: >-
+  {% set icons = {
+    1: "rocket-launch",
+    2: "airplane-alert",
+    3: "chemical-weapon",
+    4: "alert",
+    5: "firework",
+    6: "firework",
+    7: "earth",
+    8: "earth",
+    9: "nuke",
+    10: "shield-home",
+    11: "home-flood",
+    12: "biohazard",
+    13: "update",
+    14: "flash-alert",
+    15: "alert-circle-check",
+    16: "alert-circle-check",
+    17: "alert-circle-check",
+    18: "alert-circle-check",
+    19: "alert-circle-check",
+    20: "alert-circle-check",
+    21: "alert-circle-check",
+    22: "alert-circle-check",                  
+  } %}
   {% for alert in (state_attr('binary_sensor.oref_alert', 'country_active_alerts') or []) %}
     <ha-alert alert-type="error">
-      {{ alert['data'] }} 
+      {{ alert['data'] }}
+      <font color="red"><ha-icon icon="mdi:{{ icons.get(alert['category'], 'alert') }}" /></font>
       [{{ alert['title'] }}]
       ({{ alert['alertDate'] | as_timestamp | timestamp_custom('%H:%M:%S') }})
     </ha-alert>
