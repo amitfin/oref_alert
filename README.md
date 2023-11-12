@@ -116,6 +116,22 @@ The basic usage is to trigger an automation rule when the binary sensor is turni
 
 Below are a few more examples:
 
+### Coloring State Icons
+
+```
+type: entities
+entities:
+  - entity: binary_sensor.oref_alert
+    card_mod:
+      style: |
+        :host {
+          --state-binary_sensor-on-color: red;
+          --state-binary_sensor-off-color: green;
+          }
+```
+
+Note that it depends on the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.
+
 ### Presenting Active Alerts in Israel
 
 Here is a simple [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting all active alerts:
@@ -130,7 +146,14 @@ content: >-
       ({{ alert['alertDate'] | as_timestamp | timestamp_custom('%H:%M:%S') }})
     </ha-alert>
   {% endfor %}
+card_mod:
+  style: |
+    ha-card {
+      direction: rtl;
+    }
 ```
+
+(The `card_mod` section at the bottom is only required when the langugage is English. It forces RTL for this element. Note that it depends on the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.)
 
 <img width="291" alt="image" src="https://github.com/amitfin/oref_alert/assets/19599059/facc8ad9-431e-4f99-a1d1-e4488aa5be97">
 
