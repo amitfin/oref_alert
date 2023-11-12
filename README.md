@@ -180,7 +180,7 @@ card_mod:
 
 (The `card_mod` section at the bottom is only required when the langugage is English. It forces RTL for this element. Note that it depends on the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.)
 
-<img width="291" alt="image" src="https://github.com/amitfin/oref_alert/assets/19599059/facc8ad9-431e-4f99-a1d1-e4488aa5be97">
+<kbd><img width="345" alt="image" src="https://github.com/amitfin/oref_alert/assets/19599059/73e16e08-8989-4a56-8153-02632122a7b8"></kbd>
 
 ### Mobile Notifications
 
