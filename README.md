@@ -42,6 +42,10 @@ There are 5 configuration fields:
 
 <kbd><img src="https://github.com/amitfin/oref_alert/assets/19599059/2422d891-15f5-4393-b713-59d09f20c308" width="400"></kbd>
 
+## All Areas Sensor
+
+`binary_sensor.oref_alert_all_areas` is an additional sensor monitoring any active alert in the country. The sensor is `on` when there is one or more active alerts in Israel.
+
 ## Additional Sensors
 
 It's possible to create additional sensors using the service `oref_alert.add_sensor`. The service can be accessed via this My button:
@@ -129,6 +133,9 @@ entities:
           --state-binary_sensor-off-color: green;
           }
 ```
+
+<kbd>![image](https://github.com/amitfin/oref_alert/assets/19599059/9f6d08f0-8269-499a-9c2d-1fe263257457)</kbd>
+
 
 Note that it depends on the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.
 
