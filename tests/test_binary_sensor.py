@@ -29,6 +29,7 @@ from custom_components.oref_alert.const import (
     CONF_POLL_INTERVAL,
     DOMAIN,
     OREF_ALERT_UNIQUE_ID,
+    ALL_AREAS_ID_SUFFIX,
 )
 
 from .utils import load_json_fixture, mock_urls
@@ -110,6 +111,7 @@ async def test_state_attributes(
     config_id = await async_setup(hass)
     state = hass.states.get(ENTITY_ID)
     active_area_alert = load_json_fixture("single_alert_history.json")
+    assert state.attributes[CONF_ALERT_MAX_AGE] == 10
     assert state.attributes[ATTR_SELECTED_AREAS_ACTIVE_ALERTS] == active_area_alert
     assert state.attributes[ATTR_SELECTED_AREAS_ALERTS] == active_area_alert
     combined_alerts = load_json_fixture("combined_alerts.json")
@@ -209,4 +211,21 @@ async def test_additional_sensor(
     )
     await hass.async_block_till_done()
     assert hass.states.get(f"{ENTITY_ID}_test").state == STATE_ON
+    await async_shutdown(hass, config_id)
+
+
+async def test_all_areas_sensor(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test all-areas sensor."""
+    freezer.move_to("2023-10-10 11:30:00+03:00")
+    mock_urls(aioclient_mock, None, "single_alert_random_area_history.json")
+    config_id = await async_setup(hass)
+    state = hass.states.get(f"{ENTITY_ID}_{ALL_AREAS_ID_SUFFIX}")
+    assert state.state == STATE_ON
+    expected_alerts = load_json_fixture("single_alert_random_area_history.json")
+    assert state.attributes[ATTR_COUNTRY_ACTIVE_ALERTS] == expected_alerts
+    assert state.attributes[ATTR_COUNTRY_ALERTS] == expected_alerts
     await async_shutdown(hass, config_id)
