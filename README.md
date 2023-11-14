@@ -171,12 +171,12 @@ content: >-
     22: "alert-circle-check",                  
   } %}
   {% for alert in (state_attr('binary_sensor.oref_alert', 'country_active_alerts') or []) %}
-    <ha-alert alert-type="error">
+    <p>
+      <font color="red"><ha-icon icon="mdi:{{ icons.get(alert['category'], 'alert') }}"></ha-icon></font>
       {{ alert['data'] }}
-      <font color="red"><ha-icon icon="mdi:{{ icons.get(alert['category'], 'alert') }}" /></font>
       [{{ alert['title'] }}]
       ({{ alert['alertDate'] | as_timestamp | timestamp_custom('%H:%M:%S') }})
-    </ha-alert>
+    </p>
   {% endfor %}
 card_mod:
   style: |
@@ -187,7 +187,7 @@ card_mod:
 
 (The `card_mod` section at the bottom is only required when the langugage is English. It forces RTL for this element. Note that it depends on the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.)
 
-<kbd><img width="345" alt="image" src="https://github.com/amitfin/oref_alert/assets/19599059/73e16e08-8989-4a56-8153-02632122a7b8"></kbd>
+<kbd>![image](https://github.com/amitfin/oref_alert/assets/19599059/b5100fed-5b8a-4102-ac50-d5f3ed264d70)</kbd>
 
 ### Mobile Notifications
 
