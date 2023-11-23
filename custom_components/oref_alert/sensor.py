@@ -163,7 +163,7 @@ class TimeToShelterSensor(OrefAlertTimerSensor):
 
     @property
     def native_value(self) -> int | None:
-        """Return the remaning seconds to shelter."""
+        """Return the remaining seconds to shelter."""
         if alert_timestamp := self._get_alert_timestamp():
             alert_age = dt_util.now().timestamp() - alert_timestamp
             time_to_shelter = int(self._migun_time - alert_age)
@@ -211,7 +211,7 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
 
     @property
     def native_value(self) -> int | None:
-        """Return the remaning seconds till the end of the alert."""
+        """Return the remaining seconds till the end of the alert."""
         if alert_timestamp := self._get_alert_timestamp():
             alert_age = dt_util.now().timestamp() - alert_timestamp
             alert_end_time = int(self._max_age * 60 - alert_age)

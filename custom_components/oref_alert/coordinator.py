@@ -56,9 +56,9 @@ def _sort_alerts(item1: dict[str, Any], item2: dict[str, Any]) -> int:
     return 0
 
 
-def _compare_fields(alert: dict[str, Any], area: str, catgoery: int) -> bool:
+def _compare_fields(alert: dict[str, Any], area: str, category: int) -> bool:
     """Compare an alert with area and category (time is ignored)."""
-    return alert["data"] == area and alert["category"] == catgoery
+    return alert["data"] == area and alert["category"] == category
 
 
 class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorData]):
