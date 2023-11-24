@@ -1,6 +1,7 @@
 name: "Metadata"
 
 on:
+  workflow_dispatch:
   schedule:
     - cron:  "0 0 * * *"
 
@@ -13,7 +14,9 @@ jobs:
           uses: "actions/checkout@v4.1.1"
 
         - name: "Regenerate metadata"
-          run: "scripts/generate_metadata.py"
+          shell: "bash"
+          run: scripts/generate_metadata.py
 
         - name: "Verfiy no changes"
-          run: "git diff --exit-code"
+          shell: "bash"
+          run: git diff --exit-code
