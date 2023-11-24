@@ -1,0 +1,19 @@
+name: "Metadata"
+
+on:
+  schedule:
+    - cron:  "0 0 * * *"
+
+jobs:
+  metadata:
+    name: "Metadata sync"
+    runs-on: "ubuntu-latest"
+    steps:
+        - name: "Checkout the repository"
+          uses: "actions/checkout@v4.1.1"
+
+        - name: "Regenerate metadata"
+          run: "scripts/generate_metadata.py"
+
+        - name: "Verfiy no changes"
+          run: "git diff --exit-code"
