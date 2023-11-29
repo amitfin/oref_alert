@@ -2,6 +2,7 @@
 """Generate the metadata files."""
 import argparse
 import json
+from os import path
 import subprocess
 from typing import Any
 import yaml
@@ -9,7 +10,7 @@ import zipfile
 
 import requests
 
-OUTPUT_DIRECTORY = "/workspaces/oref_alert/custom_components/oref_alert/metadata/"
+RELATIVE_OUTPUT_DIRECTORY = "custom_components/oref_alert/metadata/"
 AREAS_OUTPUT = "areas.py"
 AREAS_AND_GROUPS_OUTPUT = "areas_and_groups.py"
 CITY_ALL_AREAS_OUTPUT = "city_all_areas.py"
@@ -51,6 +52,9 @@ class OrefMetadata:
     def __init__(self) -> None:
         """Initialize the object."""
         self._read_args()
+        self._output_directory = (
+            f"{path.dirname(__file__)}/../{RELATIVE_OUTPUT_DIRECTORY}"
+        )
         self._cities_mix: list[Any] = self._fetch_url_json(CITIES_MIX_URL)
         self._backend_areas: list[str] = self._get_areas()
         self._areas_no_group = list(
@@ -218,7 +222,7 @@ class OrefMetadata:
             (AREA_INFO_OUTPUT, "AREA_INFO", self._area_info),
         ):
             with open(
-                f"{OUTPUT_DIRECTORY}{file_name}",
+                f"{self._output_directory}{file_name}",
                 "w",
                 encoding="utf-8",
             ) as output:
@@ -244,13 +248,13 @@ class OrefMetadata:
             yaml.dump(services, output, sort_keys=False, indent=2, allow_unicode=True)
 
         with zipfile.ZipFile(
-            f"{OUTPUT_DIRECTORY}{AREA_TO_POLYGON_OUTPUT}.zip",
+            f"{self._output_directory}{AREA_TO_POLYGON_OUTPUT}.zip",
         ) as zip_file, zip_file.open(AREA_TO_POLYGON_OUTPUT) as json_file:
             previous_area_to_polygon = json.load(json_file)
 
         if self._area_to_polygon != previous_area_to_polygon:
             with zipfile.ZipFile(
-                f"{OUTPUT_DIRECTORY}{AREA_TO_POLYGON_OUTPUT}.zip",
+                f"{self._output_directory}{AREA_TO_POLYGON_OUTPUT}.zip",
                 "w",
                 compression=zipfile.ZIP_DEFLATED,
                 compresslevel=9,
@@ -260,7 +264,9 @@ class OrefMetadata:
                     json.dumps(self._area_to_polygon, ensure_ascii=False),
                 )
 
-        subprocess.run(["/usr/local/py-utils/bin/black", OUTPUT_DIRECTORY], check=False)
+        subprocess.run(
+            ["/usr/local/py-utils/bin/black", self._output_directory], check=False
+        )
 
 
 if __name__ == "__main__":
