@@ -18,7 +18,7 @@ AREA_TO_MIGUN_TIME_OUTPUT = "area_to_migun_time.py"
 DISTRICT_TO_AREAS_OUTPUT = "district_to_areas.py"
 AREA_TO_POLYGON_OUTPUT = "area_to_polygon.json"
 AREA_INFO_OUTPUT = "area_info.py"
-SERVICES_YAML = "/workspaces/oref_alert/custom_components/oref_alert/services.yaml"
+SERVICES_YAML = "custom_components/oref_alert/services.yaml"
 CITIES_MIX_URL = "https://www.oref.org.il/Shared/Ajax/GetCitiesMix.aspx"
 DISTRICTS_URL = "https://www.oref.org.il/Shared/Ajax/GetDistricts.aspx"
 TZEVAADOM_VERSIONS_URL = "https://api.tzevaadom.co.il/lists-versions"
@@ -52,9 +52,8 @@ class OrefMetadata:
     def __init__(self) -> None:
         """Initialize the object."""
         self._read_args()
-        self._output_directory = (
-            f"{path.dirname(__file__)}/../{RELATIVE_OUTPUT_DIRECTORY}"
-        )
+        self._root_directory = f"{path.dirname(__file__)}/../"
+        self._output_directory = f"{self._root_directory}{RELATIVE_OUTPUT_DIRECTORY}"
         self._cities_mix: list[Any] = self._fetch_url_json(CITIES_MIX_URL)
         self._backend_areas: list[str] = self._get_areas()
         self._areas_no_group = list(
@@ -230,7 +229,7 @@ class OrefMetadata:
                 output.write(f"{variable_name} = {variable_data}")
 
         with open(
-            SERVICES_YAML,
+            f"{self._root_directory}/{SERVICES_YAML}",
             encoding="utf-8",
         ) as services_yaml:
             services = yaml.load(services_yaml, Loader=yaml.SafeLoader)
@@ -241,7 +240,7 @@ class OrefMetadata:
             "options"
         ] = self._areas_no_group
         with open(
-            SERVICES_YAML,
+            f"{self._root_directory}/{SERVICES_YAML}",
             "w",
             encoding="utf-8",
         ) as output:
