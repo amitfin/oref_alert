@@ -263,9 +263,7 @@ class OrefMetadata:
                     json.dumps(self._area_to_polygon, ensure_ascii=False),
                 )
 
-        subprocess.run(
-            ["/usr/local/py-utils/bin/black", self._output_directory], check=False
-        )
+        subprocess.run(["ruff", "format", self._output_directory], check=False)
 
 
 if __name__ == "__main__":
