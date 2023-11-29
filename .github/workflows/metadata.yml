@@ -17,7 +17,7 @@ jobs:
           shell: "bash"
           env:
             PROXY: ${{ secrets.proxy }}
-          run: scripts/generate_metadata.py "$PROXY"
+          run: scripts/generate_metadata.py --proxy=$PROXY
 
         - name: "Verfiy no changes"
           shell: "bash"
