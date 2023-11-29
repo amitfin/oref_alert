@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate the metadata files."""
+import argparse
 import json
 import subprocess
 from typing import Any
@@ -49,7 +50,8 @@ class OrefMetadata:
 
     def __init__(self) -> None:
         """Initialize the object."""
-        self._cities_mix: list[Any] = requests.get(CITIES_MIX_URL, timeout=5).json()
+        self._read_args()
+        self._cities_mix: list[Any] = self._fetch_url_json(CITIES_MIX_URL)
         self._backend_areas: list[str] = self._get_areas()
         self._areas_no_group = list(
             filter(
@@ -70,6 +72,20 @@ class OrefMetadata:
         self._tzeva_cities, self._tzeva_polygons = self._get_tzevaadom_data()
         self._area_to_polygon = self._get_area_to_polygon()
         self._area_info = self._get_area_info()
+
+    def _read_args(self) -> None:
+        """Read program arguments."""
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--proxy")
+        parser.parse_args(namespace=self)
+
+    def _fetch_url_json(self, url: str) -> Any:
+        """Fetch URL and return JSON reply."""
+        return requests.get(
+            url,
+            proxies={"https": self.proxy} if self.proxy else None,
+            timeout=5,
+        ).json()
 
     def _get_areas(self) -> list[str]:
         """Return the list of areas."""
@@ -121,7 +137,7 @@ class OrefMetadata:
 
     def _get_districts(self) -> list:
         """Return the list of districts."""
-        districts = requests.get(DISTRICTS_URL, timeout=5).json()
+        districts = self._fetch_url_json(DISTRICTS_URL)
         return list(filter(lambda area: area["value"] is not None, districts))
 
     def _district_to_areas_map(self) -> dict[str, list[str]]:
@@ -146,12 +162,12 @@ class OrefMetadata:
 
     def _get_tzevaadom_data(self) -> (Any, Any):
         """Get tzevaadom metadata content."""
-        versions = requests.get(TZEVAADOM_VERSIONS_URL, timeout=5).json()
+        versions = self._fetch_url_json(TZEVAADOM_VERSIONS_URL)
         return (
-            requests.get(
-                f"{TZEVAADOM_CITIES_URL}{versions['cities']}", timeout=5
-            ).json()["cities"],
-            requests.get(TZEVAADOM_POLYGONS_URL, timeout=5).json(),
+            self._fetch_url_json(f"{TZEVAADOM_CITIES_URL}{versions['cities']}")[
+                "cities"
+            ],
+            self._fetch_url_json(TZEVAADOM_POLYGONS_URL),
         )
 
     def _get_area_to_polygon(self) -> dict[str, list[list[float]]]:
