@@ -28,6 +28,9 @@ jobs:
             PROXY: ${{ secrets.proxy }}
           run: scripts/generate_metadata.py --proxy=$PROXY
 
-        - name: "Verfiy no changes"
-          shell: "bash"
-          run: git diff --exit-code
+        - name: Create Pull Request
+          uses: peter-evans/create-pull-request@v5.0.2
+          with:
+            title: Metadata auto-sync
+            body: Automated changes by "Metadata" GitHub action
+            commit-message: Metadata update
