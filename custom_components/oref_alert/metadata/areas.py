@@ -1,7 +1,6 @@
 """GENERATED FILE. DO NOT EDIT MANUALLY."""
 
 AREAS = {
-    "אבו סנאן",
     "אבו קרינאת",
     "אבו תלול",
     "אבו-גוש",
