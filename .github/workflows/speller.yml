@@ -32,3 +32,5 @@ jobs:
               !LICENSE
               !pytest.ini
               !custom_components/oref_alert/metadata/*
+              !scripts/generate_metadata.py
+              !scripts/squid/squid.conf

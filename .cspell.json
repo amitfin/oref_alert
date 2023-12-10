@@ -13,6 +13,7 @@
         "freezegun",
         "pytz",
         "excinfo",
+        "caplog",
         "HACS",
         "timedelta",
         "PYTHONPATH",
@@ -27,7 +28,8 @@
         "aiohttp",
         "aioclient",
         "clientsession",
-        "Petah"
+        "Petah",
+        "Tikva"
     ],
     "ignoreRegExpList": [
         "[\u0590-\u05FF]+"
