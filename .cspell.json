@@ -1,0 +1,20 @@
+{
+    "version": "0.2",
+    "language": "en",
+    "words": [
+        "homeassistant",
+        "hass",
+        "unsub",
+        "codeowners",
+        "amitfin",
+        "pytest",
+        "venv",
+        "autouse",
+        "freezegun",
+        "pytz",
+        "excinfo",
+        "HACS",
+        "timedelta",
+        "PYTHONPATH"
+    ]
+}
