@@ -27,8 +27,7 @@
         "aiohttp",
         "aioclient",
         "clientsession",
-        "Petah",
-        "Tikva"
+        "Petah"
     ],
     "ignoreRegExpList": [
         "[\u0590-\u05FF]*"
