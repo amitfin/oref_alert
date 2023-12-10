@@ -30,6 +30,6 @@
         "Petah"
     ],
     "ignoreRegExpList": [
-        "[\u0590-\u05FF]*"
+        "[\u0590-\u05FF]+"
     ]
 }
