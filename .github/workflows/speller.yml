@@ -31,3 +31,4 @@ jobs:
               !.ruff.toml
               !LICENSE
               !pytest.ini
+              !custom_components/oref_alert/metadata/*
