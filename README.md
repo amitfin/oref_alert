@@ -8,10 +8,10 @@
 
 ![Project Maintenance](https://img.shields.io/badge/maintainer-Amit%20Finkelstein-blue.svg?style=for-the-badge)
 
-***Hebrew demos of the installation, configuration and usage can be found here: [part1](https://youtu.be/uT77BKvOSyw), [part2](https://youtu.be/rFkKvkv3JuQ), [part3](https://youtu.be/xZpMudcdZv8). A blogpost with Hebrew instructions can be found [here](https://homeusmart.blogspot.com/2023/10/haoref-heb.html). A blogpost with Russian instructions can be found [here](https://homeusmart.blogspot.com/2023/10/haidf.html).***
+***Hebrew demos of the installation, configuration and usage can be found here: [part1](https://youtu.be/uT77BKvOSyw), [part2](https://youtu.be/rFkKvkv3JuQ), [part3](https://youtu.be/xZpMudcdZv8). A blog post with Hebrew instructions can be found [here](https://homeusmart.blogspot.com/2023/10/haoref-heb.html). A blog post with Russian instructions can be found [here](https://homeusmart.blogspot.com/2023/10/haidf.html).***
 
-The integrartion provides `binary_sensor.oref_alert` which truns on when an alert is reported by the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud Haoref). The sensor monitors the alerts in the user selected areas. An alert is considered active for a certain period of time as configured by the user (10 minutes by default).
-The integraion is installed and configured via the user interface. There is no YAML or templates involved.
+The integration provides `binary_sensor.oref_alert` which turns on when an alert is reported by the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud Haoref). The sensor monitors the alerts in the user selected areas. An alert is considered active for a certain period of time as configured by the user (10 minutes by default).
+The integration is installed and configured via the user interface. There is no YAML or templates involved.
 
 ## Install
 
@@ -54,18 +54,18 @@ It's possible to create additional sensors using the service `oref_alert.add_sen
 
 The selected areas of an additional sensor can be different (non overlapping) than the primary sensor. Additional sensors can be re-added (with the same name) for overriding their configuration (there is no edit page).
 
-The service `oref_alert.remove_sensor` can be used for deleting an additioanl sensor. The service can be accessed via this My button:
+The service `oref_alert.remove_sensor` can be used for deleting an additional sensor. The service can be accessed via this My button:
 
 [![Open your Home Assistant instance and show your service developer tools with a specific service selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.remove_sensor)
 
-Note: additional sensros created before v2.2.0 use a different implementaiton. It's better to delete such entities and to create new sensors using the new functionality (old sensors are not broken and can be used).
+Note: additional sensors created before v2.2.0 use a different implementation. It's better to delete such entities and to create new sensors using the new functionality (old sensors are not broken and can be used).
 
 ## Additional Attributes
 
 All sensors have the following extra attributes:
 1. `Areas`: the list of areas provided by the user.
 2. `Alert max age`: as configured by the user.
-3. `Selected areas active alerts`: when the sensor is `on`, the alerts are listed here. 
+3. `Selected areas active alerts`: when the sensor is `on`, the alerts are listed here.
 4. `Selected areas alerts`: active and inactive alerts in the selected areas.
 5. `Country active alerts`: all active alerts in Israel.
 6. `Country alerts`: all alerts in Israel.
@@ -168,7 +168,7 @@ content: >-
     19: "alert-circle-check",
     20: "alert-circle-check",
     21: "alert-circle-check",
-    22: "alert-circle-check",                  
+    22: "alert-circle-check",
   } %}
   {% for alert in (state_attr('binary_sensor.oref_alert', 'country_active_alerts') or []) %}
     <p>
@@ -185,7 +185,7 @@ card_mod:
     }
 ```
 
-(The `card_mod` section at the bottom is only required when the langugage is English. It forces RTL for this element. Note that it depends on the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.)
+(The `card_mod` section at the bottom is only required when the language is English. It forces RTL for this element. Note that it depends on the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.)
 
 <kbd>![image](https://github.com/amitfin/oref_alert/assets/19599059/b5100fed-5b8a-4102-ac50-d5f3ed264d70)</kbd>
 
