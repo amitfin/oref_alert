@@ -21,12 +21,16 @@
         "OREF",
         "Pikud",
         "Haoref",
+        "migun",
+        "MIGUN",
         "Referer",
         "aiohttp",
+        "aioclient",
         "clientsession",
-        "התרעה",
-        "סינטטית",
-        "לצורכי",
-        "בדיקות"
+        "Petah",
+        "Tikva"
+    ],
+    "ignoreRegExpList": [
+        "[\u0590-\u05FF]*"
     ]
 }
