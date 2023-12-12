@@ -14,23 +14,23 @@ jobs:
     name: "Spell Check"
     runs-on: "ubuntu-latest"
     steps:
-        - name: "Checkout the repository"
-          uses: "actions/checkout@v4.1.1"
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v4.1.1"
 
-        - name: "Run"
-          uses: streetsidesoftware/cspell-action@v5.1.0
-          with:
-            incremental_files_only: false
-            files: |
-              **
-              .*
-              !**/translations/*.json
-              **/translations/en.json
-              !.devcontainer.json
-              !.gitignore
-              !.ruff.toml
-              !LICENSE
-              !pytest.ini
-              !custom_components/oref_alert/metadata/*
-              !scripts/generate_metadata.py
-              !scripts/squid/squid.conf
+      - name: "Run"
+        uses: streetsidesoftware/cspell-action@v5.1.0
+        with:
+          incremental_files_only: false
+          files: |
+            **
+            .*
+            !**/translations/*.json
+            **/translations/en.json
+            !.devcontainer.json
+            !.gitignore
+            !.ruff.toml
+            !LICENSE
+            !pytest.ini
+            !custom_components/oref_alert/metadata/*
+            !scripts/generate_metadata.py
+            !scripts/squid/squid.conf
