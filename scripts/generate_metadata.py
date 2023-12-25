@@ -87,7 +87,7 @@ class OrefMetadata:
         return requests.get(
             url,
             proxies={"https": self.proxy} if self.proxy else None,
-            timeout=5,
+            timeout=15,
         ).json()
 
     def _get_areas(self) -> list[str]:
