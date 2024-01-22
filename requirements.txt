@@ -1,5 +1,5 @@
 homeassistant
 pytest-homeassistant-custom-component
 ruff==0.1.14
-haversine==2.8.0
+haversine==2.8.1
 shapely==2.0.2
