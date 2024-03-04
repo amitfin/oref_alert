@@ -29,7 +29,7 @@ jobs:
           run: scripts/generate_metadata.py --proxy=$PROXY
 
         - name: Create Pull Request
-          uses: peter-evans/create-pull-request@v6.0.0
+          uses: peter-evans/create-pull-request@v6.0.1
           with:
             title: Metadata auto-sync
             body: Automated changes by "Metadata" GitHub action
