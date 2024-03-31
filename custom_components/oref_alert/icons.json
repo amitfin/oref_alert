@@ -1,0 +1,7 @@
+{
+  "services": {
+    "add_sensor": "mdi:map-marker-plus-outline",
+    "remove_sensor": "mdi:map-marker-remove-outline",
+    "synthetic_alert": "mdi:rocket-launch"
+  }
+}
