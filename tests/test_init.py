@@ -42,11 +42,11 @@ async def test_setup(hass: HomeAssistant) -> None:
     config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(ENTITY_ID)
     assert state.state == STATE_OFF
     assert await hass.config_entries.async_remove(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert not hass.states.get(ENTITY_ID)
 
 
@@ -55,15 +55,15 @@ async def test_config_update(hass: HomeAssistant) -> None:
     config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert hass.states.get(ENTITY_ID).attributes[CONF_ALERT_MAX_AGE] == 10
     hass.config_entries.async_update_entry(
         config_entry, options={**DEFAULT_OPTIONS, **{CONF_ALERT_MAX_AGE: 5}}
     )
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert hass.states.get(ENTITY_ID).attributes[CONF_ALERT_MAX_AGE] == 5
     assert await hass.config_entries.async_remove(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_add_remove_sensor_service(hass: HomeAssistant) -> None:
@@ -71,11 +71,11 @@ async def test_add_remove_sensor_service(hass: HomeAssistant) -> None:
     config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     await hass.services.async_call(
         DOMAIN, ADD_SENSOR_SERVICE, {CONF_NAME: "test", CONF_AREAS: []}, blocking=True
     )
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     entity_id = f"{ENTITY_ID}_test"
     assert hass.states.get(entity_id) is not None
     entity_reg = entity_registry.async_get(hass)
@@ -90,7 +90,7 @@ async def test_add_remove_sensor_service(hass: HomeAssistant) -> None:
         {CONF_ENTITY_ID: entity_id},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert hass.states.get(entity_id) is None
     assert entity_reg.async_get(entity_id) is None
 
@@ -103,7 +103,7 @@ async def test_synthetic_alert_service(
     config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     await hass.services.async_call(
         DOMAIN,
         SYNTHETIC_ALERT_SERVICE,
@@ -112,7 +112,7 @@ async def test_synthetic_alert_service(
     )
     freezer.tick(timedelta(seconds=10))
     async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(ENTITY_ID)
     assert len(state.attributes[ATTR_COUNTRY_ALERTS]) == 1
     assert state.attributes[ATTR_COUNTRY_ALERTS][0]["data"] == "קריית שמונה"

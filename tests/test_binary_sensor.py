@@ -48,14 +48,14 @@ async def async_setup(
     )
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     return config_entry.entry_id
 
 
 async def async_shutdown(hass: HomeAssistant, config_id: str) -> None:
     """Shutdown by removing the integration."""
     assert await hass.config_entries.async_remove(config_id)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_state(
@@ -72,12 +72,12 @@ async def test_state(
 
     freezer.move_to("2023-10-07 06:39:50+03:00")
     async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert hass.states.get(ENTITY_ID).state == STATE_ON
 
     freezer.move_to("2023-10-07 06:40:01+03:00")
     async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert hass.states.get(ENTITY_ID).state == STATE_OFF
 
     await async_shutdown(hass, config_id)
@@ -140,19 +140,19 @@ async def test_interval(
         config_entry,
         options={**config_entry.options, **{CONF_POLL_INTERVAL: 125}},
     )
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
 
     assert hass.states.get(ENTITY_ID).state == STATE_ON
     mock_urls(aioclient_mock, None, None)
 
     freezer.tick(datetime.timedelta(seconds=120))
     async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert hass.states.get(ENTITY_ID).state == STATE_ON
 
     freezer.tick(datetime.timedelta(seconds=10))
     async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert hass.states.get(ENTITY_ID).state == STATE_OFF
 
     await async_shutdown(hass, config_id)
@@ -177,7 +177,7 @@ async def test_icons(
     mock_urls(aioclient_mock, None, None)
     freezer.tick(datetime.timedelta(seconds=600))
     async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert hass.states.get(ENTITY_ID).attributes["icon"] == "mdi:emoticon-happy"
     await async_shutdown(hass, config_id)
 
@@ -209,7 +209,7 @@ async def test_additional_sensor(
         {CONF_NAME: "test", CONF_AREAS: ["תל אביב - כל האזורים"]},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert hass.states.get(f"{ENTITY_ID}_test").state == STATE_ON
     await async_shutdown(hass, config_id)
 

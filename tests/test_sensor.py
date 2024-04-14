@@ -47,14 +47,14 @@ async def async_setup(
     )
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     return config_entry.entry_id
 
 
 async def async_shutdown(hass: HomeAssistant, config_id: str) -> None:
     """Shutdown by removing the integration."""
     assert await hass.config_entries.async_remove(config_id)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_time_to_shelter_state(
@@ -80,7 +80,7 @@ async def test_time_to_shelter_state(
     for _ in range(100):
         freezer.tick(datetime.timedelta(seconds=1))
         async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        await hass.async_block_till_done(wait_background_tasks=True)
         time_to_shelter -= 1
         assert hass.states.get(TIME_TO_SHELTER_ENTITY_ID).state == (
             str(time_to_shelter) if time_to_shelter > -60 else STATE_UNKNOWN
@@ -125,7 +125,7 @@ async def test_alert_end_time_state(
         assert hass.states.get(END_TIME_ENTITY_ID).state == str(alert_end_time)
         freezer.tick(datetime.timedelta(seconds=60))
         async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        await hass.async_block_till_done(wait_background_tasks=True)
         alert_end_time -= 60
 
     assert hass.states.get(END_TIME_ENTITY_ID).state == STATE_UNKNOWN
@@ -163,7 +163,7 @@ async def test_additional_sensor(
         {CONF_NAME: "test", CONF_AREAS: ["רעננה"]},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     sensors = hass.states.async_entity_ids(Platform.SENSOR)
     assert len(sensors) == 2
     for entity_id in (

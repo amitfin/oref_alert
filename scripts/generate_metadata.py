@@ -24,9 +24,9 @@ DISTRICTS_URL = "https://www.oref.org.il/Shared/Ajax/GetDistricts.aspx"
 TZEVAADOM_VERSIONS_URL = "https://api.tzevaadom.co.il/lists-versions"
 TZEVAADOM_CITIES_URL = "https://www.tzevaadom.co.il/static/cities.json?v="
 TZEVAADOM_POLYGONS_URL = "https://www.tzevaadom.co.il/static/polygons.json?v="
-CITY_ALL_ARES_SUFFIX = " - כל האזורים"
+CITY_ALL_AREAS_SUFFIX = " - כל האזורים"
 # "Hadera all areas" is listed with this typo:
-CITY_ALL_ARES_SUFFIX_TYPO = " כל - האזורים"
+CITY_ALL_AREAS_SUFFIX_TYPO = " כל - האזורים"
 DISTRICT_PREFIX = "מחוז "
 
 MISSING_CITIES = {
@@ -58,7 +58,7 @@ class OrefMetadata:
         self._backend_areas: list[str] = self._get_areas()
         self._areas_no_group = list(
             filter(
-                lambda area: not area.endswith(CITY_ALL_ARES_SUFFIX),
+                lambda area: not area.endswith(CITY_ALL_AREAS_SUFFIX),
                 self._backend_areas,
             )
         )
@@ -95,7 +95,7 @@ class OrefMetadata:
         areas = list(
             {
                 area["label_he"].replace(
-                    CITY_ALL_ARES_SUFFIX_TYPO, CITY_ALL_ARES_SUFFIX
+                    CITY_ALL_AREAS_SUFFIX_TYPO, CITY_ALL_AREAS_SUFFIX
                 )
                 for area in self._cities_mix
             }
@@ -106,9 +106,9 @@ class OrefMetadata:
     def _get_cities_with_all_areas(self) -> list[str]:
         """Return the list of cities with 'all area'."""
         cities = [
-            area.replace(CITY_ALL_ARES_SUFFIX, "")
+            area.replace(CITY_ALL_AREAS_SUFFIX, "")
             for area in filter(
-                lambda area: area.endswith(CITY_ALL_ARES_SUFFIX), self._backend_areas
+                lambda area: area.endswith(CITY_ALL_AREAS_SUFFIX), self._backend_areas
             )
         ]
         cities.sort()
@@ -125,14 +125,14 @@ class OrefMetadata:
                     city_areas.append(area)
             city_areas = list(set(city_areas))
             city_areas.sort()
-            city_to_areas[city + CITY_ALL_ARES_SUFFIX] = city_areas
+            city_to_areas[city + CITY_ALL_AREAS_SUFFIX] = city_areas
         return city_to_areas
 
     def _area_to_migun_time_map(self) -> dict[str, int]:
         """Build a mpa between a city and the migun time."""
         migun_time = {
             area["label_he"].replace(
-                CITY_ALL_ARES_SUFFIX_TYPO, CITY_ALL_ARES_SUFFIX
+                CITY_ALL_AREAS_SUFFIX_TYPO, CITY_ALL_AREAS_SUFFIX
             ): int(area["migun_time"])
             for area in self._cities_mix
         }

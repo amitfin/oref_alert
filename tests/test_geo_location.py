@@ -49,14 +49,14 @@ async def async_setup(
     )
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     return config_entry.entry_id
 
 
 async def async_shutdown(hass: HomeAssistant, config_id: str) -> None:
     """Shutdown by removing the integration."""
     assert await hass.config_entries.async_remove(config_id)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_entity(
@@ -96,7 +96,7 @@ async def test_add_remove(
     mock_urls(aioclient_mock, None, "single_alert_history.json")
     freezer.move_to("2023-10-07 06:30:01+03:00")
     async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 1
     assert (
         len(er.async_entries_for_config_entry(entity_registry, config_id))
@@ -104,7 +104,7 @@ async def test_add_remove(
     )
     freezer.tick(timedelta(minutes=10))
     async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 0
     assert (
         len(er.async_entries_for_config_entry(entity_registry, config_id)) == base_count
@@ -124,8 +124,8 @@ async def test_clean_start(
     assert await hass.config_entries.async_set_disabled_by(
         config_id, ConfigEntryDisabler.USER
     )
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert await hass.config_entries.async_set_disabled_by(config_id, None)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 0
     await async_shutdown(hass, config_id)

@@ -63,7 +63,7 @@ async def test_updates(
     for _ in range(10):
         freezer.tick(timedelta(seconds=50))
         async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        await hass.async_block_till_done(wait_background_tasks=True)
     assert updates == 5
     assert aioclient_mock.call_count == 10
     await coordinator.async_shutdown()
@@ -132,7 +132,7 @@ async def test_real_time_timestamp(
         assert coordinator.data.alerts[0]["alertDate"] == "2023-10-07 06:30:00"
         freezer.tick(timedelta(seconds=5))
         async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        await hass.async_block_till_done(wait_background_tasks=True)
     assert coordinator.data.alerts[0]["alertDate"] == "2023-10-07 06:32:05"
     await coordinator.async_shutdown()
 
@@ -150,6 +150,24 @@ async def test_real_time_in_history(
     coordinator = OrefAlertDataUpdateCoordinator(hass, DEFAULT_CONFIG_ENTRY)
     await coordinator.async_config_entry_first_refresh()
     assert len(coordinator.data.alerts) == 1
+
+
+async def test_area_name_typo(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test name typo in real time and history."""
+    freezer.move_to("2024-04-14 02:00:00+03:00")
+    mock_urls(
+        aioclient_mock,
+        "single_alert_real_time_typo.json",
+        "single_alert_history_typo.json",
+    )
+    coordinator = OrefAlertDataUpdateCoordinator(hass, DEFAULT_CONFIG_ENTRY)
+    await coordinator.async_config_entry_first_refresh()
+    assert len(coordinator.data.alerts) == 1
+    assert coordinator.data.alerts[0]["data"] == "ביר הדאג\u0027"
 
 
 async def test_synthetic_alert(
@@ -170,7 +188,7 @@ async def test_synthetic_alert(
     coordinator.add_synthetic_alert("קריית שמונה", 40)
     freezer.tick(timedelta(seconds=39))
     async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert len(coordinator.data.alerts) == 1
     assert coordinator.data.alerts[0]["data"] == "קריית שמונה"
     assert coordinator.data.alerts[0]["alertDate"] == synthetic_alert_time.strftime(
@@ -178,6 +196,6 @@ async def test_synthetic_alert(
     )
     freezer.tick(timedelta(seconds=2))
     async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert len(coordinator.data.alerts) == 0
     await coordinator.async_shutdown()

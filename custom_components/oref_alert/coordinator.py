@@ -85,7 +85,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         current, history = await asyncio.gather(
             *[self._async_fetch_url(url) for url in (OREF_ALERTS_URL, OREF_HISTORY_URL)]
         )
-        history = history or []
+        history = self._fix_areas_spelling(history) if history else []
         alerts = self._current_to_history_format(current, history) if current else []
         alerts.extend(history)
         alerts.extend(self._get_synthetic_alerts())
@@ -125,6 +125,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         )
         alerts = []
         for area in current["data"]:
+            area = self._fix_area_spelling(area)
             for history_recent_alert in history_last_minute_alerts:
                 if _compare_fields(history_recent_alert, area, category):
                     # The alert is already in the history list. No need to add it twice.
@@ -185,3 +186,15 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         ]:
             del self._synthetic_alerts[expired]
         return self._synthetic_alerts.values()
+
+    def _fix_areas_spelling(self, alerts: list[Any]) -> list[Any]:
+        """Fix spelling errors in area names."""
+        for alert in alerts:
+            alert["data"] = self._fix_area_spelling(alert["data"])
+        return alerts
+
+    def _fix_area_spelling(self, area: str) -> str:
+        """Fix spelling error in area name."""
+        if area[0] == "'":
+            area = f"{area[1:]}'"
+        return area
