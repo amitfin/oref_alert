@@ -1,4 +1,3 @@
-homeassistant
 pytest-homeassistant-custom-component
 ruff==0.4.5
 haversine==2.8.1
