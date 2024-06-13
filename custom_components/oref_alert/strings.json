@@ -23,7 +23,7 @@
                 "title": "Configure Oref Alert",
                 "data": {
                     "areas": "Select areas to monitor (Hebrew only)",
-                    "alert_max_age": "Alert's active time period (minutes)",
+                    "alert_active_duration": "Alert's active duration (minutes)",
                     "poll_interval": "Update frequency (seconds)",
                     "on_icon": "Active alerts in selected areas icon",
                     "off_icon": "Normal time icon"

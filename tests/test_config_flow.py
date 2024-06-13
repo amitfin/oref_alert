@@ -10,12 +10,12 @@ from custom_components.oref_alert.const import (
     DOMAIN,
     TITLE,
     CONF_AREAS,
-    CONF_ALERT_MAX_AGE,
+    CONF_ALERT_ACTIVE_DURATION,
     CONF_OFF_ICON,
     CONF_ON_ICON,
     CONF_POLL_INTERVAL,
     CONF_SENSORS,
-    DEFAULT_ALERT_MAX_AGE,
+    DEFAULT_ALERT_ACTIVE_DURATION,
     DEFAULT_ON_ICON,
     DEFAULT_OFF_ICON,
     DEFAULT_POLL_INTERVAL,
@@ -23,7 +23,7 @@ from custom_components.oref_alert.const import (
 
 DEFAULT_OPTIONS = {
     CONF_AREAS: [],
-    CONF_ALERT_MAX_AGE: DEFAULT_ALERT_MAX_AGE,
+    CONF_ALERT_ACTIVE_DURATION: DEFAULT_ALERT_ACTIVE_DURATION,
     CONF_POLL_INTERVAL: DEFAULT_POLL_INTERVAL,
     CONF_ON_ICON: DEFAULT_ON_ICON,
     CONF_OFF_ICON: DEFAULT_OFF_ICON,
@@ -103,8 +103,8 @@ async def test_options_flow(hass: HomeAssistant) -> None:
 
     result2 = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        user_input={**DEFAULT_OPTIONS, **{CONF_ALERT_MAX_AGE: 15}},
+        user_input={**DEFAULT_OPTIONS, **{CONF_ALERT_ACTIVE_DURATION: 15}},
     )
     assert result2.get("type") == FlowResultType.CREATE_ENTRY
-    options[CONF_ALERT_MAX_AGE] = 15
+    options[CONF_ALERT_ACTIVE_DURATION] = 15
     assert result2.get("data") == options

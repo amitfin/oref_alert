@@ -19,14 +19,15 @@ ATTR_TIME_TO_SHELTER: Final = "time_to_shelter"
 
 CONF_AREA: Final = "area"
 CONF_AREAS: Final = "areas"
-CONF_ALERT_MAX_AGE: Final = "alert_max_age"
+CONF_ALERT_ACTIVE_DURATION: Final = "alert_active_duration"
+CONF_ALERT_MAX_AGE_DEPRECATED: Final = "alert_max_age"
 CONF_DURATION: Final = "duration"
 CONF_OFF_ICON: Final = "off_icon"
 CONF_ON_ICON: Final = "on_icon"
 CONF_POLL_INTERVAL: Final = "poll_interval"
 CONF_SENSORS: Final = "sensors"
 
-DEFAULT_ALERT_MAX_AGE: Final = 10
+DEFAULT_ALERT_ACTIVE_DURATION: Final = 10
 DEFAULT_ON_ICON: Final = "mdi:home-alert-outline"
 DEFAULT_OFF_ICON: Final = "mdi:home-outline"
 DEFAULT_POLL_INTERVAL: Final = 2

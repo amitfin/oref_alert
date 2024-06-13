@@ -9,7 +9,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
 from custom_components.oref_alert.const import (
-    CONF_ALERT_MAX_AGE,
+    CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     DOMAIN,
 )
@@ -20,7 +20,7 @@ async def test_diagnostics(
     hass_client: ClientSessionGenerator,
 ) -> None:
     """Test diagnostics."""
-    config = {CONF_AREAS: ["בארי"], CONF_ALERT_MAX_AGE: 10}
+    config = {CONF_AREAS: ["בארי"], CONF_ALERT_ACTIVE_DURATION: 10}
     config_entry = MockConfigEntry(
         options=config,
         domain=DOMAIN,

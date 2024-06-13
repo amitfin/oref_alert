@@ -15,11 +15,11 @@ import homeassistant.helpers.config_validation as cv
 
 from .const import (
     CONF_AREAS,
-    CONF_ALERT_MAX_AGE,
+    CONF_ALERT_ACTIVE_DURATION,
     CONF_OFF_ICON,
     CONF_ON_ICON,
     CONF_POLL_INTERVAL,
-    DEFAULT_ALERT_MAX_AGE,
+    DEFAULT_ALERT_ACTIVE_DURATION,
     DOMAIN,
     DEFAULT_OFF_ICON,
     DEFAULT_ON_ICON,
@@ -80,7 +80,7 @@ class OrefAlertConfigFlow(ConfigFlow, domain=DOMAIN):
                 data={},
                 options={
                     CONF_AREAS: user_input.get(CONF_AREAS, [self._auto_detected_area]),
-                    CONF_ALERT_MAX_AGE: DEFAULT_ALERT_MAX_AGE,
+                    CONF_ALERT_ACTIVE_DURATION: DEFAULT_ALERT_ACTIVE_DURATION,
                     CONF_POLL_INTERVAL: DEFAULT_POLL_INTERVAL,
                     CONF_ON_ICON: DEFAULT_ON_ICON,
                     CONF_OFF_ICON: DEFAULT_OFF_ICON,
@@ -121,8 +121,8 @@ class OptionsFlowHandler(OptionsFlow):
                         CONF_AREAS, default=self._config_entry.options[CONF_AREAS]
                     ): selector.SelectSelector(AREAS_CONFIG),
                     vol.Required(
-                        CONF_ALERT_MAX_AGE,
-                        default=self._config_entry.options[CONF_ALERT_MAX_AGE],
+                        CONF_ALERT_ACTIVE_DURATION,
+                        default=self._config_entry.options[CONF_ALERT_ACTIVE_DURATION],
                     ): cv.positive_int,
                     vol.Required(
                         CONF_POLL_INTERVAL,

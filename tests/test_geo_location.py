@@ -25,7 +25,7 @@ from pytest_homeassistant_custom_component.common import (
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
 from custom_components.oref_alert.const import (
-    CONF_ALERT_MAX_AGE,
+    CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_POLL_INTERVAL,
     DOMAIN,
@@ -35,7 +35,7 @@ from custom_components.oref_alert.const import (
 
 from .utils import mock_urls
 
-DEFAULT_OPTIONS = {CONF_AREAS: ["בארי"], CONF_ALERT_MAX_AGE: 10}
+DEFAULT_OPTIONS = {CONF_AREAS: ["בארי"], CONF_ALERT_ACTIVE_DURATION: 10}
 ENTITY_ID = f"{Platform.GEO_LOCATION}.{OREF_ALERT_UNIQUE_ID}_{LOCATION_ID_SUFFIX}"
 
 

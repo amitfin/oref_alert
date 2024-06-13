@@ -15,9 +15,9 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClien
 
 from custom_components.oref_alert.const import (
     DOMAIN,
-    CONF_ALERT_MAX_AGE,
+    CONF_ALERT_ACTIVE_DURATION,
     CONF_POLL_INTERVAL,
-    DEFAULT_ALERT_MAX_AGE,
+    DEFAULT_ALERT_ACTIVE_DURATION,
     IST,
 )
 from custom_components.oref_alert.coordinator import OrefAlertDataUpdateCoordinator
@@ -25,7 +25,7 @@ from custom_components.oref_alert.coordinator import OrefAlertDataUpdateCoordina
 from .utils import load_json_fixture, mock_urls
 
 DEFAULT_CONFIG_ENTRY = MockConfigEntry(
-    domain=DOMAIN, options={CONF_ALERT_MAX_AGE: DEFAULT_ALERT_MAX_AGE}
+    domain=DOMAIN, options={CONF_ALERT_ACTIVE_DURATION: DEFAULT_ALERT_ACTIVE_DURATION}
 )
 
 
@@ -55,7 +55,7 @@ async def test_updates(
             domain=DOMAIN,
             options={
                 CONF_POLL_INTERVAL: 100,
-                CONF_ALERT_MAX_AGE: DEFAULT_ALERT_MAX_AGE,
+                CONF_ALERT_ACTIVE_DURATION: DEFAULT_ALERT_ACTIVE_DURATION,
             },
         ),
     )
@@ -108,7 +108,7 @@ async def test_active_alerts(
     mock_urls(aioclient_mock, None, "multi_alerts_history.json")
     coordinator = OrefAlertDataUpdateCoordinator(
         hass,
-        MockConfigEntry(domain=DOMAIN, options={CONF_ALERT_MAX_AGE: 1}),
+        MockConfigEntry(domain=DOMAIN, options={CONF_ALERT_ACTIVE_DURATION: 1}),
     )
     await coordinator.async_config_entry_first_refresh()
     inactive_alert, active_alert = load_json_fixture("multi_alerts_history.json")
@@ -178,7 +178,7 @@ async def test_synthetic_alert(
     coordinator = OrefAlertDataUpdateCoordinator(
         hass,
         MockConfigEntry(
-            domain=DOMAIN, options={CONF_POLL_INTERVAL: 1, CONF_ALERT_MAX_AGE: 100}
+            domain=DOMAIN, options={CONF_POLL_INTERVAL: 1, CONF_ALERT_ACTIVE_DURATION: 100}
         ),
     )
     await coordinator.async_config_entry_first_refresh()

@@ -1,4 +1,5 @@
 """Oref Alert Integration."""
+
 from __future__ import annotations
 
 import voluptuous as vol
@@ -14,6 +15,8 @@ from .const import (
     ADD_SENSOR_SERVICE,
     REMOVE_SENSOR_SERVICE,
     SYNTHETIC_ALERT_SERVICE,
+    CONF_ALERT_ACTIVE_DURATION,
+    CONF_ALERT_MAX_AGE_DEPRECATED,
     CONF_AREAS,
     CONF_AREA,
     CONF_DURATION,
@@ -61,13 +64,21 @@ SYNTHETIC_ALERT_SCHEMA = vol.Schema(
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up entity from a config entry."""
+    entry.async_on_unload(entry.add_update_listener(config_entry_update_listener))
+
+    if CONF_ALERT_MAX_AGE_DEPRECATED in entry.options:
+        options = {**entry.options}
+        options[CONF_ALERT_ACTIVE_DURATION] = options.pop(CONF_ALERT_MAX_AGE_DEPRECATED)
+        hass.config_entries.async_update_entry(entry, options=options)
+        # config_entry_update_listener will be called and trigger a reload.
+        return True
+
     coordinator = OrefAlertDataUpdateCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         DATA_COORDINATOR: coordinator,
     }
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    entry.async_on_unload(entry.add_update_listener(config_entry_update_listener))
 
     async def add_sensor(service_call: ServiceCall) -> None:
         """Add an additional sensor (different areas)."""
@@ -134,11 +145,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def config_entry_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Update listener, called when the config entry options are changed."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    hass.config_entries.async_schedule_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    if DOMAIN not in hass.data:
+        return True
     hass.data[DOMAIN].pop(entry.entry_id)
     hass.services.async_remove(DOMAIN, ADD_SENSOR_SERVICE)
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -20,7 +20,7 @@ from custom_components.oref_alert.const import (
     ATTR_ALERT,
     ATTR_AREA,
     ATTR_TIME_TO_SHELTER,
-    CONF_ALERT_MAX_AGE,
+    CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     DOMAIN,
     OREF_ALERT_UNIQUE_ID,
@@ -30,7 +30,7 @@ from custom_components.oref_alert.const import (
 
 from .utils import load_json_fixture, mock_urls
 
-DEFAULT_OPTIONS = {CONF_AREAS: ["בארי"], CONF_ALERT_MAX_AGE: 10}
+DEFAULT_OPTIONS = {CONF_AREAS: ["בארי"], CONF_ALERT_ACTIVE_DURATION: 10}
 TIME_TO_SHELTER_ENTITY_ID = (
     f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_{TIME_TO_SHELTER_ID_SUFFIX}"
 )
@@ -138,7 +138,7 @@ async def test_alert_end_time_attributes_no_alert(
     """Test attributes when there is no alert."""
     config_id = await async_setup(hass)
     assert hass.states.get(END_TIME_ENTITY_ID).attributes[ATTR_AREA] == "בארי"
-    assert hass.states.get(END_TIME_ENTITY_ID).attributes[CONF_ALERT_MAX_AGE] == 10
+    assert hass.states.get(END_TIME_ENTITY_ID).attributes[CONF_ALERT_ACTIVE_DURATION] == 10
     assert hass.states.get(END_TIME_ENTITY_ID).attributes[ATTR_ALERT] is None
     await async_shutdown(hass, config_id)
 

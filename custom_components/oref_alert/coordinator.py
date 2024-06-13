@@ -15,7 +15,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 import homeassistant.util.dt as dt_util
 
 from .const import (
-    CONF_ALERT_MAX_AGE,
+    CONF_ALERT_ACTIVE_DURATION,
     CONF_POLL_INTERVAL,
     DEFAULT_POLL_INTERVAL,
     DOMAIN,
@@ -150,12 +150,12 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
     def _active_alerts(self, alerts: list[Any]) -> list[Any]:
         """Return the list of active alerts."""
         return self._recent_alerts(
-            alerts, self._config_entry.options[CONF_ALERT_MAX_AGE]
+            alerts, self._config_entry.options[CONF_ALERT_ACTIVE_DURATION]
         )
 
-    def _recent_alerts(self, alerts: list[Any], max_age: int) -> list[Any]:
+    def _recent_alerts(self, alerts: list[Any], active_duration: int) -> list[Any]:
         """Return the list of recent alerts, assuming the input is sorted."""
-        earliest_alert = dt_util.now().timestamp() - max_age * 60
+        earliest_alert = dt_util.now().timestamp() - active_duration * 60
         recent_alerts = []
         for alert in alerts:
             if (

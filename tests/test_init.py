@@ -1,4 +1,5 @@
 """The tests for the init file."""
+
 from __future__ import annotations
 
 from datetime import timedelta
@@ -23,7 +24,8 @@ from custom_components.oref_alert.const import (
     REMOVE_SENSOR_SERVICE,
     SYNTHETIC_ALERT_SERVICE,
     ATTR_COUNTRY_ALERTS,
-    CONF_ALERT_MAX_AGE,
+    CONF_ALERT_ACTIVE_DURATION,
+    CONF_ALERT_MAX_AGE_DEPRECATED,
     CONF_AREA,
     CONF_AREAS,
     CONF_DURATION,
@@ -33,7 +35,7 @@ from custom_components.oref_alert.const import (
     OREF_ALERT_UNIQUE_ID,
 )
 
-DEFAULT_OPTIONS = {CONF_AREAS: [], CONF_ALERT_MAX_AGE: 10}
+DEFAULT_OPTIONS = {CONF_AREAS: [], CONF_ALERT_ACTIVE_DURATION: 10}
 ENTITY_ID = f"{Platform.BINARY_SENSOR}.{OREF_ALERT_UNIQUE_ID}"
 
 
@@ -56,12 +58,12 @@ async def test_config_update(hass: HomeAssistant) -> None:
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert hass.states.get(ENTITY_ID).attributes[CONF_ALERT_MAX_AGE] == 10
+    assert hass.states.get(ENTITY_ID).attributes[CONF_ALERT_ACTIVE_DURATION] == 10
     hass.config_entries.async_update_entry(
-        config_entry, options={**DEFAULT_OPTIONS, **{CONF_ALERT_MAX_AGE: 5}}
+        config_entry, options={**DEFAULT_OPTIONS, **{CONF_ALERT_ACTIVE_DURATION: 5}}
     )
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert hass.states.get(ENTITY_ID).attributes[CONF_ALERT_MAX_AGE] == 5
+    assert hass.states.get(ENTITY_ID).attributes[CONF_ALERT_ACTIVE_DURATION] == 5
     assert await hass.config_entries.async_remove(config_entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
 
@@ -116,3 +118,18 @@ async def test_synthetic_alert_service(
     state = hass.states.get(ENTITY_ID)
     assert len(state.attributes[ATTR_COUNTRY_ALERTS]) == 1
     assert state.attributes[ATTR_COUNTRY_ALERTS][0]["data"] == "קריית שמונה"
+
+
+async def test_max_age_deprecation(hass: HomeAssistant) -> None:
+    """Test an old config with max_age option."""
+    config_entry = MockConfigEntry(
+        domain=DOMAIN, options={CONF_AREAS: [], CONF_ALERT_MAX_AGE_DEPRECATED: 15}
+    )
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    state = hass.states.get(ENTITY_ID)
+    assert state.state == STATE_OFF
+    assert state.attributes[CONF_ALERT_ACTIVE_DURATION] == 15
+    assert await hass.config_entries.async_remove(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)

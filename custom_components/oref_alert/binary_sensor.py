@@ -17,7 +17,7 @@ from .const import (
     DATA_COORDINATOR,
     TITLE,
     CONF_AREAS,
-    CONF_ALERT_MAX_AGE,
+    CONF_ALERT_ACTIVE_DURATION,
     CONF_OFF_ICON,
     CONF_ON_ICON,
     CONF_SENSORS,
@@ -64,7 +64,7 @@ class AlertSensorBase(
             ATTR_SELECTED_AREAS_ACTIVE_ALERTS,
             ATTR_SELECTED_AREAS_ALERTS,
             CONF_AREAS,
-            CONF_ALERT_MAX_AGE,
+            CONF_ALERT_ACTIVE_DURATION,
         }
     )
 
@@ -129,7 +129,7 @@ class AlertSensor(AlertSensorBase):
         """Return additional attributes."""
         return {
             CONF_AREAS: self._areas,
-            CONF_ALERT_MAX_AGE: self._config_entry.options[CONF_ALERT_MAX_AGE],
+            CONF_ALERT_ACTIVE_DURATION: self._config_entry.options[CONF_ALERT_ACTIVE_DURATION],
             ATTR_SELECTED_AREAS_ACTIVE_ALERTS: [
                 alert
                 for alert in self._data.active_alerts
@@ -169,7 +169,7 @@ class AlertSensorAllAreas(AlertSensorBase):
     def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return additional attributes."""
         return {
-            CONF_ALERT_MAX_AGE: self._config_entry.options[CONF_ALERT_MAX_AGE],
+            CONF_ALERT_ACTIVE_DURATION: self._config_entry.options[CONF_ALERT_ACTIVE_DURATION],
             ATTR_COUNTRY_ACTIVE_ALERTS: self._data.active_alerts,
             ATTR_COUNTRY_ALERTS: self._data.alerts,
         }

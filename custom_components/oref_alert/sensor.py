@@ -24,7 +24,7 @@ from .const import (
     IST,
     TITLE,
     ATTR_ALERT,
-    CONF_ALERT_MAX_AGE,
+    CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_SENSORS,
     ATTR_AREA,
@@ -189,7 +189,7 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
     _entity_component_unrecorded_attributes = frozenset(
         {
             ATTR_AREA,
-            CONF_ALERT_MAX_AGE,
+            CONF_ALERT_ACTIVE_DURATION,
             ATTR_ALERT,
         }
     )
@@ -203,7 +203,7 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
     ) -> None:
         """Initialize object with defaults."""
         super().__init__(area, coordinator, config_entry)
-        self._max_age: int = self._config_entry.options[CONF_ALERT_MAX_AGE]
+        self._ACTIVE_DURATION: int = self._config_entry.options[CONF_ALERT_ACTIVE_DURATION]
         self._attr_name = f"{name} {END_TIME_NAME_SUFFIX}"
         self._attr_unique_id = (
             f"{name.lower().replace(' ', '_')}_" f"{END_TIME_ID_SUFFIX}"
@@ -214,7 +214,7 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
         """Return the remaining seconds till the end of the alert."""
         if alert_timestamp := self._get_alert_timestamp():
             alert_age = dt_util.now().timestamp() - alert_timestamp
-            alert_end_time = int(self._max_age * 60 - alert_age)
+            alert_end_time = int(self._ACTIVE_DURATION * 60 - alert_age)
             self._update_in_1_second()
             return alert_end_time
         return None
@@ -224,6 +224,6 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
         """Return additional attributes."""
         return {
             ATTR_AREA: self._area,
-            CONF_ALERT_MAX_AGE: self._max_age,
+            CONF_ALERT_ACTIVE_DURATION: self._ACTIVE_DURATION,
             ATTR_ALERT: self._get_alert(),
         }

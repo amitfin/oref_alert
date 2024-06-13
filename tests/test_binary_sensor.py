@@ -22,7 +22,7 @@ from custom_components.oref_alert.const import (
     ATTR_COUNTRY_ACTIVE_ALERTS,
     ATTR_SELECTED_AREAS_ALERTS,
     ATTR_SELECTED_AREAS_ACTIVE_ALERTS,
-    CONF_ALERT_MAX_AGE,
+    CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_OFF_ICON,
     CONF_ON_ICON,
@@ -34,7 +34,7 @@ from custom_components.oref_alert.const import (
 
 from .utils import load_json_fixture, mock_urls
 
-DEFAULT_OPTIONS = {CONF_AREAS: ["בארי"], CONF_ALERT_MAX_AGE: 10}
+DEFAULT_OPTIONS = {CONF_AREAS: ["בארי"], CONF_ALERT_ACTIVE_DURATION: 10}
 ENTITY_ID = f"{Platform.BINARY_SENSOR}.{OREF_ALERT_UNIQUE_ID}"
 
 
@@ -111,7 +111,7 @@ async def test_state_attributes(
     config_id = await async_setup(hass)
     state = hass.states.get(ENTITY_ID)
     active_area_alert = load_json_fixture("single_alert_history.json")
-    assert state.attributes[CONF_ALERT_MAX_AGE] == 10
+    assert state.attributes[CONF_ALERT_ACTIVE_DURATION] == 10
     assert state.attributes[ATTR_SELECTED_AREAS_ACTIVE_ALERTS] == active_area_alert
     assert state.attributes[ATTR_SELECTED_AREAS_ALERTS] == active_area_alert
     combined_alerts = load_json_fixture("combined_alerts.json")

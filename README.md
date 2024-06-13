@@ -35,7 +35,7 @@ Once the component is installed, it's possible to control additional parameters 
 
 There are 5 configuration fields:
 1. Selected areas: list of areas to monitor. It's also possible to select a district (מחוז) and all-areas (כל האזורים) for cities with sub-areas.
-2. Max age of an alert: this is the alert's active time period (in minutes). The default is 10 minutes.
+2. Active duration of an alert: this is the alert's active time period (in minutes). The default is 10 minutes.
 3. Update frequency: the time to wait between updates of the sensor (in seconds). The default is 2 seconds.
 4. On icon: the icon to be used when there are active alerts in one of the selected areas. This is the icon which is displayed when the state of the binary sensor is "on".
 5. Off icon: the icon to  be used when the state of the binary sensor is "off".
@@ -64,7 +64,7 @@ Note: additional sensors created before v2.2.0 use a different implementation. I
 
 All sensors have the following extra attributes:
 1. `Areas`: the list of areas provided by the user.
-2. `Alert max age`: as configured by the user.
+2. `Alert active duration`: as configured by the user.
 3. `Selected areas active alerts`: when the sensor is `on`, the alerts are listed here.
 4. `Selected areas alerts`: active and inactive alerts in the selected areas.
 5. `Country active alerts`: all active alerts in Israel.
@@ -81,9 +81,9 @@ The integration creates an additional set of sensors which monitor the time to s
 
 ## Alert End Time Sensors
 
-The integration creates an additional set of sensors which monitor the time to the end of the alert for a specific area. The ID of the entity is similar to the corresponding binary sensor, with the suffix of `_end_time`. For example, `sensor.oref_alert_end_time`. When there is a new alert in the area, the `state` of the sensor is set according to the `Alert max age` as configured by the user (default is 10 minutes). The `state` of the sensor decrements as time passes, and it becomes `unknown` once the alert is `off`. The sensor has the following extra attributes:
+The integration creates an additional set of sensors which monitor the time to the end of the alert for a specific area. The ID of the entity is similar to the corresponding binary sensor, with the suffix of `_end_time`. For example, `sensor.oref_alert_end_time`. When there is a new alert in the area, the `state` of the sensor is set according to the `Alert active duration` as configured by the user (default is 10 minutes). The `state` of the sensor decrements as time passes, and it becomes `unknown` once the alert is `off`. The sensor has the following extra attributes:
 1. `Area`: the name of the area.
-2. `Alert max age`: as configured by the user.
+2. `Alert active duration`: as configured by the user.
 3. `Alert`: the active alert (when there is such).
 
 *Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the service `oref_alert.add_sensor`.*
