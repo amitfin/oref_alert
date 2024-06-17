@@ -1,4 +1,4 @@
 pytest-homeassistant-custom-component
-ruff==0.4.8
+ruff==0.4.9
 haversine==2.8.1
 shapely==2.0.4
