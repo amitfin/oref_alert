@@ -1,4 +1,5 @@
 """DataUpdateCoordinator for oref_alert integration."""
+
 import asyncio
 from dataclasses import dataclass
 from datetime import timedelta
@@ -24,8 +25,11 @@ from .const import (
 )
 from .metadata.areas import AREAS
 
-OREF_ALERTS_URL = "https://www.oref.org.il/WarningMessages/alert/alerts.json"
-OREF_HISTORY_URL = "https://www.oref.org.il/WarningMessages/History/AlertsHistory.json"
+OREF_ALERTS_URL = "https://www.oref.org.il/warningMessages/alert/Alerts.json"
+OREF_HISTORY_URL = (
+    "https://www.oref.org.il/warningMessages/alert/History/AlertsHistory.json"
+)
+
 OREF_HEADERS = {
     "Referer": "https://www.oref.org.il/",
     "X-Requested-With": "XMLHttpRequest",
