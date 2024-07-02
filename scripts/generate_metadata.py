@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate the metadata files."""
+
 import argparse
 import json
 from os import path
@@ -19,8 +20,8 @@ DISTRICT_TO_AREAS_OUTPUT = "district_to_areas.py"
 AREA_TO_POLYGON_OUTPUT = "area_to_polygon.json"
 AREA_INFO_OUTPUT = "area_info.py"
 SERVICES_YAML = "custom_components/oref_alert/services.yaml"
-CITIES_MIX_URL = "https://www.oref.org.il/Shared/Ajax/GetCitiesMix.aspx"
-DISTRICTS_URL = "https://www.oref.org.il/Shared/Ajax/GetDistricts.aspx"
+CITIES_MIX_URL = "https://alerts-history.oref.org.il/Shared/Ajax/GetCitiesMix.aspx"
+DISTRICTS_URL = "https://alerts-history.oref.org.il/Shared/Ajax/GetDistricts.aspx"
 TZEVAADOM_VERSIONS_URL = "https://api.tzevaadom.co.il/lists-versions"
 TZEVAADOM_CITIES_URL = "https://www.tzevaadom.co.il/static/cities.json?v="
 TZEVAADOM_POLYGONS_URL = "https://www.tzevaadom.co.il/static/polygons.json?v="
@@ -31,9 +32,11 @@ DISTRICT_PREFIX = "מחוז "
 
 MISSING_CITIES = {
     "ביר הדאג'": {"lat": 31.0237, "long": 34.7091, "en": "Bir Hadaj"},
+    "ברחבי הארץ": {"lat": 31.7781, "long": 35.2164, "en": "Across the country"},
     "גני מודיעין": {"lat": 31.9304, "long": 35.0177, "en": "Ganei Modi'in"},
     "גבעון החדשה": {"lat": 31.8482, "long": 35.1580, "en": "Giv'on HaHadasha"},
     "מלאה": {"lat": 32.5629, "long": 35.2366, "en": "Mle'a"},
+    "כל הארץ": {"lat": 31.7781, "long": 35.2164, "en": "Entire country"},
     "כרם בן שמן": {"lat": 31.9585, "long": 34.9340, "en": "Kerem Ben Shemen"},
     "ניר יפה": {"lat": 32.5698, "long": 35.2448, "en": "Nir Yafeh"},
     "נאות חובב": {"lat": 31.1336, "long": 34.7898, "en": "Ne'ot Hovav"},
@@ -233,9 +236,9 @@ class OrefMetadata:
             encoding="utf-8",
         ) as services_yaml:
             services = yaml.load(services_yaml, Loader=yaml.SafeLoader)
-        services["add_sensor"]["fields"]["areas"]["selector"]["select"][
-            "options"
-        ] = self._areas_and_groups
+        services["add_sensor"]["fields"]["areas"]["selector"]["select"]["options"] = (
+            self._areas_and_groups
+        )
         services["synthetic_alert"]["fields"]["area"]["selector"]["select"][
             "options"
         ] = self._areas_no_group
@@ -246,9 +249,12 @@ class OrefMetadata:
         ) as output:
             yaml.dump(services, output, sort_keys=False, indent=2, allow_unicode=True)
 
-        with zipfile.ZipFile(
-            f"{self._output_directory}{AREA_TO_POLYGON_OUTPUT}.zip",
-        ) as zip_file, zip_file.open(AREA_TO_POLYGON_OUTPUT) as json_file:
+        with (
+            zipfile.ZipFile(
+                f"{self._output_directory}{AREA_TO_POLYGON_OUTPUT}.zip",
+            ) as zip_file,
+            zip_file.open(AREA_TO_POLYGON_OUTPUT) as json_file,
+        ):
             previous_area_to_polygon = json.load(json_file)
 
         if self._area_to_polygon != previous_area_to_polygon:
