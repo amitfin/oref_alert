@@ -144,7 +144,13 @@ class OrefMetadata:
     def _get_districts(self) -> list:
         """Return the list of districts."""
         districts = self._fetch_url_json(DISTRICTS_URL)
-        return list(filter(lambda area: area["value"] is not None, districts))
+        return list(
+            filter(
+                lambda area: area["value"] is not None
+                and area["label"] not in ["כל הארץ", "ברחבי הארץ"],
+                districts,
+            )
+        )
 
     def _district_to_areas_map(self) -> dict[str, list[str]]:
         """Build the map between districts and their areas."""
