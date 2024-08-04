@@ -36,6 +36,7 @@
                 "editor.formatOnType": true,
                 "files.trimTrailingWhitespace": true,
                 "python.analysis.typeCheckingMode": "basic",
+                "python.analysis.diagnosticMode": "workspace",
                 "python.analysis.autoImportCompletions": true,
                 "python.defaultInterpreterPath": "/usr/local/bin/python",
                 "[python]": {
