@@ -2,30 +2,34 @@
 
 from __future__ import annotations
 
-import voluptuous as vol
+from typing import TYPE_CHECKING
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, Platform
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import entity_registry, selector
 import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
+from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, Platform
+from homeassistant.exceptions import ConfigEntryError
+from homeassistant.helpers import entity_registry, selector
 from homeassistant.helpers.service import async_register_admin_service
 
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant, ServiceCall
+
+from .config_flow import AREAS_CONFIG
 from .const import (
     ADD_SENSOR_SERVICE,
-    REMOVE_SENSOR_SERVICE,
-    SYNTHETIC_ALERT_SERVICE,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_ALERT_MAX_AGE_DEPRECATED,
-    CONF_AREAS,
     CONF_AREA,
+    CONF_AREAS,
     CONF_DURATION,
     CONF_SENSORS,
     DATA_COORDINATOR,
     DOMAIN,
+    REMOVE_SENSOR_SERVICE,
+    SYNTHETIC_ALERT_SERVICE,
     TITLE,
 )
-from .config_flow import AREAS_CONFIG
 from .coordinator import OrefAlertDataUpdateCoordinator
 from .metadata.areas import AREAS
 
@@ -34,7 +38,7 @@ PLATFORMS = (Platform.BINARY_SENSOR, Platform.SENSOR, Platform.GEO_LOCATION)
 ADD_SENSOR_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_NAME): selector.TextSelector(),
-        vol.Required(CONF_AREAS, default=[]): selector.SelectSelector(AREAS_CONFIG),
+        vol.Required(CONF_AREAS, default=[]): selector.SelectSelector(AREAS_CONFIG),  # type: ignore[reportArgumentType]
     },
     extra=vol.ALLOW_EXTRA,
 )
@@ -56,7 +60,7 @@ REMOVE_SENSOR_SCHEMA = vol.Schema(
 SYNTHETIC_ALERT_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_AREA): vol.All(cv.string, vol.In(AREAS)),
-        vol.Required(CONF_DURATION, default=10): cv.positive_int,
+        vol.Required(CONF_DURATION, default=10): cv.positive_int,  # type: ignore[reportArgumentType]
     },
     extra=vol.ALLOW_EXTRA,
 )
@@ -83,13 +87,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def add_sensor(service_call: ServiceCall) -> None:
         """Add an additional sensor (different areas)."""
         config_entry = hass.config_entries.async_get_entry(entry.entry_id)
+        if config_entry is None:
+            message = f"Config entry {entry.entry_id} was not found."
+            raise ConfigEntryError(message)
         sensors = {**config_entry.options.get(CONF_SENSORS, {})}
         sensors[f"{TITLE} {service_call.data[CONF_NAME]}"] = service_call.data[
             CONF_AREAS
         ]
         hass.config_entries.async_update_entry(
             config_entry,
-            options={**config_entry.options, **{CONF_SENSORS: sensors}},
+            options={**config_entry.options, CONF_SENSORS: sensors},
         )
 
     async_register_admin_service(
@@ -103,10 +110,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def remove_sensor(service_call: ServiceCall) -> None:
         """Remove an additional sensor."""
         entity_reg = entity_registry.async_get(hass)
-        entity_name = entity_reg.async_get(
-            service_call.data[CONF_ENTITY_ID]
-        ).original_name
+        entity_name = getattr(
+            entity_reg.async_get(service_call.data[CONF_ENTITY_ID]), "original_name", ""
+        )
         config_entry = hass.config_entries.async_get_entry(entry.entry_id)
+        if config_entry is None:
+            message = f"Config entry {entry.entry_id} was not found."
+            raise ConfigEntryError(message)
         sensors = {
             name: areas
             for name, areas in config_entry.options.get(CONF_SENSORS, {}).items()
@@ -115,7 +125,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entity_reg.async_remove(service_call.data[CONF_ENTITY_ID])
         hass.config_entries.async_update_entry(
             config_entry,
-            options={**config_entry.options, **{CONF_SENSORS: sensors}},
+            options={**config_entry.options, CONF_SENSORS: sensors},
         )
 
     async_register_admin_service(

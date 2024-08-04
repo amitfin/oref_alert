@@ -1,37 +1,41 @@
 """Support for representing daily schedule as binary sensors."""
+
 from __future__ import annotations
 
-from typing import Any
-
-from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components import binary_sensor
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .area_utils import expand_areas_and_groups
 from .const import (
-    DOMAIN,
-    DATA_COORDINATOR,
-    TITLE,
-    CONF_AREAS,
-    CONF_ALERT_ACTIVE_DURATION,
-    CONF_OFF_ICON,
-    CONF_ON_ICON,
-    CONF_SENSORS,
     ALL_AREAS_ID_SUFFIX,
     ALL_AREAS_NAME_SUFFIX,
     ATTR_COUNTRY_ACTIVE_ALERTS,
     ATTR_COUNTRY_ALERTS,
     ATTR_SELECTED_AREAS_ACTIVE_ALERTS,
     ATTR_SELECTED_AREAS_ALERTS,
+    CONF_ALERT_ACTIVE_DURATION,
+    CONF_AREAS,
+    CONF_OFF_ICON,
+    CONF_ON_ICON,
+    CONF_SENSORS,
+    DATA_COORDINATOR,
     DEFAULT_OFF_ICON,
     DEFAULT_ON_ICON,
+    DOMAIN,
     OREF_ALERT_UNIQUE_ID,
+    TITLE,
 )
 from .coordinator import OrefAlertCoordinatorData, OrefAlertDataUpdateCoordinator
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 
 async def async_setup_entry(
@@ -44,7 +48,7 @@ async def async_setup_entry(
     async_add_entities(
         [
             AlertSensor(name, config_entry, coordinator)
-            for name in [None] + list(config_entry.options.get(CONF_SENSORS, {}).keys())
+            for name in [None, *list(config_entry.options.get(CONF_SENSORS, {}).keys())]
         ]
         + [AlertSensorAllAreas(config_entry, coordinator)]
     )
@@ -87,7 +91,7 @@ class AlertSensorBase(
         super()._handle_coordinator_update()
 
     @property
-    def icon(self):
+    def icon(self) -> str:
         """Return the sensor icon."""
         return self._on_icon if self.is_on else self._off_icon
 
@@ -119,17 +123,16 @@ class AlertSensor(AlertSensorBase):
     @property
     def is_on(self) -> bool:
         """Return True is sensor is on."""
-        for alert in self._data.active_alerts:
-            if self.is_selected_area(alert):
-                return True
-        return False
+        return any(self.is_selected_area(alert) for alert in self._data.active_alerts)
 
     @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return additional attributes."""
         return {
             CONF_AREAS: self._areas,
-            CONF_ALERT_ACTIVE_DURATION: self._config_entry.options[CONF_ALERT_ACTIVE_DURATION],
+            CONF_ALERT_ACTIVE_DURATION: self._config_entry.options[
+                CONF_ALERT_ACTIVE_DURATION
+            ],
             ATTR_SELECTED_AREAS_ACTIVE_ALERTS: [
                 alert
                 for alert in self._data.active_alerts
@@ -169,7 +172,9 @@ class AlertSensorAllAreas(AlertSensorBase):
     def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return additional attributes."""
         return {
-            CONF_ALERT_ACTIVE_DURATION: self._config_entry.options[CONF_ALERT_ACTIVE_DURATION],
+            CONF_ALERT_ACTIVE_DURATION: self._config_entry.options[
+                CONF_ALERT_ACTIVE_DURATION
+            ],
             ATTR_COUNTRY_ACTIVE_ALERTS: self._data.active_alerts,
             ATTR_COUNTRY_ALERTS: self._data.alerts,
         }

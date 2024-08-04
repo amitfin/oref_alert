@@ -1,11 +1,12 @@
 """The tests for the geo_location file."""
+
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from freezegun.api import FrozenDateTimeFactory
-
+import homeassistant.util.dt as dt_util
+from homeassistant.config_entries import ConfigEntryDisabler
 from homeassistant.const import (
     ATTR_DATE,
     ATTR_LATITUDE,
@@ -13,27 +14,29 @@ from homeassistant.const import (
     CONF_SOURCE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.config_entries import ConfigEntryDisabler
 from homeassistant.helpers import entity_registry as er
-import homeassistant.util.dt as dt_util
-
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
 )
-from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
 from custom_components.oref_alert.const import (
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_POLL_INTERVAL,
     DOMAIN,
-    OREF_ALERT_UNIQUE_ID,
     LOCATION_ID_SUFFIX,
+    OREF_ALERT_UNIQUE_ID,
 )
 
 from .utils import mock_urls
+
+if TYPE_CHECKING:
+    from freezegun.api import FrozenDateTimeFactory
+    from homeassistant.core import HomeAssistant
+    from pytest_homeassistant_custom_component.test_util.aiohttp import (
+        AiohttpClientMocker,
+    )
 
 DEFAULT_OPTIONS = {CONF_AREAS: ["בארי"], CONF_ALERT_ACTIVE_DURATION: 10}
 ENTITY_ID = f"{Platform.GEO_LOCATION}.{OREF_ALERT_UNIQUE_ID}_{LOCATION_ID_SUFFIX}"
@@ -71,6 +74,7 @@ async def test_entity(
     mock_urls(aioclient_mock, None, "single_alert_history.json")
     config_id = await async_setup(hass)
     state = hass.states.get(f"{ENTITY_ID}_be_eri")
+    assert state is not None
     assert state.state == "80.7"
     assert state.name == "בארי"
     assert state.attributes[CONF_SOURCE] == DOMAIN

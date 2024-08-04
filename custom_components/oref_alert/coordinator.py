@@ -7,13 +7,12 @@ from functools import cmp_to_key
 from json import JSONDecodeError
 from typing import Any
 
+import homeassistant.util.dt as dt_util
 from aiohttp.client_exceptions import ContentTypeError
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-import homeassistant.util.dt as dt_util
 
 from .const import (
     CONF_ALERT_ACTIVE_DURATION,
@@ -68,7 +67,7 @@ def _compare_fields(alert: dict[str, Any], area: str, category: int) -> bool:
 class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorData]):
     """Class to manage fetching Oref Alert data."""
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry):
+    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         """Initialize global data updater."""
         super().__init__(
             hass,
@@ -82,7 +81,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         )
         self._config_entry: ConfigEntry = config_entry
         self._http_client = async_get_clientsession(hass)
-        self._synthetic_alerts: dict[int, dict[Any]] = {}
+        self._synthetic_alerts: dict[int, dict[str, Any]] = {}
 
     async def _async_update_data(self) -> OrefAlertCoordinatorData:
         """Request the data from Oref servers.."""
@@ -100,7 +99,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
 
     async def _async_fetch_url(self, url: str) -> Any:
         """Fetch data from Oref servers."""
-        exc_info = None
+        exc_info = Exception()
         for _ in range(REQUEST_RETRIES):
             try:
                 async with self._http_client.get(url, headers=OREF_HEADERS) as response:
@@ -109,7 +108,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                     except (JSONDecodeError, ContentTypeError):
                         # Empty file is a valid return but not a valid JSON file
                         return None
-            except Exception as ex:  # pylint: disable=broad-except
+            except Exception as ex:  # noqa: BLE001
                 exc_info = ex
         raise exc_info
 
@@ -128,8 +127,8 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             else []
         )
         alerts = []
-        for area in current["data"]:
-            area = self._fix_area_spelling(area)
+        for alert_area in current["data"]:
+            area = self._fix_area_spelling(alert_area)
             for history_recent_alert in history_last_minute_alerts:
                 if _compare_fields(history_recent_alert, area, category):
                     # The alert is already in the history list. No need to add it twice.
@@ -163,11 +162,10 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         recent_alerts = []
         for alert in alerts:
             if (
-                dt_util.parse_datetime(alert["alertDate"])
-                .replace(tzinfo=IST)
-                .timestamp()
-                < earliest_alert
-            ):
+                alert_date := dt_util.parse_datetime(alert["alertDate"])
+            ) is not None and alert_date.replace(
+                tzinfo=IST
+            ).timestamp() < earliest_alert:
                 break
             recent_alerts.append(alert)
         return recent_alerts
@@ -182,14 +180,14 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             "category": 1,
         }
 
-    def _get_synthetic_alerts(self) -> list[dict[Any]]:
+    def _get_synthetic_alerts(self) -> list[dict[str, Any]]:
         """Return the list of synthetic alerts."""
         now = dt_util.now().timestamp()
         for expired in [
             timestamp for timestamp in self._synthetic_alerts if timestamp < now
         ]:
             del self._synthetic_alerts[expired]
-        return self._synthetic_alerts.values()
+        return list(self._synthetic_alerts.values())
 
     def _fix_areas_spelling(self, alerts: list[Any]) -> list[Any]:
         """Fix spelling errors in area names."""

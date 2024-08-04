@@ -9,6 +9,7 @@ __pycache__
 # misc
 .coverage
 coverage.xml
+.ruff_cache
 
 # Home Assistant configuration
 config/*

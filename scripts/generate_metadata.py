@@ -3,13 +3,13 @@
 
 import argparse
 import json
-from os import path
 import subprocess
-from typing import Any
-import yaml
 import zipfile
+from pathlib import Path
+from typing import Any
 
 import requests
+import yaml
 
 RELATIVE_OUTPUT_DIRECTORY = "custom_components/oref_alert/metadata/"
 AREAS_OUTPUT = "areas.py"
@@ -54,9 +54,10 @@ class OrefMetadata:
 
     def __init__(self) -> None:
         """Initialize the object."""
+        self.proxy = None
         self._read_args()
-        self._root_directory = f"{path.dirname(__file__)}/../"
-        self._output_directory = f"{self._root_directory}{RELATIVE_OUTPUT_DIRECTORY}"
+        self._root_directory = Path(__file__).parent.parent
+        self._output_directory = self._root_directory / RELATIVE_OUTPUT_DIRECTORY
         self._cities_mix: list[Any] = self._fetch_url_json(CITIES_MIX_URL)
         self._backend_areas: list[str] = self._get_areas()
         self._areas_no_group = list(
@@ -172,7 +173,7 @@ class OrefMetadata:
             district_to_areas[DISTRICT_PREFIX + district] = district_areas
         return district_to_areas
 
-    def _get_tzevaadom_data(self) -> (Any, Any):
+    def _get_tzevaadom_data(self) -> tuple[Any, Any]:
         """Get tzevaadom metadata content."""
         versions = self._fetch_url_json(TZEVAADOM_VERSIONS_URL)
         return (
@@ -197,6 +198,10 @@ class OrefMetadata:
     def _get_area_info(self) -> dict[str, list[list[float]]]:
         """Get area additional information from tzevaadom."""
         areas = {}
+        assert (
+            len(set(MISSING_CITIES.keys()).intersection(set(self._tzeva_cities.keys())))
+            == 0
+        )
         assert (
             len(
                 set(self._areas_no_group)
@@ -229,16 +234,14 @@ class OrefMetadata:
             ),
             (AREA_INFO_OUTPUT, "AREA_INFO", self._area_info),
         ):
-            with open(
-                f"{self._output_directory}{file_name}",
+            with (self._output_directory / file_name).open(
                 "w",
                 encoding="utf-8",
             ) as output:
                 output.write('"""GENERATED FILE. DO NOT EDIT MANUALLY."""\n\n')
                 output.write(f"{variable_name} = {variable_data}")
 
-        with open(
-            f"{self._root_directory}/{SERVICES_YAML}",
+        with (self._root_directory / SERVICES_YAML).open(
             encoding="utf-8",
         ) as services_yaml:
             services = yaml.load(services_yaml, Loader=yaml.SafeLoader)
@@ -248,8 +251,7 @@ class OrefMetadata:
         services["synthetic_alert"]["fields"]["area"]["selector"]["select"][
             "options"
         ] = self._areas_no_group
-        with open(
-            f"{self._root_directory}/{SERVICES_YAML}",
+        with (self._root_directory / SERVICES_YAML).open(
             "w",
             encoding="utf-8",
         ) as output:
@@ -257,7 +259,7 @@ class OrefMetadata:
 
         with (
             zipfile.ZipFile(
-                f"{self._output_directory}{AREA_TO_POLYGON_OUTPUT}.zip",
+                f"{self._output_directory / AREA_TO_POLYGON_OUTPUT}.zip",
             ) as zip_file,
             zip_file.open(AREA_TO_POLYGON_OUTPUT) as json_file,
         ):
@@ -265,7 +267,7 @@ class OrefMetadata:
 
         if self._area_to_polygon != previous_area_to_polygon:
             with zipfile.ZipFile(
-                f"{self._output_directory}{AREA_TO_POLYGON_OUTPUT}.zip",
+                f"{self._output_directory / AREA_TO_POLYGON_OUTPUT}.zip",
                 "w",
                 compression=zipfile.ZIP_DEFLATED,
                 compresslevel=9,
@@ -275,7 +277,7 @@ class OrefMetadata:
                     json.dumps(self._area_to_polygon, ensure_ascii=False),
                 )
 
-        subprocess.run(["ruff", "format", self._output_directory], check=False)
+        subprocess.run(["ruff", "format", self._output_directory], check=False)  # noqa: S603, S607
 
 
 if __name__ == "__main__":

@@ -1,13 +1,12 @@
 """Support for oref alerts geo location events."""
+
 from __future__ import annotations
 
-from datetime import datetime
+from typing import TYPE_CHECKING
 
+import homeassistant.util.dt as dt_util
 from haversine import haversine
-
-from homeassistant.components.geo_location import GeolocationEvent
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.components.geo_location import ATTR_SOURCE
+from homeassistant.components.geo_location import ATTR_SOURCE, GeolocationEvent
 from homeassistant.const import (
     ATTR_DATE,
     ATTR_LATITUDE,
@@ -17,19 +16,24 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import slugify
-import homeassistant.util.dt as dt_util
 
 from .const import (
     DATA_COORDINATOR,
     DOMAIN,
     IST,
-    OREF_ALERT_UNIQUE_ID,
     LOCATION_ID_SUFFIX,
+    OREF_ALERT_UNIQUE_ID,
 )
-from .coordinator import OrefAlertDataUpdateCoordinator
 from .metadata.area_info import AREA_INFO
+
+if TYPE_CHECKING:
+    from datetime import datetime
+
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+    from .coordinator import OrefAlertDataUpdateCoordinator
 
 
 async def async_setup_entry(
@@ -64,7 +68,10 @@ class OrefAlertLocationEvent(GeolocationEvent):
     ) -> None:
         """Initialize entity."""
         self._attr_name = area
-        self._attr_unique_id = f"{OREF_ALERT_UNIQUE_ID}_{LOCATION_ID_SUFFIX}_{slugify(AREA_INFO[area]['en'])}"
+        self._attr_unique_id = (
+            f"{OREF_ALERT_UNIQUE_ID}_{LOCATION_ID_SUFFIX}_"
+            + slugify(AREA_INFO[area]["en"])
+        )
         self._attr_latitude = AREA_INFO[area]["lat"]
         self._attr_longitude = AREA_INFO[area]["long"]
         self._attr_unit_of_measurement = UnitOfLength.KILOMETERS
@@ -79,7 +86,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
         """Return input for object id."""
         return self._attr_unique_id
 
-    def _async_remove_self(self) -> None:
+    def async_remove_self(self) -> None:
         """Remove this entity."""
         self.hass.async_create_task(self.async_remove(force_remove=True))
 
@@ -119,7 +126,11 @@ class OrefAlertLocationEventManager:
         """Return the alert time as a datetime object."""
         for alert in self._coordinator.data.active_alerts:
             if alert["data"] == area:
-                return dt_util.parse_datetime(alert["alertDate"]).replace(tzinfo=IST)
+                if (
+                    alert_date := dt_util.parse_datetime(alert["alertDate"])
+                ) is not None:
+                    return alert_date.replace(tzinfo=IST)
+                return None
         return None
 
     @callback
@@ -137,7 +148,7 @@ class OrefAlertLocationEventManager:
 
         to_delete = []
         for area in previous - current:
-            self._location_events[area]._async_remove_self()
+            self._location_events[area].async_remove_self()
             to_delete.append(self._location_events[area].entity_id)
             del self._location_events[area]
         self._hass.async_create_task(self._cleanup_entity_registry(to_delete))

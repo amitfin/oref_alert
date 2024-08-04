@@ -1,12 +1,12 @@
 """The tests for the coordinator file."""
-from datetime import timedelta
-import pytest
 
+from datetime import timedelta
+
+import homeassistant.util.dt as dt_util
+import pytest
+from freezegun.api import FrozenDateTimeFactory
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-import homeassistant.util.dt as dt_util
-
-from freezegun.api import FrozenDateTimeFactory
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
@@ -14,10 +14,10 @@ from pytest_homeassistant_custom_component.common import (
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
 from custom_components.oref_alert.const import (
-    DOMAIN,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_POLL_INTERVAL,
     DEFAULT_ALERT_ACTIVE_DURATION,
+    DOMAIN,
     IST,
 )
 from custom_components.oref_alert.coordinator import OrefAlertDataUpdateCoordinator
@@ -178,7 +178,8 @@ async def test_synthetic_alert(
     coordinator = OrefAlertDataUpdateCoordinator(
         hass,
         MockConfigEntry(
-            domain=DOMAIN, options={CONF_POLL_INTERVAL: 1, CONF_ALERT_ACTIVE_DURATION: 100}
+            domain=DOMAIN,
+            options={CONF_POLL_INTERVAL: 1, CONF_ALERT_ACTIVE_DURATION: 100},
         ),
     )
     await coordinator.async_config_entry_first_refresh()

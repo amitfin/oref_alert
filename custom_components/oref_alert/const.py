@@ -1,7 +1,8 @@
 """Constants for the oref_alert integration."""
+
 import logging
-from typing import Final
 import zoneinfo
+from typing import Final
 
 DOMAIN: Final = "oref_alert"
 TITLE: Final = "Oref Alert"

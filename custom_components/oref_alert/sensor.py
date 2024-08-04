@@ -1,42 +1,45 @@
 """Support for representing daily schedule as binary sensors."""
+
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from collections.abc import Callable, Mapping
-
-from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorEntity,
-)
-from homeassistant.config_entries import ConfigEntry
+import homeassistant.util.dt as dt_util
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import event as event_helper
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-import homeassistant.util.dt as dt_util
 
 from .const import (
-    DOMAIN,
-    DATA_COORDINATOR,
-    IST,
-    TITLE,
     ATTR_ALERT,
+    ATTR_AREA,
+    ATTR_TIME_TO_SHELTER,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_SENSORS,
-    ATTR_AREA,
-    ATTR_TIME_TO_SHELTER,
+    DATA_COORDINATOR,
+    DOMAIN,
     END_TIME_ID_SUFFIX,
     END_TIME_NAME_SUFFIX,
+    IST,
     TIME_TO_SHELTER_ID_SUFFIX,
     TIME_TO_SHELTER_NAME_SUFFIX,
+    TITLE,
 )
 from .coordinator import OrefAlertCoordinatorData, OrefAlertDataUpdateCoordinator
-from .metadata.areas import AREAS
 from .metadata.area_to_migun_time import AREA_TO_MIGUN_TIME
+from .metadata.areas import AREAS
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping
+
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+SECONDS_IN_A_MINUTE = 60
 
 
 async def async_setup_entry(
@@ -48,8 +51,10 @@ async def async_setup_entry(
     coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
     entities = [
         (name, areas[0])
-        for name, areas in [(TITLE, config_entry.options[CONF_AREAS])]
-        + list(config_entry.options.get(CONF_SENSORS, {}).items())
+        for name, areas in [
+            (TITLE, config_entry.options[CONF_AREAS]),
+            *list(config_entry.options.get(CONF_SENSORS, {}).items()),
+        ]
         if len(areas) == 1 and areas[0] in AREAS
     ]
     async_add_entities(
@@ -103,25 +108,23 @@ class OrefAlertTimerSensor(
     def _get_alert_timestamp(self) -> float | None:
         """Return the timestamp of the latest active alert in the area."""
         if alert := self._get_alert():
-            return (
-                dt_util.parse_datetime(alert["alertDate"])
-                .replace(tzinfo=IST)
-                .timestamp()
-            )
+            alert_date = dt_util.parse_datetime(alert["alertDate"])
+            if alert_date:
+                return alert_date.replace(tzinfo=IST).timestamp()
         return None
 
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
         self._clean_up_listener()
 
-    def _clean_up_listener(self):
+    def _clean_up_listener(self) -> None:
         """Remove the update timer."""
         if self._unsub_update is not None:
             self._unsub_update()
             self._unsub_update = None
 
     @callback
-    async def _async_update(self, *_) -> None:
+    async def _async_update(self, *_: Any) -> None:
         """Update the state."""
         self.async_write_ha_state()
 
@@ -168,7 +171,7 @@ class TimeToShelterSensor(OrefAlertTimerSensor):
             alert_age = dt_util.now().timestamp() - alert_timestamp
             time_to_shelter = int(self._migun_time - alert_age)
             # Count till "-60" (a minute past the time to shelter).
-            if time_to_shelter > -60:
+            if time_to_shelter > -1 * SECONDS_IN_A_MINUTE:
                 self._update_in_1_second()
                 return time_to_shelter
         return None
@@ -203,7 +206,9 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
     ) -> None:
         """Initialize object with defaults."""
         super().__init__(area, coordinator, config_entry)
-        self._ACTIVE_DURATION: int = self._config_entry.options[CONF_ALERT_ACTIVE_DURATION]
+        self._ACTIVE_DURATION: int = self._config_entry.options[
+            CONF_ALERT_ACTIVE_DURATION
+        ]
         self._attr_name = f"{name} {END_TIME_NAME_SUFFIX}"
         self._attr_unique_id = (
             f"{name.lower().replace(' ', '_')}_" f"{END_TIME_ID_SUFFIX}"

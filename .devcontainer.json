@@ -1,6 +1,6 @@
 {
     "name": "oref_alert",
-    "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
+    "image": "mcr.microsoft.com/devcontainers/python:3.12",
     "postCreateCommand": "scripts/setup",
     "forwardPorts": [
         8123
@@ -15,10 +15,11 @@
         "vscode": {
             "extensions": [
                 "charliermarsh.ruff",
-                "ms-python.python",
                 "github.vscode-pull-request-github",
+                "ms-python.python",
+                "ms-python.vscode-pylance",
                 "ryanluker.vscode-coverage-gutters",
-                "ms-python.vscode-pylance"
+                "streetsidesoftware.code-spell-checker"
             ],
             "settings": {
                 "files.eol": "\n",
@@ -34,11 +35,15 @@
                 "editor.formatOnSave": true,
                 "editor.formatOnType": true,
                 "files.trimTrailingWhitespace": true,
+                "python.analysis.typeCheckingMode": "basic",
+                "python.analysis.autoImportCompletions": true,
+                "python.defaultInterpreterPath": "/usr/local/bin/python",
                 "[python]": {
                     "editor.defaultFormatter": "charliermarsh.ruff"
                 }
             }
         }
     },
-    "remoteUser": "vscode"
+    "remoteUser": "vscode",
+    "features": {}
 }

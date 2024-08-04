@@ -1,29 +1,31 @@
 """Config flow for oref_alert integration."""
+
 from __future__ import annotations
 
 import contextlib
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
 from homeassistant.core import async_get_hass, callback
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import selector
-import homeassistant.helpers.config_validation as cv
+
+if TYPE_CHECKING:
+    from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
-    CONF_AREAS,
     CONF_ALERT_ACTIVE_DURATION,
+    CONF_AREAS,
     CONF_OFF_ICON,
     CONF_ON_ICON,
     CONF_POLL_INTERVAL,
     DEFAULT_ALERT_ACTIVE_DURATION,
-    DOMAIN,
     DEFAULT_OFF_ICON,
     DEFAULT_ON_ICON,
     DEFAULT_POLL_INTERVAL,
+    DOMAIN,
     TITLE,
 )
 from .metadata.area_to_polygon import find_area
@@ -36,7 +38,7 @@ AREAS_CONFIG = selector.SelectSelectorConfig(
     custom_value=False,
 )
 CONFIG_SCHEMA = vol.Schema(
-    {vol.Required(CONF_AREAS, default=[]): selector.SelectSelector(AREAS_CONFIG)}
+    {vol.Required(CONF_AREAS, default=[]): selector.SelectSelector(AREAS_CONFIG)}  # type: ignore[reportArgumentType]
 )
 
 
