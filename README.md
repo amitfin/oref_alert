@@ -141,7 +141,7 @@ Note that it depends on the installation of [card-mod](https://github.com/thomas
 
 ### Presenting Active Alerts in Israel
 
-Here is a simple [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting all active alerts:
+Here is a simple [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting all active alerts (the list is based on [this file](https://www.oref.org.il/alerts/alertCategories.json)):
 
 ```
 type: markdown
