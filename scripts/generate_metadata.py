@@ -31,10 +31,8 @@ CITY_ALL_AREAS_SUFFIX_TYPO = " כל - האזורים"
 DISTRICT_PREFIX = "מחוז "
 
 MISSING_CITIES = {
-    "ביר הדאג'": {"lat": 31.0237, "long": 34.7091, "en": "Bir Hadaj"},
     "ברחבי הארץ": {"lat": 31.7781, "long": 35.2164, "en": "Across the country"},
     "גני מודיעין": {"lat": 31.9304, "long": 35.0177, "en": "Ganei Modi'in"},
-    "גבעון החדשה": {"lat": 31.8482, "long": 35.1580, "en": "Giv'on HaHadasha"},
     "מלאה": {"lat": 32.5629, "long": 35.2366, "en": "Mle'a"},
     "כל הארץ": {"lat": 31.7781, "long": 35.2164, "en": "Entire country"},
     "כרם בן שמן": {"lat": 31.9585, "long": 34.9340, "en": "Kerem Ben Shemen"},
@@ -42,10 +40,21 @@ MISSING_CITIES = {
     "נאות חובב": {"lat": 31.1336, "long": 34.7898, "en": "Ne'ot Hovav"},
     "גדיש": {"lat": 32.5588, "long": 35.2444, "en": "Gadish"},
     "רמת רחל": {"lat": 31.7395, "long": 35.2178, "en": "Ramat Rachel"},
-    "פקיעין החדשה": {"lat": 32.9852, "long": 35.3215, "en": "Peki'in HaHadasha"},
     'בסמ"ה': {"lat": 32.5307, "long": 35.1025, "en": "Basma"},
     "מרכז אומן": {"lat": 32.5638, "long": 35.2425, "en": "Merkaz Omen"},
     "עין חרוד איחוד": {"lat": 32.5631, "long": 35.3917, "en": "Ein Harod"},
+    "צפת": {"lat": 32.9646, "long": 35.496, "en": "Safed"},
+    "אל-ח'וואלד מערב": {"lat": 32.771, "long": 35.1363, "en": "Al Khawaled - West"},
+    "אשדוד -יא,יב,טו,יז,מרינה,סיטי": {
+        "lat": 31.7836,
+        "long": 34.6332,
+        "en": "Ashdod - Yod Alef,Yod Bet,Tet Vav,Yod Zain,Marina,City",
+    },
+    "אזור תעשייה מילואות צפון": {
+        "lat": 33.0684,
+        "long": 35.1102,
+        "en": "North Miluot Industrial Zone",
+    },
 }
 
 
