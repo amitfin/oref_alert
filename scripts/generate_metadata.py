@@ -45,7 +45,7 @@ MISSING_CITIES = {
     "עין חרוד איחוד": {"lat": 32.5631, "long": 35.3917, "en": "Ein Harod"},
     "צפת": {"lat": 32.9646, "long": 35.496, "en": "Safed"},
     "אל-ח'וואלד מערב": {"lat": 32.771, "long": 35.1363, "en": "Al Khawaled - West"},
-    "אשדוד -יא,יב,טו,יז,מרינה,סיטי": {
+    "אשדוד -יא,יב,טו,יז,מרינה,סיטי": {  # noqa: RUF001
         "lat": 31.7836,
         "long": 34.6332,
         "en": "Ashdod - Yod Alef,Yod Bet,Tet Vav,Yod Zain,Marina,City",

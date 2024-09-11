@@ -23,6 +23,7 @@ ignore = [
 ]
 "custom_components/oref_alert/metadata/*" = [
     "RUF001", # String contains ambiguous letter
+    "E501", # Line too long
 ]
 "scripts/*" = [
     "S101", # Assert
