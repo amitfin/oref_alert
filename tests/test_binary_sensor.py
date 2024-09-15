@@ -208,13 +208,18 @@ async def test_icons(
 async def test_unrecognized_area(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test unrecognized area."""
     mock_urls(aioclient_mock, "unrecognized_alert.json", None)
     config_id = await async_setup(hass)
+    assert caplog.text.count("Alert has an unrecognized area: שכם") == 1
+    freezer.tick(datetime.timedelta(seconds=600))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert caplog.text.count("Alert has an unrecognized area: שכם") == 1
     await async_shutdown(hass, config_id)
-    assert "Alert has an unrecognized area: שכם" in caplog.text
     assert "Alert has an unrecognized area: סעד" not in caplog.text
 
 

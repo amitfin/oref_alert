@@ -93,7 +93,9 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         alerts.extend(history)
         alerts.extend(self._get_synthetic_alerts())
         alerts.sort(key=cmp_to_key(_sort_alerts))
-        for unrecognized_area in {alert["data"] for alert in alerts}.difference(AREAS):
+        for unrecognized_area in {alert["data"] for alert in alerts}.difference(
+            {alert["data"] for alert in getattr(self.data, "alerts", [])}
+        ).difference(AREAS):
             LOGGER.error("Alert has an unrecognized area: %s", unrecognized_area)
         return OrefAlertCoordinatorData(alerts, self._active_alerts(alerts))
 
