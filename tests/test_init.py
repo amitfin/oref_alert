@@ -12,8 +12,10 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.helpers import entity_registry
+from homeassistant.helpers import issue_registry as ir
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
+    async_capture_events,
     async_fire_time_changed,
 )
 
@@ -149,3 +151,26 @@ async def test_max_age_deprecation(hass: HomeAssistant) -> None:
     assert state.attributes[CONF_ALERT_ACTIVE_DURATION] == 15
     assert await hass.config_entries.async_remove(config_entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
+
+
+async def test_unknown_area(hass: HomeAssistant) -> None:
+    """Test repair ticket of an unknown area."""
+    repairs = async_capture_events(hass, ir.EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED)
+    config_entry = MockConfigEntry(
+        domain=DOMAIN,
+        options={
+            CONF_ALERT_ACTIVE_DURATION: 10,
+            CONF_AREAS: ["unknown1"],
+            CONF_SENSORS: {"x": ["unknown2"]},
+        },
+    )
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert await hass.config_entries.async_remove(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert len(repairs) == 2
+    for i in range(2):
+        assert repairs[i].data["action"] == "create"
+        assert repairs[i].data["domain"] == DOMAIN
+        assert repairs[i].data["issue_id"] == f"{DOMAIN}_unknown{i + 1}"

@@ -70,5 +70,11 @@
                 }
             }
         }
+    },
+    "issues": {
+        "unknown_area": {
+            "title": "Oref Alert Unknown Area",
+            "description": "The area '{area}' doesn't exist. Please remove it and choose the relevant area from the list."
+        }
     }
 }

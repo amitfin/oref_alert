@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 from typing import TYPE_CHECKING
 
 import homeassistant.helpers.config_validation as cv
@@ -9,7 +10,10 @@ import voluptuous as vol
 from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, Platform
 from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers import entity_registry, selector
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.service import async_register_admin_service
+
+from custom_components.oref_alert.metadata.areas_and_groups import AREAS_AND_GROUPS
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -76,6 +80,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.config_entries.async_update_entry(entry, options=options)
         # config_entry_update_listener will be called and trigger a reload.
         return True
+
+    for area in itertools.chain(
+        entry.options[CONF_AREAS],
+        itertools.chain.from_iterable(entry.options.get(CONF_SENSORS, {}).values()),
+    ):
+        if area not in AREAS_AND_GROUPS:
+            ir.async_create_issue(
+                hass,
+                DOMAIN,
+                f"{DOMAIN}_{area}",
+                is_fixable=False,
+                learn_more_url="https://github.com/amitfin/oref_alert",
+                severity=ir.IssueSeverity.ERROR,
+                translation_key="unknown_area",
+                translation_placeholders={
+                    "area": area,
+                },
+            )
 
     coordinator = OrefAlertDataUpdateCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
