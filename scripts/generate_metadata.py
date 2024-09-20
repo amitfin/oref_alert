@@ -43,7 +43,6 @@ MISSING_CITIES = {
     'בסמ"ה': {"lat": 32.5307, "long": 35.1025, "en": "Basma"},
     "מרכז אומן": {"lat": 32.5638, "long": 35.2425, "en": "Merkaz Omen"},
     "עין חרוד איחוד": {"lat": 32.5631, "long": 35.3917, "en": "Ein Harod"},
-    "צפת": {"lat": 32.9646, "long": 35.496, "en": "Safed"},
     "אל-ח'וואלד מערב": {"lat": 32.771, "long": 35.1363, "en": "Al Khawaled - West"},
     "אשדוד -יא,יב,טו,יז,מרינה,סיטי": {  # noqa: RUF001
         "lat": 31.7836,
@@ -189,7 +188,7 @@ class OrefMetadata:
             self._fetch_url_json(f"{TZEVAADOM_CITIES_URL}{versions['cities']}")[
                 "cities"
             ],
-            self._fetch_url_json(TZEVAADOM_POLYGONS_URL),
+            self._fetch_url_json(f"{TZEVAADOM_POLYGONS_URL}{versions['polygons']}"),
         )
 
     def _get_area_to_polygon(self) -> dict[str, list[list[float]]]:
