@@ -40,34 +40,34 @@ class AreasChecker:
         try:
             async with self._http_client.get(CITIES_MIX_URL) as response:
                 data = await response.json()
-                areas = {
-                    area["label_he"]
-                    for area in data
-                    if not area["label_he"].endswith(FILTER_SUFFIX1)
-                    and not area["label_he"].endswith(FILTER_SUFFIX2)
-                }
-                new = sorted(areas.difference(AREAS))
-                old = sorted(AREAS.difference(areas))
-                if old:
-                    LOGGER.warning(
-                        "The following Oref Alert areas were removed: "
-                        + ",".join([f'"{area}"' for area in old])
-                    )
-                if new:
-                    LOGGER.warning(
-                        "The following Oref Alert areas were added: "
-                        + ",".join([f'"{area}"' for area in new])
-                    )
-                if old or new:
-                    ir.async_create_issue(
-                        self._hass,
-                        DOMAIN,
-                        f"{DOMAIN}_upgrade_required",
-                        is_fixable=False,
-                        learn_more_url="https://github.com/amitfin/oref_alert",
-                        severity=ir.IssueSeverity.WARNING,
-                        translation_key="upgrade_required",
-                    )
+            areas = {
+                area["label_he"]
+                for area in data
+                if not area["label_he"].endswith(FILTER_SUFFIX1)
+                and not area["label_he"].endswith(FILTER_SUFFIX2)
+            }
+            new = sorted(areas.difference(AREAS))
+            old = sorted(AREAS.difference(areas))
+            if old:
+                LOGGER.warning(
+                    "The following Oref Alert areas were removed: "
+                    + ",".join([f'"{area}"' for area in old])
+                )
+            if new:
+                LOGGER.warning(
+                    "The following Oref Alert areas were added: "
+                    + ",".join([f'"{area}"' for area in new])
+                )
+            if old or new:
+                ir.async_create_issue(
+                    self._hass,
+                    DOMAIN,
+                    f"{DOMAIN}_upgrade_required",
+                    is_fixable=False,
+                    learn_more_url="https://github.com/amitfin/oref_alert",
+                    severity=ir.IssueSeverity.WARNING,
+                    translation_key="upgrade_required",
+                )
         finally:
             self._unsub__next_check = event.async_track_point_in_time(
                 self._hass, self._check, dt_util.now() + timedelta(hours=12)
