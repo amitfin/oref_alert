@@ -20,6 +20,7 @@ DISTRICT_TO_AREAS_OUTPUT = "district_to_areas.py"
 AREA_TO_POLYGON_OUTPUT = "area_to_polygon.json"
 AREA_INFO_OUTPUT = "area_info.py"
 SERVICES_YAML = "custom_components/oref_alert/services.yaml"
+TEST_AREAS_FIXTURE = "tests/fixtures/GetCitiesMix.json"
 CITIES_MIX_URL = "https://alerts-history.oref.org.il/Shared/Ajax/GetCitiesMix.aspx"
 DISTRICTS_URL = "https://alerts-history.oref.org.il/Shared/Ajax/GetDistricts.aspx"
 TZEVAADOM_VERSIONS_URL = "https://api.tzevaadom.co.il/lists-versions"
@@ -284,6 +285,11 @@ class OrefMetadata:
                     AREA_TO_POLYGON_OUTPUT,
                     json.dumps(self._area_to_polygon, ensure_ascii=False),
                 )
+
+        with (self._root_directory / TEST_AREAS_FIXTURE).open(
+            "w", encoding="utf-8"
+        ) as fixture:
+            json.dump(self._cities_mix, fixture, ensure_ascii=False)
 
         subprocess.run(["ruff", "format", self._output_directory], check=False)  # noqa: S603, S607
 

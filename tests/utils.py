@@ -7,6 +7,7 @@ from typing import Any
 from pytest_homeassistant_custom_component.common import load_fixture
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
+from custom_components.oref_alert.areas_checker import CITIES_MIX_URL
 from custom_components.oref_alert.coordinator import OREF_ALERTS_URL, OREF_HISTORY_URL
 
 
@@ -26,6 +27,11 @@ def mock_urls(
     aioclient_mock.get(
         OREF_HISTORY_URL,
         text=load_fixture(history_fixture) if history_fixture else "",
+        **kwargs,
+    )
+    aioclient_mock.get(
+        CITIES_MIX_URL,
+        text=load_fixture("GetCitiesMix.json"),
         **kwargs,
     )
 

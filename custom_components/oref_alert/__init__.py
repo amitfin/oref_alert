@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
@@ -13,6 +13,7 @@ from homeassistant.helpers import entity_registry, selector
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.service import async_register_admin_service
 
+from custom_components.oref_alert.areas_checker import AreasChecker
 from custom_components.oref_alert.metadata.areas_and_groups import AREAS_AND_GROUPS
 
 if TYPE_CHECKING:
@@ -37,6 +38,7 @@ from .const import (
 from .coordinator import OrefAlertDataUpdateCoordinator
 from .metadata.areas import AREAS
 
+AREAS_CHECKER: Final = "areas_checker"
 PLATFORMS = (Platform.BINARY_SENSOR, Platform.SENSOR, Platform.GEO_LOCATION)
 
 ADD_SENSOR_SCHEMA = vol.Schema(
@@ -103,6 +105,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_config_entry_first_refresh()
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         DATA_COORDINATOR: coordinator,
+        AREAS_CHECKER: AreasChecker(hass),
     }
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -184,6 +187,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if DOMAIN not in hass.data:
         return True
-    hass.data[DOMAIN].pop(entry.entry_id)
-    hass.services.async_remove(DOMAIN, ADD_SENSOR_SERVICE)
+    if (data := hass.data[DOMAIN].pop(entry.entry_id)) is not None:
+        data[AREAS_CHECKER].stop()
+    for service in [ADD_SENSOR_SERVICE, REMOVE_SENSOR_SERVICE, SYNTHETIC_ALERT_SERVICE]:
+        hass.services.async_remove(DOMAIN, service)
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
