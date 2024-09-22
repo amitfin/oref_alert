@@ -67,6 +67,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
         date: datetime | None,
     ) -> None:
         """Initialize entity."""
+        self._hass = hass
         self._attr_name = area
         self._attr_unique_id = (
             f"{OREF_ALERT_UNIQUE_ID}_{LOCATION_ID_SUFFIX}_"
@@ -88,7 +89,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
 
     def async_remove_self(self) -> None:
         """Remove this entity."""
-        self.hass.async_create_task(self.async_remove(force_remove=True))
+        self._hass.async_create_task(self.async_remove(force_remove=True))
 
 
 class OrefAlertLocationEventManager:
