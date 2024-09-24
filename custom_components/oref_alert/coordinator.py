@@ -59,11 +59,6 @@ def _sort_alerts(item1: dict[str, Any], item2: dict[str, Any]) -> int:
     return 0
 
 
-def _compare_fields(alert: dict[str, Any], area: str, category: int) -> bool:
-    """Compare an alert with area and category (time is ignored)."""
-    return alert["data"] == area and alert["category"] == category
-
-
 class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorData]):
     """Class to manage fetching Oref Alert data."""
 
@@ -119,7 +114,6 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
     ) -> list[dict[str, str]]:
         """Convert current alerts payload to history format."""
         now = dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S")
-        category = int(current["cat"])
         history_last_minute_alerts = self._recent_alerts(
             history, REAL_TIME_ALERT_LOGIC_WINDOW
         )
@@ -132,12 +126,12 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         for alert_area in current["data"]:
             area = self._fix_area_spelling(alert_area)
             for history_recent_alert in history_last_minute_alerts:
-                if _compare_fields(history_recent_alert, area, category):
+                if history_recent_alert["data"] == area:
                     # The alert is already in the history list. No need to add it twice.
                     break
             else:
                 for previous_recent_alert in previous_last_minute_alerts:
-                    if _compare_fields(previous_recent_alert, area, category):
+                    if previous_recent_alert["data"] == area:
                         # The alert was already added, so take the original timestamp.
                         alerts.append(previous_recent_alert)
                         break
@@ -147,7 +141,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                             "alertDate": now,
                             "title": current["title"],
                             "data": area,
-                            "category": category,
+                            "category": int(current["cat"]),
                         }
                     )
         return alerts
