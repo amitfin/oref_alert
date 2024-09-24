@@ -16,6 +16,9 @@
 # See here for more info: https://docs.pytest.org/en/latest/fixture.html (note that
 # pytest includes fixtures OOB which you can use as defined on this page)
 
+from collections.abc import Generator
+from unittest.mock import patch
+
 import pytest
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
@@ -34,3 +37,10 @@ def _auto_enable_custom_integrations(enable_custom_integrations: bool) -> None: 
 def _auto_aioclient_mock(aioclient_mock: AiohttpClientMocker) -> None:
     """Mock aiohttp with empty result relevant URLs."""
     mock_urls(aioclient_mock, None, None)
+
+
+@pytest.fixture(autouse=True)
+def _disable_asyncio_sleep() -> Generator[None, None, None]:
+    """Disable sleep for all tests."""
+    with patch("asyncio.sleep"):
+        yield
