@@ -73,7 +73,7 @@ async def test_entity(
     freezer.move_to("2023-10-07 06:30:00+03:00")
     mock_urls(aioclient_mock, None, "single_alert_history.json")
     config_id = await async_setup(hass)
-    state = hass.states.get(f"{ENTITY_ID}_be_eri")
+    state = hass.states.get(f"{ENTITY_ID}_be_eri_1696649400")
     assert state is not None
     assert state.state == "80.7"
     assert state.name == "בארי"

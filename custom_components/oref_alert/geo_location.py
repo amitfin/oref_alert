@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import TYPE_CHECKING
 
 import homeassistant.util.dt as dt_util
@@ -73,6 +74,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
         self._attr_unique_id = (
             f"{OREF_ALERT_UNIQUE_ID}_{LOCATION_ID_SUFFIX}_"
             + slugify(AREA_INFO[area]["en"])
+            + f"_{int(time.time())}"
         )
         self._attr_latitude = AREA_INFO[area]["lat"]
         self._attr_longitude = AREA_INFO[area]["long"]
