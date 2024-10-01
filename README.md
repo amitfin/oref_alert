@@ -20,6 +20,7 @@ The integration is installed and configured via the user interface. There is no 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=amitfin&repository=oref_alert&category=integration)
 
 Otherwise, download `oref_alert.zip` from the [latest release](https://github.com/amitfin/oref_alert/releases), extract and copy the content under `custom_components` directory.
+It requires the Shapely module that is not required by HA itself, so you may need to install it.
 
 Home Assistant restart is required once the integration files are copied (either by HACS or manually).
 
