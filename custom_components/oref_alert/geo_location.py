@@ -30,7 +30,6 @@ from .const import (
 from .metadata.area_info import AREA_INFO
 
 if TYPE_CHECKING:
-
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
