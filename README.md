@@ -170,12 +170,15 @@ content: >-
     21: "alert-circle-check",
     22: "alert-circle-check",
   } %}
-  {% for alert in (state_attr('binary_sensor.oref_alert', 'country_active_alerts') or []) %}
+  {% for alert in states.geo_location |
+     selectattr('entity_id', 'in', integration_entities('oref_alert')) |
+     sort(attribute='attributes.date', reverse=true) %}
     <p>
-      <font color="red"><ha-icon icon="mdi:{{ icons.get(alert['category'], 'alert') }}"></ha-icon></font>
-      {{ alert['data'] }}
-      [{{ alert['title'] }}]
-      ({{ alert['alertDate'] | as_timestamp | timestamp_custom('%H:%M:%S') }})
+      <font color="red"><ha-icon icon="mdi:{{ icons.get(alert.attributes.category, 'alert') }}"></ha-icon></font>
+      {{ alert.name }}
+      [{{ alert.attributes.title }}]
+      <מרחק {{ alert.state | int }} ק״מ>
+      ({{ alert.attributes.date | as_timestamp | timestamp_custom('%H:%M') }})
     </p>
   {% endfor %}
 card_mod:
