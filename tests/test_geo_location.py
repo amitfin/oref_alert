@@ -11,8 +11,11 @@ from homeassistant.const import (
     ATTR_DATE,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
+    CONF_FRIENDLY_NAME,
     CONF_SOURCE,
+    CONF_UNIT_OF_MEASUREMENT,
     Platform,
+    UnitOfLength,
 )
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import (
@@ -80,9 +83,14 @@ async def test_entity(
     assert state.attributes[CONF_SOURCE] == DOMAIN
     assert state.attributes[ATTR_LATITUDE] == 31.4245
     assert state.attributes[ATTR_LONGITUDE] == 34.4926
+    assert state.attributes[CONF_UNIT_OF_MEASUREMENT] == UnitOfLength.KILOMETERS
+    assert state.attributes[CONF_FRIENDLY_NAME] == "בארי"
     assert state.attributes[ATTR_DATE] == dt_util.parse_datetime(
         "2023-10-07 06:30:00+03:00"
     )
+    assert state.attributes["category"] == 1
+    assert state.attributes["title"] == "ירי רקטות וטילים"
+    assert len(state.attributes) == 8
     await async_shutdown(hass, config_id)
 
 
