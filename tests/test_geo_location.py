@@ -141,3 +141,25 @@ async def test_clean_start(
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 0
     await async_shutdown(hass, config_id)
+
+
+async def test_attributes_update(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test entity state."""
+    freezer.move_to("2023-10-07 06:30:00+03:00")
+    mock_urls(aioclient_mock, None, "single_alert_history.json")
+    config_id = await async_setup(hass)
+    state = hass.states.get(f"{ENTITY_ID}_be_eri_1696649400")
+    assert state is not None
+    assert state.attributes["category"] == 1
+    mock_urls(aioclient_mock, None, "single_alert_history_update.json")
+    freezer.tick(10)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    state = hass.states.get(f"{ENTITY_ID}_be_eri_1696649400")
+    assert state is not None
+    assert state.attributes["category"] == 2
+    await async_shutdown(hass, config_id)
