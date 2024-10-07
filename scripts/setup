@@ -4,4 +4,6 @@ set -e
 
 cd "$(dirname "$0")/.."
 
-python3 -m pip install --requirement requirements.txt
+sudo python3 -m pip install --upgrade pip
+sudo python3 -m pip install uv
+sudo uv pip install --system -r requirements.txt

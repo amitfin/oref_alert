@@ -1,7 +1,7 @@
 {
     "name": "oref_alert",
     "image": "mcr.microsoft.com/devcontainers/python:3.12",
-    "postCreateCommand": "scripts/setup",
+    "postCreateCommand": "scripts/setup && git config --global --add safe.directory ${containerWorkspaceFolder}",
     "forwardPorts": [
         8123
     ],
