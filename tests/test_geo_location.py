@@ -78,7 +78,7 @@ async def test_entity(
     config_id = await async_setup(hass)
     state = hass.states.get(f"{ENTITY_ID}_be_eri_1696649400")
     assert state is not None
-    assert state.state == "80.7"
+    assert state.state == "80.6"
     assert state.name == "בארי"
     assert state.attributes[CONF_SOURCE] == DOMAIN
     assert state.attributes[ATTR_LATITUDE] == 31.4245

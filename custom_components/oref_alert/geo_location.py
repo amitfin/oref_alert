@@ -7,7 +7,6 @@ import time
 from typing import TYPE_CHECKING, Any
 
 import homeassistant.util.dt as dt_util
-from haversine import haversine
 from homeassistant.components.geo_location import ATTR_SOURCE, GeolocationEvent
 from homeassistant.const import (
     ATTR_DATE,
@@ -19,6 +18,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import slugify
+from homeassistant.util.location import vincenty
 
 from .const import (
     DATA_COORDINATOR,
@@ -74,10 +74,10 @@ class OrefAlertLocationEvent(GeolocationEvent):
             + slugify(AREA_INFO[area]["en"])
             + f"_{int(time.time())}"
         )
-        self._attr_latitude = AREA_INFO[area]["lat"]
-        self._attr_longitude = AREA_INFO[area]["long"]
+        self._attr_latitude: float = AREA_INFO[area]["lat"]
+        self._attr_longitude: float = AREA_INFO[area]["long"]
         self._attr_unit_of_measurement = UnitOfLength.KILOMETERS
-        self._attr_distance = haversine(
+        self._attr_distance = vincenty(
             (hass.config.latitude, hass.config.longitude),
             (self._attr_latitude, self._attr_longitude),
         )
