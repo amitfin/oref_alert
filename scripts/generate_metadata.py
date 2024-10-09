@@ -289,7 +289,14 @@ class OrefMetadata:
         with (self._root_directory / TEST_AREAS_FIXTURE).open(
             "w", encoding="utf-8"
         ) as fixture:
-            json.dump(self._cities_mix, fixture, ensure_ascii=False)
+            json.dump(
+                sorted(
+                    [{"label_he": area["label_he"]} for area in self._cities_mix],
+                    key=lambda x: x["label_he"],
+                ),
+                fixture,
+                ensure_ascii=False,
+            )
 
         subprocess.run(["ruff", "format", self._output_directory], check=False)  # noqa: S603, S607
 
