@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import time
 from typing import TYPE_CHECKING, Any
 
 import homeassistant.util.dt as dt_util
@@ -15,14 +14,12 @@ from homeassistant.const import (
     UnitOfLength,
 )
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.util import slugify
 from homeassistant.util.location import vincenty
 
 from .const import (
     DATA_COORDINATOR,
     DOMAIN,
     IST,
-    LOCATION_ID_SUFFIX,
     OREF_ALERT_UNIQUE_ID,
 )
 from .metadata.area_info import AREA_INFO
@@ -67,11 +64,6 @@ class OrefAlertLocationEvent(GeolocationEvent):
         """Initialize entity."""
         self._hass = hass
         self._attr_name = area
-        self._suggested_object_id = (
-            f"{OREF_ALERT_UNIQUE_ID}_{LOCATION_ID_SUFFIX}_"
-            + slugify(AREA_INFO[area]["en"])
-            + f"_{int(time.time())}"
-        )
         self._attr_latitude: float = AREA_INFO[area]["lat"]
         self._attr_longitude: float = AREA_INFO[area]["long"]
         self._attr_unit_of_measurement = UnitOfLength.KILOMETERS
@@ -84,7 +76,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
     @property
     def suggested_object_id(self) -> str | None:
         """Return input for object id."""
-        return self._suggested_object_id
+        return OREF_ALERT_UNIQUE_ID
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
