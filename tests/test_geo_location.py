@@ -27,6 +27,7 @@ from custom_components.oref_alert.const import (
     CONF_AREAS,
     CONF_POLL_INTERVAL,
     DOMAIN,
+    LOCATION_ID_SUFFIX,
     OREF_ALERT_UNIQUE_ID,
 )
 
@@ -40,7 +41,7 @@ if TYPE_CHECKING:
     )
 
 DEFAULT_OPTIONS = {CONF_AREAS: ["בארי"], CONF_ALERT_ACTIVE_DURATION: 10}
-ENTITY_ID = f"{Platform.GEO_LOCATION}.{OREF_ALERT_UNIQUE_ID}"
+ENTITY_ID = f"{Platform.GEO_LOCATION}.{OREF_ALERT_UNIQUE_ID}_{LOCATION_ID_SUFFIX}"
 
 
 async def async_setup(

@@ -20,6 +20,7 @@ from .const import (
     DATA_COORDINATOR,
     DOMAIN,
     IST,
+    LOCATION_ID_SUFFIX,
     OREF_ALERT_UNIQUE_ID,
 )
 from .metadata.area_info import AREA_INFO
@@ -76,7 +77,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
     @property
     def suggested_object_id(self) -> str | None:
         """Return input for object id."""
-        return OREF_ALERT_UNIQUE_ID
+        return f"{OREF_ALERT_UNIQUE_ID}_{LOCATION_ID_SUFFIX}"
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
