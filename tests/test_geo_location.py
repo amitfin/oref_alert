@@ -76,6 +76,10 @@ async def test_entity(
     freezer.move_to("2023-10-07 06:30:00+03:00")
     mock_urls(aioclient_mock, None, "single_alert_history.json")
     config_id = await async_setup(hass)
+    assert not any(
+        entry.domain == Platform.GEO_LOCATION
+        for entry in er.async_entries_for_config_entry(er.async_get(hass), config_id)
+    )
     state = hass.states.get(f"{ENTITY_ID}_be_eri_1696649400")
     assert state is not None
     assert state.state == "80.6"
@@ -103,24 +107,19 @@ async def test_add_remove(
     freezer.move_to("2023-10-07 06:29:00+03:00")
     config_id = await async_setup(hass, {CONF_POLL_INTERVAL: 1})
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 0
-    entity_registry = er.async_get(hass)
-    base_count = len(er.async_entries_for_config_entry(entity_registry, config_id))
     mock_urls(aioclient_mock, None, "single_alert_history.json")
     freezer.move_to("2023-10-07 06:30:01+03:00")
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 1
-    assert (
-        len(er.async_entries_for_config_entry(entity_registry, config_id))
-        == base_count + 1
+    assert not any(
+        entry.domain == Platform.GEO_LOCATION
+        for entry in er.async_entries_for_config_entry(er.async_get(hass), config_id)
     )
     freezer.tick(timedelta(minutes=10))
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 0
-    assert (
-        len(er.async_entries_for_config_entry(entity_registry, config_id)) == base_count
-    )
     await async_shutdown(hass, config_id)
 
 
