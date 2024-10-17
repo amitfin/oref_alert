@@ -84,7 +84,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
             or 0,
             1,
         )
-        self._alert_attributes = {**attributes, ATTR_HOME_DISTANCE: self._attr_distance}
+        self._alert_attributes = attributes
 
     @property
     def suggested_object_id(self) -> str | None:
@@ -94,7 +94,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra state attributes."""
-        return self._alert_attributes
+        return {**self._alert_attributes, ATTR_HOME_DISTANCE: self._attr_distance}
 
     @callback
     def async_remove_self(self) -> None:
