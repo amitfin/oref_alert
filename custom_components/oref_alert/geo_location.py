@@ -19,7 +19,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.util.location import vincenty
 
 from .const import (
-    ATTR_DISTANCE,
+    ATTR_HOME_DISTANCE,
     DATA_COORDINATOR,
     DOMAIN,
     IST,
@@ -56,7 +56,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
             ATTR_LATITUDE,
             ATTR_LONGITUDE,
             ATTR_DATE,
-            ATTR_DISTANCE,
+            ATTR_HOME_DISTANCE,
             CONF_FRIENDLY_NAME,
             CONF_UNIT_OF_MEASUREMENT,
             "category",
@@ -84,7 +84,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
             or 0,
             1,
         )
-        self._alert_attributes = {**attributes, ATTR_DISTANCE: self._attr_distance}
+        self._alert_attributes = {**attributes, ATTR_HOME_DISTANCE: self._attr_distance}
 
     @property
     def suggested_object_id(self) -> str | None:

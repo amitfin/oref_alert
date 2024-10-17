@@ -24,7 +24,7 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.oref_alert.const import (
-    ATTR_DISTANCE,
+    ATTR_HOME_DISTANCE,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_POLL_INTERVAL,
@@ -90,7 +90,7 @@ async def test_entity(
     assert state.attributes[ATTR_LONGITUDE] == 34.4926
     assert state.attributes[CONF_UNIT_OF_MEASUREMENT] == UnitOfLength.KILOMETERS
     assert state.attributes[CONF_FRIENDLY_NAME] == "בארי"
-    assert state.attributes[ATTR_DISTANCE] == 80.6
+    assert state.attributes[ATTR_HOME_DISTANCE] == 80.6
     assert state.attributes[ATTR_DATE] == dt_util.parse_datetime(
         "2023-10-07 06:30:00+03:00"
     )
@@ -194,7 +194,8 @@ async def test_distance_types(
     )
     assert result_as_boolean(
         Template(
-            f"{{{{ states.{ENTITY_ID}.attributes.{ATTR_DISTANCE} is float }}}}", hass
+            f"{{{{ states.{ENTITY_ID}.attributes.{ATTR_HOME_DISTANCE} is float }}}}",
+            hass,
         ).async_render(parse_result=False)
     )
     await async_shutdown(hass, config_id)
