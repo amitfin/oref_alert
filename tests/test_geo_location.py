@@ -17,12 +17,14 @@ from homeassistant.const import (
     UnitOfLength,
 )
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.template import Template, result_as_boolean
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
 )
 
 from custom_components.oref_alert.const import (
+    ATTR_DISTANCE,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_POLL_INTERVAL,
@@ -88,12 +90,13 @@ async def test_entity(
     assert state.attributes[ATTR_LONGITUDE] == 34.4926
     assert state.attributes[CONF_UNIT_OF_MEASUREMENT] == UnitOfLength.KILOMETERS
     assert state.attributes[CONF_FRIENDLY_NAME] == "בארי"
+    assert state.attributes[ATTR_DISTANCE] == 80.6
     assert state.attributes[ATTR_DATE] == dt_util.parse_datetime(
         "2023-10-07 06:30:00+03:00"
     )
     assert state.attributes["category"] == 1
     assert state.attributes["title"] == "ירי רקטות וטילים"
-    assert len(state.attributes) == 8
+    assert len(state.attributes) == 9
     await async_shutdown(hass, config_id)
 
 
@@ -170,4 +173,28 @@ async def test_attributes_update(
     state = hass.states.get(ENTITY_ID)
     assert state is not None
     assert state.attributes["category"] == 2
+    await async_shutdown(hass, config_id)
+
+
+async def test_distance_types(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test type of state and distance attribute."""
+    freezer.move_to("2023-10-07 06:30:00+03:00")
+    mock_urls(aioclient_mock, None, "single_alert_history.json")
+    config_id = await async_setup(hass)
+    state = hass.states.get(ENTITY_ID)
+    assert state is not None
+    assert result_as_boolean(
+        Template(f"{{{{ states.{ENTITY_ID}.state is string }}}}", hass).async_render(
+            parse_result=False
+        )
+    )
+    assert result_as_boolean(
+        Template(
+            f"{{{{ states.{ENTITY_ID}.attributes.{ATTR_DISTANCE} is float }}}}", hass
+        ).async_render(parse_result=False)
+    )
     await async_shutdown(hass, config_id)

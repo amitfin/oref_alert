@@ -17,6 +17,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.util.location import vincenty
 
 from .const import (
+    ATTR_DISTANCE,
     DATA_COORDINATOR,
     DOMAIN,
     IST,
@@ -68,11 +69,15 @@ class OrefAlertLocationEvent(GeolocationEvent):
         self._attr_latitude: float = AREA_INFO[area]["lat"]
         self._attr_longitude: float = AREA_INFO[area]["long"]
         self._attr_unit_of_measurement = UnitOfLength.KILOMETERS
-        self._attr_distance = vincenty(
-            (hass.config.latitude, hass.config.longitude),
-            (self._attr_latitude, self._attr_longitude),
+        self._attr_distance = round(
+            vincenty(
+                (hass.config.latitude, hass.config.longitude),
+                (self._attr_latitude, self._attr_longitude),
+            )
+            or 0,
+            1,
         )
-        self._alert_attributes = attributes
+        self._alert_attributes = {**attributes, ATTR_DISTANCE: self._attr_distance}
 
     @property
     def suggested_object_id(self) -> str | None:
