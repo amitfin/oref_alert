@@ -11,6 +11,8 @@ from homeassistant.const import (
     ATTR_DATE,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
+    CONF_FRIENDLY_NAME,
+    CONF_UNIT_OF_MEASUREMENT,
     UnitOfLength,
 )
 from homeassistant.core import HomeAssistant, callback
@@ -48,12 +50,17 @@ class OrefAlertLocationEvent(GeolocationEvent):
     _attr_should_poll = False
     _attr_source = DOMAIN
     _attr_has_entity_name = True
-    _entity_component_unrecorded_attributes = frozenset(
+    _unrecorded_attributes = frozenset(
         {
             ATTR_SOURCE,
             ATTR_LATITUDE,
             ATTR_LONGITUDE,
             ATTR_DATE,
+            ATTR_DISTANCE,
+            CONF_FRIENDLY_NAME,
+            CONF_UNIT_OF_MEASUREMENT,
+            "category",
+            "title",
         }
     )
 
