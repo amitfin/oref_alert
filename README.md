@@ -176,7 +176,7 @@ content: >-
     <p>
       <font color="red"><ha-icon icon="mdi:{{ icons.get(alert.attributes.category, 'alert') }}"></ha-icon></font>
       {{ alert.name }}
-      [{{ alert.home_distance | int }} ק״מ]
+      [{{ alert.state | int }} ק״מ]
       ({{ alert.attributes.date | as_timestamp | timestamp_custom('%H:%M') }})
     </p>
   {% endfor %}
