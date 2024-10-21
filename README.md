@@ -141,7 +141,7 @@ Note that it depends on the installation of [card-mod](https://github.com/thomas
 
 ### Presenting Active Alerts in Israel
 
-Here is a simple [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting all active alerts (the list of categories is based on [this file](https://www.oref.org.il/alerts/alertCategories.json)):
+Here is a [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting all active alerts sorted by their distance from HA's home coordinates (the list of categories is based on [this file](https://www.oref.org.il/alerts/alertCategories.json)):
 
 ```
 type: markdown
@@ -172,11 +172,11 @@ content: >-
   } %}
   {% for alert in states.geo_location |
      selectattr('entity_id', 'in', integration_entities('oref_alert')) |
-     sort(attribute='attributes.date', reverse=true) %}
+     sort(attribute='attributes.home_distance') %}
     <p>
       <font color="red"><ha-icon icon="mdi:{{ icons.get(alert.attributes.category, 'alert') }}"></ha-icon></font>
       {{ alert.name }}
-      [{{ alert.state | int }} ק״מ]
+      [{{ alert.home_distance | int }} ק״מ]
       ({{ alert.attributes.date | as_timestamp | timestamp_custom('%H:%M') }})
     </p>
   {% endfor %}
@@ -187,7 +187,7 @@ card_mod:
     }
 ```
 
-(The `card_mod` section at the bottom is only required when the language is English. It forces RTL for this element. Note that it depends on the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.)
+(The `card_mod` section at the bottom is only required when the language is English. It forces RTL for this element. Note that it requires the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.)
 
 <kbd>![image](https://github.com/user-attachments/assets/bc1830dc-07d2-4a3b-a5c4-c08d1e620a79)</kbd>
 
