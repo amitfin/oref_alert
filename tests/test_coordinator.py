@@ -1,6 +1,7 @@
 """The tests for the coordinator file."""
 
 from datetime import timedelta
+from http import HTTPStatus
 
 import homeassistant.util.dt as dt_util
 import pytest
@@ -20,7 +21,11 @@ from custom_components.oref_alert.const import (
     DOMAIN,
     IST,
 )
-from custom_components.oref_alert.coordinator import OrefAlertDataUpdateCoordinator
+from custom_components.oref_alert.coordinator import (
+    OREF_ALERTS_URL,
+    OREF_HISTORY_URL,
+    OrefAlertDataUpdateCoordinator,
+)
 
 from .utils import load_json_fixture, mock_urls
 
@@ -199,4 +204,38 @@ async def test_synthetic_alert(
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(coordinator.data.alerts) == 0
+    await coordinator.async_shutdown()
+
+
+async def test_http_cache(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test HTTP caching."""
+    freezer.move_to("2023-10-07 06:30:00+03:00")
+    mock_urls(
+        aioclient_mock, "single_alert_real_time.json", "single_alert_history.json"
+    )
+    coordinator = OrefAlertDataUpdateCoordinator(hass, DEFAULT_CONFIG_ENTRY)
+    await coordinator.async_config_entry_first_refresh()
+    coordinator.async_add_listener(lambda: None)
+    assert len(coordinator.data.alerts) == 2
+
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(OREF_ALERTS_URL, status=HTTPStatus.NOT_MODIFIED)
+    aioclient_mock.get(OREF_HISTORY_URL, status=HTTPStatus.NOT_MODIFIED)
+    freezer.tick(timedelta(seconds=10))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert len(coordinator.data.alerts) == 2
+
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(OREF_ALERTS_URL, text="")
+    aioclient_mock.get(OREF_HISTORY_URL, status=HTTPStatus.NOT_MODIFIED)
+    freezer.tick(timedelta(seconds=10))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert len(coordinator.data.alerts) == 1
+
     await coordinator.async_shutdown()
