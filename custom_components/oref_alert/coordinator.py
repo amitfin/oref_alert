@@ -4,6 +4,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import timedelta
 from functools import cmp_to_key
+from http import HTTPStatus
 from json import JSONDecodeError
 from typing import Any
 
@@ -76,35 +77,59 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         )
         self._config_entry: ConfigEntry = config_entry
         self._http_client = async_get_clientsession(hass)
+        self._http_cache = {}
         self._synthetic_alerts: dict[int, dict[str, Any]] = {}
 
     async def _async_update_data(self) -> OrefAlertCoordinatorData:
         """Request the data from Oref servers.."""
-        current, history = await asyncio.gather(
+        (current, current_modified), (history, history_modified) = await asyncio.gather(
             *[self._async_fetch_url(url) for url in (OREF_ALERTS_URL, OREF_HISTORY_URL)]
         )
-        history = self._fix_areas_spelling(history) if history else []
-        alerts = self._current_to_history_format(current, history) if current else []
-        alerts.extend(history)
-        alerts.extend(self._get_synthetic_alerts())
-        alerts.sort(key=cmp_to_key(_sort_alerts))
-        for unrecognized_area in {alert["data"] for alert in alerts}.difference(
-            {alert["data"] for alert in getattr(self.data, "alerts", [])}
-        ).difference(AREAS):
-            LOGGER.error("Alert has an unrecognized area: %s", unrecognized_area)
+        if (
+            current_modified
+            or history_modified
+            or not self.data
+            or self._synthetic_alerts
+        ):
+            history = self._fix_areas_spelling(history) if history else []
+            alerts = (
+                self._current_to_history_format(current, history) if current else []
+            )
+            alerts.extend(history)
+            alerts.extend(self._get_synthetic_alerts())
+            alerts.sort(key=cmp_to_key(_sort_alerts))
+            for unrecognized_area in {alert["data"] for alert in alerts}.difference(
+                {alert["data"] for alert in getattr(self.data, "alerts", [])}
+            ).difference(AREAS):
+                LOGGER.error("Alert has an unrecognized area: %s", unrecognized_area)
+        else:
+            alerts = self.data.alerts
         return OrefAlertCoordinatorData(alerts, self._active_alerts(alerts))
 
-    async def _async_fetch_url(self, url: str) -> Any:
+    async def _async_fetch_url(self, url: str) -> tuple[Any, bool]:
         """Fetch data from Oref servers."""
         exc_info = Exception()
+        cached_content, last_modified = self._http_cache.get(url, (None, None))
+        headers = (
+            OREF_HEADERS
+            if not last_modified
+            else {"If-Modified-Since": last_modified, **OREF_HEADERS}
+        )
         for _ in range(REQUEST_RETRIES):
             try:
-                async with self._http_client.get(url, headers=OREF_HEADERS) as response:
+                async with self._http_client.get(url, headers=headers) as response:
+                    if response.status == HTTPStatus.NOT_MODIFIED:
+                        return cached_content, False
                     try:
-                        return await response.json(encoding="utf-8-sig")
+                        content = await response.json(encoding="utf-8-sig")
                     except (JSONDecodeError, ContentTypeError):
                         # Empty file is a valid return but not a valid JSON file
-                        return None
+                        content = None
+                    self._http_cache[url] = (
+                        content,
+                        response.headers.get("Last-Modified"),
+                    )
+                    return content, not (content is None and cached_content is None)
             except Exception as ex:  # noqa: BLE001
                 exc_info = ex
         raise exc_info
