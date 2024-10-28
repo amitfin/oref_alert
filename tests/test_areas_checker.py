@@ -43,7 +43,7 @@ async def test_areas_check_failure(
     assert len(repairs) == 1
     assert repairs[0].data["action"] == "create"
     assert repairs[0].data["domain"] == DOMAIN
-    assert repairs[0].data["issue_id"] == f"{DOMAIN}_upgrade_required"
+    assert repairs[0].data["issue_id"] == "upgrade_required"
 
 
 async def test_areas_check_pass(

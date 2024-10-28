@@ -59,10 +59,12 @@ class AreasChecker:
                     + ",".join([f'"{area}"' for area in new])
                 )
             if old or new:
+                issue_id = "upgrade_required"
+                ir.async_delete_issue(self._hass, DOMAIN, issue_id)
                 ir.async_create_issue(
                     self._hass,
                     DOMAIN,
-                    f"{DOMAIN}_upgrade_required",
+                    issue_id,
                     is_fixable=False,
                     learn_more_url="https://github.com/amitfin/oref_alert",
                     severity=ir.IssueSeverity.WARNING,
