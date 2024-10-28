@@ -282,10 +282,12 @@ class OrefMetadata:
             "w", encoding="utf-8"
         ) as fixture:
             json.dump(
-                sorted(
-                    [{"label_he": area["label_he"]} for area in self._cities_mix],
-                    key=lambda x: x["label_he"],
-                ),
+                [
+                    {"label_he": label_he}
+                    for label_he in sorted(
+                        {area["label_he"] for area in self._cities_mix}
+                    )
+                ],
                 fixture,
                 ensure_ascii=False,
             )
