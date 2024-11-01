@@ -18,6 +18,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .const import (
     CONF_ALERT_ACTIVE_DURATION,
     CONF_POLL_INTERVAL,
+    DEFAULT_ALERT_ACTIVE_DURATION,
     DEFAULT_POLL_INTERVAL,
     DOMAIN,
     IST,
@@ -68,6 +69,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         super().__init__(
             hass,
             LOGGER,
+            config_entry=config_entry,
             name=DOMAIN,
             update_interval=timedelta(
                 seconds=config_entry.options.get(
@@ -75,7 +77,9 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 )
             ),
         )
-        self._config_entry: ConfigEntry = config_entry
+        self._active_duration = config_entry.options.get(
+            CONF_ALERT_ACTIVE_DURATION, DEFAULT_ALERT_ACTIVE_DURATION
+        )
         self._http_client = async_get_clientsession(hass)
         self._http_cache = {}
         self._synthetic_alerts: dict[int, dict[str, Any]] = {}
@@ -173,9 +177,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
 
     def _active_alerts(self, alerts: list[Any]) -> list[Any]:
         """Return the list of active alerts."""
-        return self._recent_alerts(
-            alerts, self._config_entry.options[CONF_ALERT_ACTIVE_DURATION]
-        )
+        return self._recent_alerts(alerts, self._active_duration)
 
     def _recent_alerts(self, alerts: list[Any], active_duration: int) -> list[Any]:
         """Return the list of recent alerts, assuming the input is sorted."""

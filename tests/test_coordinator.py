@@ -6,6 +6,7 @@ from http import HTTPStatus
 import homeassistant.util.dt as dt_util
 import pytest
 from freezegun.api import FrozenDateTimeFactory
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from pytest_homeassistant_custom_component.common import (
@@ -29,16 +30,25 @@ from custom_components.oref_alert.coordinator import (
 
 from .utils import load_json_fixture, mock_urls
 
-DEFAULT_CONFIG_ENTRY = MockConfigEntry(
-    domain=DOMAIN, options={CONF_ALERT_ACTIVE_DURATION: DEFAULT_ALERT_ACTIVE_DURATION}
-)
+
+def create_coordinator(
+    hass: HomeAssistant, options: dict | None = None
+) -> OrefAlertDataUpdateCoordinator:
+    """Create a test coordinator."""
+    config = MockConfigEntry(
+        domain=DOMAIN,
+        options={
+            CONF_ALERT_ACTIVE_DURATION: DEFAULT_ALERT_ACTIVE_DURATION,
+            **(options if options else {}),
+        },
+    )
+    config.mock_state(hass, ConfigEntryState.SETUP_IN_PROGRESS)
+    return OrefAlertDataUpdateCoordinator(hass, config)
 
 
 async def test_init(hass: HomeAssistant) -> None:
     """Test initializing the coordinator."""
-    await OrefAlertDataUpdateCoordinator(
-        hass, DEFAULT_CONFIG_ENTRY
-    ).async_config_entry_first_refresh()
+    await create_coordinator(hass).async_config_entry_first_refresh()
     # No pending refresh since there are no listeners
 
 
@@ -54,16 +64,7 @@ async def test_updates(
         nonlocal updates
         updates += 1
 
-    coordinator = OrefAlertDataUpdateCoordinator(
-        hass,
-        MockConfigEntry(
-            domain=DOMAIN,
-            options={
-                CONF_POLL_INTERVAL: 100,
-                CONF_ALERT_ACTIVE_DURATION: DEFAULT_ALERT_ACTIVE_DURATION,
-            },
-        ),
-    )
+    coordinator = create_coordinator(hass, {CONF_POLL_INTERVAL: 100})
     coordinator.async_add_listener(update)
     for _ in range(10):
         freezer.tick(timedelta(seconds=50))
@@ -81,7 +82,7 @@ async def test_server_down_during_init(
 ) -> None:
     """Test errors on HTTP requests during initialization."""
     mock_urls(aioclient_mock, None, None, exc=Exception("dummy log for testing"))
-    coordinator = OrefAlertDataUpdateCoordinator(hass, DEFAULT_CONFIG_ENTRY)
+    coordinator = create_coordinator(hass)
     with pytest.raises(ConfigEntryNotReady):
         await coordinator.async_config_entry_first_refresh()
     assert "dummy log for testing" in caplog.text
@@ -97,7 +98,7 @@ async def test_alerts_processing(
     mock_urls(
         aioclient_mock, "multi_alerts_real_time.json", "multi_alerts_history.json"
     )
-    coordinator = OrefAlertDataUpdateCoordinator(hass, DEFAULT_CONFIG_ENTRY)
+    coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     assert coordinator.data.alerts == load_json_fixture("combined_alerts.json")
     assert coordinator.data.active_alerts == load_json_fixture("combined_alerts.json")
@@ -111,10 +112,7 @@ async def test_active_alerts(
     """Test active alerts logic."""
     freezer.move_to("2023-10-07 06:30:00+03:00")
     mock_urls(aioclient_mock, None, "multi_alerts_history.json")
-    coordinator = OrefAlertDataUpdateCoordinator(
-        hass,
-        MockConfigEntry(domain=DOMAIN, options={CONF_ALERT_ACTIVE_DURATION: 1}),
-    )
+    coordinator = create_coordinator(hass, {CONF_ALERT_ACTIVE_DURATION: 1})
     await coordinator.async_config_entry_first_refresh()
     inactive_alert, active_alert = load_json_fixture("multi_alerts_history.json")
     assert coordinator.data.alerts == [active_alert, inactive_alert]
@@ -129,7 +127,7 @@ async def test_real_time_timestamp(
     """Test real time timestamp."""
     freezer.move_to("2023-10-07 06:30:00+03:00")
     mock_urls(aioclient_mock, "single_alert_real_time.json", None)
-    coordinator = OrefAlertDataUpdateCoordinator(hass, DEFAULT_CONFIG_ENTRY)
+    coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
     for _ in range(25):
@@ -152,7 +150,7 @@ async def test_real_time_in_history(
     mock_urls(
         aioclient_mock, "single_alert_real_time.json", "history_same_as_real_time.json"
     )
-    coordinator = OrefAlertDataUpdateCoordinator(hass, DEFAULT_CONFIG_ENTRY)
+    coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     assert len(coordinator.data.alerts) == 1
 
@@ -169,7 +167,7 @@ async def test_area_name_typo(
         "single_alert_real_time_typo.json",
         "single_alert_history_typo.json",
     )
-    coordinator = OrefAlertDataUpdateCoordinator(hass, DEFAULT_CONFIG_ENTRY)
+    coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     assert len(coordinator.data.alerts) == 1
     assert coordinator.data.alerts[0]["data"] == "ביר הדאג\u0027"
@@ -180,12 +178,8 @@ async def test_synthetic_alert(
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test synthetic alert."""
-    coordinator = OrefAlertDataUpdateCoordinator(
-        hass,
-        MockConfigEntry(
-            domain=DOMAIN,
-            options={CONF_POLL_INTERVAL: 1, CONF_ALERT_ACTIVE_DURATION: 100},
-        ),
+    coordinator = create_coordinator(
+        hass, {CONF_POLL_INTERVAL: 1, CONF_ALERT_ACTIVE_DURATION: 100}
     )
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
@@ -217,7 +211,7 @@ async def test_http_cache(
     mock_urls(
         aioclient_mock, "single_alert_real_time.json", "single_alert_history.json"
     )
-    coordinator = OrefAlertDataUpdateCoordinator(hass, DEFAULT_CONFIG_ENTRY)
+    coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
     assert len(coordinator.data.alerts) == 2
