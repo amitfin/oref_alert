@@ -69,7 +69,6 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         super().__init__(
             hass,
             LOGGER,
-            config_entry=config_entry,
             name=DOMAIN,
             update_interval=timedelta(
                 seconds=config_entry.options.get(
