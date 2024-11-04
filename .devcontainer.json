@@ -45,6 +45,7 @@
             }
         }
     },
-    "remoteUser": "vscode",
+    "containerUser": "root",
+    "remoteUser": "root",
     "features": {}
 }
