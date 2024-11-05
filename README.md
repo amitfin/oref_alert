@@ -119,12 +119,6 @@ data:
   title: ירי רקטות וטילים
   icon: mdi:rocket-launch
   emoji: 🚀
-origin: LOCAL
-time_fired: "2024-11-05T15:40:21.153737+00:00"
-context:
-  id: 01JBYFQTS1D6NMM1BYRW1XCRZ0
-  parent_id: null
-  user_id: null
 ```
 
 In the [Mobile Notifications](#mobile-notifications) section there is an example for usage of this event.
