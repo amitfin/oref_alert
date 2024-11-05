@@ -90,7 +90,18 @@ The integration creates an additional set of sensors which monitor the time to t
 
 ## Geo Location Entities
 
-Geo-location entities are created for every active alert in Israel (regardless of the selected areas). These entities exist while the corresponding alert is active (10 minutes by default). The [map card](https://www.home-assistant.io/dashboards/map) can be used to present the entities on a map. `oref_alert` should be added to [geo_location_sources](https://www.home-assistant.io/dashboards/map/#geo_location_sources), and [auto_fit](https://www.home-assistant.io/dashboards/map/#auto_fit) should be set to true:
+Geo-location entities are created for every active alert in Israel (regardless of the selected areas). These entities exist while the corresponding alert is active (10 minutes by default). The state of the entity is the distance in kilometers from HA home's coordinates. In addition, each entity has the following attributes:
+1. `friendly_name`: alert's area
+2. `latitdue`
+3. `longitude`
+4. `home_distance`: same as the state, but an integer type and not a string (state is always a string)
+5. `title`: alert's description
+7. `date`
+6. `category`: integer with alert's category
+7. `icon`: Material icon ("mdi:xxx") based on the category
+8. `emoji`: based on the category
+
+The [map card](https://www.home-assistant.io/dashboards/map) can be used to present the entities on a map. `oref_alert` should be added to [geo_location_sources](https://www.home-assistant.io/dashboards/map/#geo_location_sources), and [auto_fit](https://www.home-assistant.io/dashboards/map/#auto_fit) should be set to true:
 
 ```
 type: map
