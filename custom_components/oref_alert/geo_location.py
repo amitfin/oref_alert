@@ -9,6 +9,7 @@ import homeassistant.util.dt as dt_util
 from homeassistant.components.geo_location import ATTR_SOURCE, GeolocationEvent
 from homeassistant.const import (
     ATTR_DATE,
+    ATTR_ICON,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     CONF_FRIENDLY_NAME,
@@ -18,7 +19,14 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.util.location import vincenty
 
+from custom_components.oref_alert.category_symbol import (
+    category_to_emoji,
+    category_to_icon,
+)
+
 from .const import (
+    ATTR_AREA,
+    ATTR_EMOJI,
     ATTR_HOME_DISTANCE,
     DATA_COORDINATOR,
     DOMAIN,
@@ -84,7 +92,12 @@ class OrefAlertLocationEvent(GeolocationEvent):
             or 0,
             1,
         )
-        self._alert_attributes = attributes
+        category = attributes.get("category", 0)
+        self._alert_attributes = {
+            **attributes,
+            ATTR_ICON: category_to_icon(category),
+            ATTR_EMOJI: category_to_emoji(category),
+        }
 
     @property
     def suggested_object_id(self) -> str | None:
@@ -155,6 +168,24 @@ class OrefAlertLocationEventManager:
             if (entity := self._location_events.pop(area, None)) is not None:
                 entity.async_remove_self()
 
+    def fire_events(self, events: dict[str, OrefAlertLocationEvent]) -> None:
+        """Fire events for new locations."""
+        for area, event in events.items():
+            attributes = event.extra_state_attributes
+            self._hass.bus.async_fire(
+                f"{DOMAIN}_event",
+                {
+                    ATTR_AREA: area,
+                    ATTR_HOME_DISTANCE: event.extra_state_attributes[
+                        ATTR_HOME_DISTANCE
+                    ],
+                    "category": attributes.get("category", 0),
+                    "title": attributes.get("title", ""),
+                    ATTR_ICON: attributes[ATTR_ICON],
+                    ATTR_EMOJI: attributes[ATTR_EMOJI],
+                },
+            )
+
     @callback
     def _async_update(self) -> None:
         """Add and/or remove entities according to the new active alerts list."""
@@ -169,6 +200,7 @@ class OrefAlertLocationEventManager:
             for area in active - exists
             if area in AREA_INFO
         }
+        self.fire_events(to_add)
         self._location_events.update(to_add)
         self._async_add_entities(to_add.values())
 

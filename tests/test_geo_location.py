@@ -8,6 +8,7 @@ import homeassistant.util.dt as dt_util
 from homeassistant.config_entries import ConfigEntryDisabler
 from homeassistant.const import (
     ATTR_DATE,
+    ATTR_ICON,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     CONF_FRIENDLY_NAME,
@@ -24,6 +25,7 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.oref_alert.const import (
+    ATTR_EMOJI,
     ATTR_HOME_DISTANCE,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
@@ -37,7 +39,7 @@ from .utils import mock_urls
 
 if TYPE_CHECKING:
     from freezegun.api import FrozenDateTimeFactory
-    from homeassistant.core import HomeAssistant
+    from homeassistant.core import Event, HomeAssistant
     from pytest_homeassistant_custom_component.test_util.aiohttp import (
         AiohttpClientMocker,
     )
@@ -96,7 +98,9 @@ async def test_entity(
     )
     assert state.attributes["category"] == 1
     assert state.attributes["title"] == "ירי רקטות וטילים"
-    assert len(state.attributes) == 9
+    assert state.attributes[ATTR_ICON] == "mdi:rocket-launch"
+    assert state.attributes[ATTR_EMOJI] == "🚀"
+    assert len(state.attributes) == 11
     await async_shutdown(hass, config_id)
 
 
@@ -198,4 +202,37 @@ async def test_distance_types(
             hass,
         ).async_render(parse_result=False)
     )
+    await async_shutdown(hass, config_id)
+
+
+async def test_bus_event(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test bus events."""
+    hass.config.latitude = 32.072
+    hass.config.longitude = 34.879
+    freezer.move_to("2023-10-07 06:30:00+03:00")
+    mock_urls(aioclient_mock, None, "single_alert_history.json")
+
+    events: list[Event] = []
+
+    async def event_listener(event: Event) -> None:
+        events.append(event)
+
+    hass.bus.async_listen(f"{DOMAIN}_event", event_listener)
+
+    config_id = await async_setup(hass)
+
+    assert len(events) == 1
+    assert events[0].data == {
+        "area": "בארי",
+        "home_distance": 80.6,
+        "category": 1,
+        "title": "ירי רקטות וטילים",
+        "icon": "mdi:rocket-launch",
+        "emoji": "🚀",
+    }
+
     await async_shutdown(hass, config_id)
