@@ -12,6 +12,7 @@ IST = zoneinfo.ZoneInfo("Asia/Jerusalem")
 
 ATTR_ALERT: Final = "alert"
 ATTR_AREA: Final = "area"
+ATTR_CATEGORY: Final = "category"
 ATTR_COUNTRY_ALERTS: Final = "country_alerts"
 ATTR_COUNTRY_ACTIVE_ALERTS: Final = "country_active_alerts"
 ATTR_EMOJI: Final = "emoji"
@@ -19,6 +20,7 @@ ATTR_HOME_DISTANCE: Final = "home_distance"
 ATTR_SELECTED_AREAS_ALERTS: Final = "selected_areas_alerts"
 ATTR_SELECTED_AREAS_ACTIVE_ALERTS: Final = "selected_areas_active_alerts"
 ATTR_TIME_TO_SHELTER: Final = "time_to_shelter"
+ATTR_TITLE: Final = "title"
 
 CONF_AREA: Final = "area"
 CONF_AREAS: Final = "areas"

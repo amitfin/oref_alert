@@ -26,8 +26,10 @@ from custom_components.oref_alert.category_symbol import (
 
 from .const import (
     ATTR_AREA,
+    ATTR_CATEGORY,
     ATTR_EMOJI,
     ATTR_HOME_DISTANCE,
+    ATTR_TITLE,
     DATA_COORDINATOR,
     DOMAIN,
     IST,
@@ -67,8 +69,8 @@ class OrefAlertLocationEvent(GeolocationEvent):
             ATTR_HOME_DISTANCE,
             CONF_FRIENDLY_NAME,
             CONF_UNIT_OF_MEASUREMENT,
-            "category",
-            "title",
+            ATTR_CATEGORY,
+            ATTR_TITLE,
         }
     )
 
@@ -92,7 +94,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
             or 0,
             1,
         )
-        category = attributes.get("category", 0)
+        category = attributes.get(ATTR_CATEGORY, 0)
         self._alert_attributes = {
             **attributes,
             ATTR_ICON: category_to_icon(category),
@@ -179,8 +181,8 @@ class OrefAlertLocationEventManager:
                     ATTR_HOME_DISTANCE: event.extra_state_attributes[
                         ATTR_HOME_DISTANCE
                     ],
-                    "category": attributes.get("category", 0),
-                    "title": attributes.get("title", ""),
+                    ATTR_CATEGORY: attributes.get(ATTR_CATEGORY, 0),
+                    ATTR_TITLE: attributes.get(ATTR_TITLE, ""),
                     ATTR_ICON: attributes[ATTR_ICON],
                     ATTR_EMOJI: attributes[ATTR_EMOJI],
                 },

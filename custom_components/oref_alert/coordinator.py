@@ -16,6 +16,8 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
+    ATTR_CATEGORY,
+    ATTR_TITLE,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_POLL_INTERVAL,
     DEFAULT_ALERT_ACTIVE_DURATION,
@@ -167,9 +169,9 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                     alerts.append(
                         {
                             "alertDate": now,
-                            "title": current["title"],
+                            ATTR_TITLE: current[ATTR_TITLE],
                             "data": area,
-                            "category": int(current["cat"]),
+                            ATTR_CATEGORY: int(current["cat"]),
                         }
                     )
         return alerts
@@ -197,9 +199,9 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         now = dt_util.now(IST)
         self._synthetic_alerts[int(now.timestamp()) + duration] = {
             "alertDate": now.strftime("%Y-%m-%d %H:%M:%S"),
-            "title": "התרעה סינטטית לצורכי בדיקות",
+            ATTR_TITLE: "התרעה סינטטית לצורכי בדיקות",
             "data": area,
-            "category": 1,
+            ATTR_CATEGORY: 1,
         }
 
     def _get_synthetic_alerts(self) -> list[dict[str, Any]]:
