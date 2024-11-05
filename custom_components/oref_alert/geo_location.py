@@ -94,12 +94,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
             or 0,
             1,
         )
-        category = attributes.get(ATTR_CATEGORY, 0)
-        self._alert_attributes = {
-            **attributes,
-            ATTR_ICON: category_to_icon(category),
-            ATTR_EMOJI: category_to_emoji(category),
-        }
+        self._alert_attributes = attributes
 
     @property
     def suggested_object_id(self) -> str | None:
@@ -157,6 +152,8 @@ class OrefAlertLocationEventManager:
                     alert_date := dt_util.parse_datetime(alert["alertDate"])
                 ) is not None:
                     attributes[ATTR_DATE] = alert_date.replace(tzinfo=IST)
+                attributes[ATTR_ICON] = category_to_icon(attributes[ATTR_CATEGORY])
+                attributes[ATTR_EMOJI] = category_to_emoji(attributes[ATTR_CATEGORY])
                 return attributes
         return {}
 
@@ -181,10 +178,10 @@ class OrefAlertLocationEventManager:
                     ATTR_HOME_DISTANCE: event.extra_state_attributes[
                         ATTR_HOME_DISTANCE
                     ],
-                    ATTR_CATEGORY: attributes.get(ATTR_CATEGORY, 0),
-                    ATTR_TITLE: attributes.get(ATTR_TITLE, ""),
-                    ATTR_ICON: attributes[ATTR_ICON],
-                    ATTR_EMOJI: attributes[ATTR_EMOJI],
+                    ATTR_CATEGORY: attributes.get(ATTR_CATEGORY),
+                    ATTR_TITLE: attributes.get(ATTR_TITLE),
+                    ATTR_ICON: attributes.get(ATTR_ICON),
+                    ATTR_EMOJI: attributes.get(ATTR_EMOJI),
                 },
             )
 
