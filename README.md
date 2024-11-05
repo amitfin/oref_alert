@@ -92,7 +92,7 @@ The integration creates an additional set of sensors which monitor the time to t
 
 Geo-location entities are created for every active alert in Israel (regardless of the selected areas). These entities exist while the corresponding alert is active (10 minutes by default). The state of the entity is the distance in kilometers from HA home's coordinates. In addition, each entity has the following attributes:
 1. `friendly_name`: alert's area
-2. `latitdude`
+2. `latitude`
 3. `longitude`
 4. `home_distance`: same as the state, but an integer type and not a string (state is always a string)
 5. `title`: alert's description
