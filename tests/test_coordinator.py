@@ -43,7 +43,9 @@ def create_coordinator(
         },
     )
     config.mock_state(hass, ConfigEntryState.SETUP_IN_PROGRESS)
-    return OrefAlertDataUpdateCoordinator(hass, config)
+    coordinator = OrefAlertDataUpdateCoordinator(hass, config)
+    coordinator.config_entry = config
+    return coordinator
 
 
 async def test_init(hass: HomeAssistant) -> None:
