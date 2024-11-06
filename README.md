@@ -119,13 +119,15 @@ This will create a map presenting all active alerts in Israel:
 
 ## Events
 
-A new alert triggers firing an event on HA bus. Here is an example of such an event:
+A new event is fired on HA bus for any new alert. Here is an example of such an event:
 
 ```
 event_type: oref_alert_event
 data:
   area: תל אביב - מרכז העיר
   home_distance: 9.7
+  latitude: 32.0798
+  longitude: 34.7772
   category: 1
   title: ירי רקטות וטילים
   icon: mdi:rocket-launch
