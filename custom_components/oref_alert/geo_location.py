@@ -175,9 +175,9 @@ class OrefAlertLocationEventManager:
                 f"{DOMAIN}_event",
                 {
                     ATTR_AREA: area,
-                    ATTR_HOME_DISTANCE: event.extra_state_attributes[
-                        ATTR_HOME_DISTANCE
-                    ],
+                    ATTR_HOME_DISTANCE: event.distance,
+                    ATTR_LATITUDE: event.latitude,
+                    ATTR_LONGITUDE: event.longitude,
                     ATTR_CATEGORY: attributes.get(ATTR_CATEGORY),
                     ATTR_TITLE: attributes.get(ATTR_TITLE),
                     ATTR_ICON: attributes.get(ATTR_ICON),

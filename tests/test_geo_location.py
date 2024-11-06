@@ -229,6 +229,8 @@ async def test_bus_event(
     assert events[0].data == {
         "area": "בארי",
         "home_distance": 80.6,
+        "latitude": 31.4245,
+        "longitude": 34.4926,
         "category": 1,
         "title": "ירי רקטות וטילים",
         "icon": "mdi:rocket-launch",
