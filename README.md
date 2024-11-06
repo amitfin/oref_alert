@@ -134,7 +134,7 @@ data:
   emoji: 🚀
 ```
 
-In the [Mobile Notifications](#mobile-notifications) section there is an example for usage of this event.
+In the [Mobile Notifications: Detailed Alerts](#detailed-alerts) section there is an example for usage of this event.
 
 ## Synthetic Alert
 
@@ -199,7 +199,10 @@ card_mod:
 
 ### Mobile Notifications
 
-Here is an advanced usage for getting mobile notifications on any alert in the country:
+#### Combined Alerts
+
+Here is an automation rule for getting mobile notifications for new alerts:
+
 ```
 alias: Oref Alert Country Notifications
 id: oref_alert_country_notifications
@@ -220,7 +223,12 @@ action:
 mode: queued
 ```
 
+<img width="400" src="https://github.com/user-attachments/assets/ab12abf4-042e-4099-a1ef-e26db57b653a">
+
+#### Detailed Alerts
+
 This is a different approach where only alerts within 30km from home generate notifications, but each notification has additional information (and being sent separately):
+
 ```
 alias: Oref Alert Country Notifications Details
 id: oref_alert_country_notifications_details
@@ -235,6 +243,8 @@ actions:
       message: "{{ trigger.event.data.emoji }} {{ trigger.event.data.area }} [{{ trigger.event.data.title }}] ({{ trigger.event.data.home_distance | int }} ק״מ)"
 mode: queued
 ```
+
+<img width="400" src="https://github.com/user-attachments/assets/3262dd19-0f65-44f4-8983-270da96200e5">
 
 ### Time To Shelter Countdown
 
