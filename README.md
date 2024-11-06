@@ -181,7 +181,7 @@ content: >-
      sort(attribute='attributes.home_distance') %}
     <p>
       <font color="red"><ha-icon icon="{{ alert.attributes.icon }}"></ha-icon></font>
-      {{ alert.name }}
+      <a href="https://maps.google.com/?q={{ alert.attributes.latitude }},{{ alert.attributes.longitude }}">{{ alert.name }}</a>
       [{{ alert.state | int }} ק״מ]
       ({{ alert.attributes.date | as_timestamp | timestamp_custom('%H:%M') }})
     </p>
@@ -195,7 +195,7 @@ card_mod:
 
 (The `card_mod` section at the bottom is only required when the language is English. It forces RTL for this element. Note that it requires the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.)
 
-<kbd><img width="210" alt="image" src="https://github.com/user-attachments/assets/bd10e757-f615-467f-a457-6cc5ae5ba257"></kbd>
+<kbd><img width="310" alt="image" src="https://github.com/user-attachments/assets/21ad82ea-6ff6-43c3-8c57-a1f6b2785498"></kbd>
 
 ### Mobile Notifications
 
