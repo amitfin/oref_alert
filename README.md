@@ -206,17 +206,17 @@ Here is an automation rule for getting mobile notifications for new alerts:
 ```
 alias: Oref Alert Country Notifications
 id: oref_alert_country_notifications
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: binary_sensor.oref_alert
     attribute: country_active_alerts
-action:
+actions:
   - variables:
-      current: "{{ state_attr('binary_sensor.oref_alert', 'country_active_alerts') | map(attribute='data') | list }}"
+      current: "{{ trigger.to_state.attributes.country_active_alerts  | map(attribute='data') | list }}"
       previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | list }}"
       alerts: "{{ current | reject('in', previous) | unique | sort | list }}"
   - condition: "{{ alerts | length > 0 }}"
-  - service: notify.mobile_app_amits_iphone
+  - action: notify.mobile_app_amits_iphone
     data:
       title: התרעות פיקוד העורף
       message: "{{ alerts | join(' | ') }}"
@@ -252,14 +252,14 @@ Here is another advanced usage for counting down (every 5 seconds) the time to s
 ```
 alias: Oref Alert Time To Shelter Countdown
 id: oref_alert_time_to_shelter_countdown
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: sensor.oref_alert_time_to_shelter
-action:
+actions:
   - variables:
       time_to_shelter: "{{ states('sensor.oref_alert_time_to_shelter') | int(-1) }}"
   - condition: "{{ time_to_shelter >= 0 and time_to_shelter % 5 == 0}}"
-  - service: tts.google_translate_say
+  - action: tts.google_translate_say
     data:
       entity_id: media_player.shelter_speaker
       language: iw
