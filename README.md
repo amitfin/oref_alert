@@ -212,7 +212,7 @@ triggers:
     attribute: country_active_alerts
 actions:
   - variables:
-      current: "{{ trigger.to_state.attributes.country_active_alerts  | map(attribute='data') | list }}"
+      current: "{{ trigger.to_state.attributes.country_active_alerts | map(attribute='data') | list }}"
       previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | list }}"
       alerts: "{{ current | reject('in', previous) | unique | sort | list }}"
   - condition: "{{ alerts | length > 0 }}"
