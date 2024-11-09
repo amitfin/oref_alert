@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 from .config_flow import AREAS_CONFIG
 from .const import (
     ADD_SENSOR_SERVICE,
+    ATTR_CATEGORY,
+    ATTR_TITLE,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_ALERT_MAX_AGE_DEPRECATED,
     CONF_AREA,
@@ -66,7 +68,9 @@ REMOVE_SENSOR_SCHEMA = vol.Schema(
 SYNTHETIC_ALERT_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_AREA): vol.All(cv.string, vol.In(AREAS)),
-        vol.Required(CONF_DURATION, default=10): cv.positive_int,  # type: ignore[reportArgumentType]
+        vol.Required(CONF_DURATION, default=10): cv.positive_int,
+        vol.Required(ATTR_CATEGORY, default=1): cv.positive_int,
+        vol.Optional(ATTR_TITLE): cv.string,
     },
     extra=vol.ALLOW_EXTRA,
 )
@@ -163,9 +167,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def synthetic_alert(service_call: ServiceCall) -> None:
         """Add a synthetic alert for testing purposes."""
-        coordinator.add_synthetic_alert(
-            service_call.data[CONF_AREA], service_call.data[CONF_DURATION]
-        )
+        coordinator.add_synthetic_alert(service_call.data)
 
     async_register_admin_service(
         hass,

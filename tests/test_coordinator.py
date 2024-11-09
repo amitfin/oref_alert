@@ -16,7 +16,11 @@ from pytest_homeassistant_custom_component.common import (
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
 from custom_components.oref_alert.const import (
+    ATTR_CATEGORY,
+    ATTR_TITLE,
     CONF_ALERT_ACTIVE_DURATION,
+    CONF_AREA,
+    CONF_DURATION,
     CONF_POLL_INTERVAL,
     DEFAULT_ALERT_ACTIVE_DURATION,
     DOMAIN,
@@ -187,7 +191,14 @@ async def test_synthetic_alert(
     coordinator.async_add_listener(lambda: None)
     assert len(coordinator.data.alerts) == 0
     synthetic_alert_time = dt_util.now(IST)
-    coordinator.add_synthetic_alert("קריית שמונה", 40)
+    coordinator.add_synthetic_alert(
+        {
+            CONF_AREA: "קריית שמונה",
+            CONF_DURATION: 40,
+            ATTR_CATEGORY: 5,
+            ATTR_TITLE: "test",
+        }
+    )
     freezer.tick(timedelta(seconds=39))
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
@@ -196,6 +207,8 @@ async def test_synthetic_alert(
     assert coordinator.data.alerts[0]["alertDate"] == synthetic_alert_time.strftime(
         "%Y-%m-%d %H:%M:%S"
     )
+    assert coordinator.data.alerts[0]["category"] == 5
+    assert coordinator.data.alerts[0]["title"] == "test"
     freezer.tick(timedelta(seconds=2))
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)

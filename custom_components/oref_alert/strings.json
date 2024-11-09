@@ -67,6 +67,14 @@
                 "duration": {
                     "name": "Duration",
                     "description": "Alert's existence time (seconds)"
+                },
+                "category": {
+                    "name": "Category",
+                    "description": "Alert's category"
+                },
+                "title": {
+                    "name": "Title",
+                    "description": "Alert's description"
                 }
             }
         }

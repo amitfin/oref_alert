@@ -2937,3 +2937,16 @@ synthetic_alert:
           min: 1
           max: 100
           unit_of_measurement: seconds
+    category:
+      required: true
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 30
+          mode: box
+    title:
+      required: true
+      default: "התרעה סינטטית לצורכי בדיקות"
+      selector:
+        text:
