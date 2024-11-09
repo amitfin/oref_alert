@@ -227,7 +227,7 @@ mode: queued
 
 #### Detailed Alerts
 
-This is a different approach where only alerts within 30km from home generate notifications, but each notification has additional information (and being sent separately):
+This is a different approach where only alerts which are either within 30km from home or 5km from Amit's current location generate notifications. However, each notification has additional information (and being sent separately):
 
 ```
 alias: Oref Alert Country Notifications Details
@@ -236,7 +236,12 @@ triggers:
   - trigger: event
     event_type: oref_alert_event
 actions:
-  - condition: "{{ trigger.event.data.home_distance < 30 }}"
+  - condition: or
+    conditions:
+      - condition: template
+        value_template: "{{ trigger.event.data.home_distance < 30 }}"
+      - condition: template
+        value_template: "{{ distance('device_tracker.amits_iphone', trigger.event.data.latitude, trigger.event.data.longitude) < 5 }}"
   - action: notify.mobile_app_amits_iphone
     data:
       title: התרעות פיקוד העורף
