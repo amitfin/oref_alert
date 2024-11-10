@@ -33,8 +33,10 @@ from .const import (
     CONF_SENSORS,
     DATA_COORDINATOR,
     DOMAIN,
+    END_TIME_ID_SUFFIX,
     REMOVE_SENSOR_SERVICE,
     SYNTHETIC_ALERT_SERVICE,
+    TIME_TO_SHELTER_ID_SUFFIX,
     TITLE,
 )
 from .coordinator import OrefAlertDataUpdateCoordinator
@@ -55,7 +57,10 @@ REMOVE_SENSOR_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(
-                exclude_entities=["binary_sensor.oref_alert"],
+                exclude_entities=[
+                    "binary_sensor.oref_alert",
+                    "binary_sensor.oref_alert_all_areas",
+                ],
                 filter=selector.EntityFilterSelectorConfig(
                     integration="oref_alert", domain="binary_sensor"
                 ),
@@ -152,6 +157,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             if name != entity_name
         }
         entity_reg.async_remove(service_call.data[CONF_ENTITY_ID])
+        for suffix in [TIME_TO_SHELTER_ID_SUFFIX, END_TIME_ID_SUFFIX]:
+            entity_id = (
+                f"{Platform.SENSOR}."
+                f"{service_call.data[CONF_ENTITY_ID].split(".")[1]}_{suffix}"
+            )
+            if entity_reg.async_get(entity_id) is not None:
+                entity_reg.async_remove(entity_id)
         hass.config_entries.async_update_entry(
             config_entry,
             options={**config_entry.options, CONF_SENSORS: sensors},

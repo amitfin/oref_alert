@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.const import CONF_NAME, STATE_UNKNOWN, Platform
+from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, STATE_UNKNOWN, Platform
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
@@ -21,6 +21,7 @@ from custom_components.oref_alert.const import (
     DOMAIN,
     END_TIME_ID_SUFFIX,
     OREF_ALERT_UNIQUE_ID,
+    REMOVE_SENSOR_SERVICE,
     TIME_TO_SHELTER_ID_SUFFIX,
 )
 
@@ -188,4 +189,32 @@ async def test_additional_sensor(
         state = hass.states.get(entity_id)
         assert state is not None
         assert state.attributes[ATTR_AREA] == "רעננה"
+    await async_shutdown(hass, config_id)
+
+
+async def test_remove_sensors(
+    hass: HomeAssistant,
+) -> None:
+    """Test removing sensors from entity registry."""
+    config_id = await async_setup(hass)
+    await hass.services.async_call(
+        DOMAIN,
+        ADD_SENSOR_SERVICE,
+        {CONF_NAME: "test", CONF_AREAS: ["רעננה"]},
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    # There are 3 binary sensors: default, all_areas, test
+    assert len(hass.states.async_entity_ids(Platform.BINARY_SENSOR)) == 3
+    # There are 4 sensors: time-to-shelter & end-time times default & test
+    assert len(hass.states.async_entity_ids(Platform.SENSOR)) == 4
+    await hass.services.async_call(
+        DOMAIN,
+        REMOVE_SENSOR_SERVICE,
+        {CONF_ENTITY_ID: "binary_sensor.oref_alert_test"},
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert len(hass.states.async_entity_ids(Platform.BINARY_SENSOR)) == 2
+    assert len(hass.states.async_entity_ids(Platform.SENSOR)) == 2
     await async_shutdown(hass, config_id)
