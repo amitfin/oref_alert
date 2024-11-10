@@ -2947,6 +2947,6 @@ synthetic_alert:
           mode: box
     title:
       required: true
-      default: "התרעה סינטטית לצורכי בדיקות"
+      default: התרעה סינטטית לצורכי בדיקות
       selector:
-        text:
+        text: null
