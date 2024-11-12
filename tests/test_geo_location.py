@@ -166,10 +166,17 @@ async def test_attributes_update(
     """Test entity state."""
     freezer.move_to("2023-10-07 06:30:00+03:00")
     mock_urls(aioclient_mock, None, "single_alert_history.json")
+    events: list[Event] = []
+
+    async def event_listener(event: Event) -> None:
+        events.append(event)
+
+    hass.bus.async_listen(f"{DOMAIN}_event", event_listener)
     config_id = await async_setup(hass)
     state = hass.states.get(ENTITY_ID)
     assert state is not None
     assert state.attributes["category"] == 1
+    assert len(events) == 1
     mock_urls(aioclient_mock, None, "single_alert_history_update.json")
     freezer.tick(10)
     async_fire_time_changed(hass)
@@ -177,6 +184,7 @@ async def test_attributes_update(
     state = hass.states.get(ENTITY_ID)
     assert state is not None
     assert state.attributes["category"] == 2
+    assert len(events) == 2
     await async_shutdown(hass, config_id)
 
 

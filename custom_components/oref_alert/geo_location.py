@@ -111,12 +111,17 @@ class OrefAlertLocationEvent(GeolocationEvent):
         """Remove this entity."""
         self._hass.async_create_task(self.async_remove(force_remove=True))
 
-    @callback
-    def async_update(self, attributes: dict) -> None:
+    def async_update(self, attributes: dict) -> bool:
         """Update the extra attributes when needed."""
-        if attributes and attributes != self._alert_attributes:
-            self._alert_attributes = attributes
-            self.async_write_ha_state()
+        if not attributes or attributes == self._alert_attributes:
+            return False
+        significant_update = False
+        for attribute in [ATTR_TITLE, ATTR_CATEGORY]:
+            if attributes.get(attribute) != self._alert_attributes.get(attribute):
+                significant_update = True
+        self._alert_attributes = attributes
+        self.async_write_ha_state()
+        return significant_update
 
 
 class OrefAlertLocationEventManager:
@@ -191,17 +196,21 @@ class OrefAlertLocationEventManager:
         active = {alert["data"] for alert in self._coordinator.data.active_alerts}
         exists = set(self._location_events.keys())
 
-        for area in exists.intersection(active):
-            self._location_events[area].async_update(self._alert_attributes(area))
+        updated = {
+            area: self._location_events[area]
+            for area in exists.intersection(active)
+            if self._location_events[area].async_update(self._alert_attributes(area))
+        }
 
         to_add = {
             area: OrefAlertLocationEvent(self._hass, area, self._alert_attributes(area))
             for area in active - exists
             if area in AREA_INFO
         }
-        self.fire_events(to_add)
         self._location_events.update(to_add)
         self._async_add_entities(to_add.values())
+
+        self.fire_events({**updated, **to_add})
 
         if len(exists - active):
             self._hass.async_create_task(self._cleanup_entities())
