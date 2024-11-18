@@ -36,10 +36,10 @@ async def test_areas_check_failure(
     """Test failed areas check."""
     repairs = async_capture_events(hass, ir.EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED)
     aioclient_mock.clear_requests()
-    aioclient_mock.get(CITIES_MIX_URL, text="[]")
+    aioclient_mock.get(CITIES_MIX_URL, text='[{"label_he": "test"}]')
     await _areas_check(hass, freezer)
     assert "The following Oref Alert areas were removed:" in caplog.text
-    assert "The following Oref Alert areas were added:" not in caplog.text
+    assert "The following Oref Alert areas were added:" in caplog.text
     assert len(repairs) == 1
     assert repairs[0].data["action"] == "create"
     assert repairs[0].data["domain"] == DOMAIN

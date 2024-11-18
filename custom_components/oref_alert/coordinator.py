@@ -54,15 +54,16 @@ class OrefAlertCoordinatorData:
 
 def _sort_alerts(item1: dict[str, Any], item2: dict[str, Any]) -> int:
     """Sort by descending-order "date" and then ascending-order "name"."""
+    result = 0
     if item1["alertDate"] < item2["alertDate"]:
-        return 1
-    if item1["alertDate"] > item2["alertDate"]:
-        return -1
-    if item1["data"] > item2["data"]:
-        return 1
-    if item1["data"] < item2["data"]:
-        return -1
-    return 0
+        result = 1
+    elif item1["alertDate"] > item2["alertDate"]:
+        result = -1
+    elif item1["data"] > item2["data"]:
+        result = 1
+    elif item1["data"] < item2["data"]:
+        result = -1
+    return result
 
 
 class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorData]):

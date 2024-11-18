@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Final
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, Platform
-from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers import entity_registry, selector
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.service import async_register_admin_service
@@ -121,17 +120,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def add_sensor(service_call: ServiceCall) -> None:
         """Add an additional sensor (different areas)."""
         config_entry = hass.config_entries.async_get_entry(entry.entry_id)
-        if config_entry is None:
-            message = f"Config entry {entry.entry_id} was not found."
-            raise ConfigEntryError(message)
-        sensors = {**config_entry.options.get(CONF_SENSORS, {})}
-        sensors[f"{TITLE} {service_call.data[CONF_NAME]}"] = service_call.data[
-            CONF_AREAS
-        ]
-        hass.config_entries.async_update_entry(
-            config_entry,
-            options={**config_entry.options, CONF_SENSORS: sensors},
-        )
+        if config_entry is not None:
+            sensors = {**config_entry.options.get(CONF_SENSORS, {})}
+            sensors[f"{TITLE} {service_call.data[CONF_NAME]}"] = service_call.data[
+                CONF_AREAS
+            ]
+            hass.config_entries.async_update_entry(
+                config_entry,
+                options={**config_entry.options, CONF_SENSORS: sensors},
+            )
 
     async_register_admin_service(
         hass,
@@ -148,26 +145,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entity_reg.async_get(service_call.data[CONF_ENTITY_ID]), "original_name", ""
         )
         config_entry = hass.config_entries.async_get_entry(entry.entry_id)
-        if config_entry is None:
-            message = f"Config entry {entry.entry_id} was not found."
-            raise ConfigEntryError(message)
-        sensors = {
-            name: areas
-            for name, areas in config_entry.options.get(CONF_SENSORS, {}).items()
-            if name != entity_name
-        }
-        entity_reg.async_remove(service_call.data[CONF_ENTITY_ID])
-        for suffix in [TIME_TO_SHELTER_ID_SUFFIX, END_TIME_ID_SUFFIX]:
-            entity_id = (
-                f"{Platform.SENSOR}."
-                f"{service_call.data[CONF_ENTITY_ID].split(".")[1]}_{suffix}"
+        if config_entry is not None:
+            sensors = {
+                name: areas
+                for name, areas in config_entry.options.get(CONF_SENSORS, {}).items()
+                if name != entity_name
+            }
+            entity_reg.async_remove(service_call.data[CONF_ENTITY_ID])
+            for suffix in [TIME_TO_SHELTER_ID_SUFFIX, END_TIME_ID_SUFFIX]:
+                entity_id = (
+                    f"{Platform.SENSOR}."
+                    f"{service_call.data[CONF_ENTITY_ID].split(".")[1]}_{suffix}"
+                )
+                if entity_reg.async_get(entity_id) is not None:
+                    entity_reg.async_remove(entity_id)
+            hass.config_entries.async_update_entry(
+                config_entry,
+                options={**config_entry.options, CONF_SENSORS: sensors},
             )
-            if entity_reg.async_get(entity_id) is not None:
-                entity_reg.async_remove(entity_id)
-        hass.config_entries.async_update_entry(
-            config_entry,
-            options={**config_entry.options, CONF_SENSORS: sensors},
-        )
 
     async_register_admin_service(
         hass,

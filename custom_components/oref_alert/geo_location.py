@@ -146,6 +146,7 @@ class OrefAlertLocationEventManager:
 
     def _alert_attributes(self, area: str) -> dict:
         """Return alert's attributes."""
+        attributes = {}
         for alert in self._coordinator.data.active_alerts:
             if alert["data"] == area:
                 attributes = {
@@ -159,8 +160,8 @@ class OrefAlertLocationEventManager:
                     attributes[ATTR_DATE] = alert_date.replace(tzinfo=IST)
                 attributes[ATTR_ICON] = category_to_icon(attributes[ATTR_CATEGORY])
                 attributes[ATTR_EMOJI] = category_to_emoji(attributes[ATTR_CATEGORY])
-                return attributes
-        return {}
+                break
+        return attributes
 
     @callback
     async def _cleanup_entities(self) -> None:
