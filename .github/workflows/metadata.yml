@@ -35,6 +35,7 @@ jobs:
         - name: Create Pull Request
           uses: peter-evans/create-pull-request@v7.0.5
           with:
+            branch: create-pull-request/metadata
             title: Metadata auto-sync
             body: Automated changes by "Metadata" GitHub action
             commit-message: Metadata update
