@@ -226,6 +226,4 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         """Fix spelling error in area name."""
         if area[0] == "'":
             area = f"{area[1:]}'"
-        elif area == "איזור תעשייה מילואות צפון":
-            area = "אזור תעשייה מילואות צפון"
         return area

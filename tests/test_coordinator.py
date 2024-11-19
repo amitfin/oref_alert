@@ -175,9 +175,8 @@ async def test_area_name_typo(
     )
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
-    assert len(coordinator.data.alerts) == 2
+    assert len(coordinator.data.alerts) == 1
     assert coordinator.data.alerts[0]["data"] == "ביר הדאג\u0027"
-    assert coordinator.data.alerts[1]["data"] == "אזור תעשייה מילואות צפון"
 
 
 async def test_synthetic_alert(

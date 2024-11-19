@@ -33,20 +33,9 @@ DISTRICT_PREFIX = "מחוז "
 
 MISSING_CITIES = {
     "ברחבי הארץ": {"lat": 31.7781, "long": 35.2164},
-    "גני מודיעין": {"lat": 31.9304, "long": 35.0177},
-    "מלאה": {"lat": 32.5629, "long": 35.2366},
     "כל הארץ": {"lat": 31.7781, "long": 35.2164},
-    "כרם בן שמן": {"lat": 31.9585, "long": 34.9340},
-    "ניר יפה": {"lat": 32.5698, "long": 35.2448},
-    "נאות חובב": {"lat": 31.1336, "long": 34.7898},
-    "גדיש": {"lat": 32.5588, "long": 35.2444},
-    "רמת רחל": {"lat": 31.7395, "long": 35.2178},
-    'בסמ"ה': {"lat": 32.5307, "long": 35.1025},
-    "מרכז אומן": {"lat": 32.5638, "long": 35.2425},
-    "עין חרוד איחוד": {"lat": 32.5631, "long": 35.3917},
     "אל-ח'וואלד מערב": {"lat": 32.771, "long": 35.1363},
     "אשדוד -יא,יב,טו,יז,מרינה,סיטי": {"lat": 31.7836, "long": 34.6332},  # noqa: RUF001
-    "אזור תעשייה מילואות צפון": {"lat": 33.0684, "long": 35.1102},
     "כמאנה": {"lat": 32.9085, "long": 35.3358},
 }
 
@@ -200,17 +189,22 @@ class OrefMetadata:
     def _get_area_info(self) -> dict[str, list[list[float]]]:
         """Get area additional information from tzevaadom."""
         areas = {}
-        assert (
-            len(set(MISSING_CITIES.keys()).intersection(set(self._tzeva_cities.keys())))
-            == 0
+
+        overlap = set(MISSING_CITIES.keys()).intersection(
+            set(self._tzeva_cities.keys())
         )
-        assert (
-            len(
-                set(self._areas_no_group)
-                - set(self._tzeva_cities.keys())
-                - set(MISSING_CITIES.keys())
-            )
-        ) == 0
+        assert not len(overlap), f"Missing cities include Tzeva Adom areas: {overlap}"
+
+        unknown = set(MISSING_CITIES.keys()) - set(self._areas_no_group)
+        assert not len(unknown), f"Missing cities include unknown areas: {unknown}"
+
+        uncovered = (
+            set(self._areas_no_group)
+            - set(self._tzeva_cities.keys())
+            - set(MISSING_CITIES.keys())
+        )
+        assert not len(uncovered), f"Areas with no info: {uncovered}"
+
         for area in self._areas_no_group:
             if area in self._tzeva_cities:
                 areas[area] = {

@@ -2,6 +2,7 @@
   "version": "0.2",
   "language": "en",
   "words": [
+    "Adom",
     "aioclient",
     "aiohttp",
     "Amit's",
@@ -34,9 +35,12 @@
     "selectattr",
     "Tikva",
     "timedelta",
+    "Tzeva",
     "unsub",
     "venv",
     "vincenty"
   ],
-  "ignoreRegExpList": ["[\u0590-\u05FF]+"]
+  "ignoreRegExpList": [
+    "[\u0590-\u05FF]+"
+  ]
 }
