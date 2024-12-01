@@ -40,7 +40,7 @@ def _auto_aioclient_mock(aioclient_mock: AiohttpClientMocker) -> None:
 
 
 @pytest.fixture(autouse=True)
-def _disable_asyncio_sleep() -> Generator[None, None, None]:
+def _disable_asyncio_sleep() -> Generator[None]:
     """Disable sleep for all tests."""
     with patch("asyncio.sleep"):
         yield
