@@ -251,6 +251,22 @@ mode: queued
 
 <img width="400" src="https://github.com/user-attachments/assets/3262dd19-0f65-44f4-8983-270da96200e5">
 
+#### Custom Sound
+
+It's possible to set a custom sound for a specific mobile app push notification. Here is an iOS example:
+
+```
+action: notify.mobile_app_amits_iphone
+data:
+  title: התרעות פיקוד העורף
+  message: <<omitted-in-example>>
+  data:
+    push:
+      sound: US-EN-Morgan-Freeman-Vacate-The-Premises.wav
+```
+
+Additional information (for Android and iOS) can be found [here](https://companion.home-assistant.io/docs/notifications/notification-sounds).
+
 ### Time To Shelter Countdown
 
 Here is another advanced usage for counting down (every 5 seconds) the time to shelter:
