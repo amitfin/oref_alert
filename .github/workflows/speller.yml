@@ -18,7 +18,7 @@ jobs:
         uses: "actions/checkout@v4.2.2"
 
       - name: "Run"
-        uses: streetsidesoftware/cspell-action@v6.9.0
+        uses: streetsidesoftware/cspell-action@v6.10.0
         with:
           incremental_files_only: false
           files: |
