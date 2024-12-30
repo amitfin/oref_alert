@@ -24,7 +24,7 @@ jobs:
           run: scripts/update_manifest.py
 
         - name: Create Pull Request
-          uses: peter-evans/create-pull-request@v7.0.5
+          uses: peter-evans/create-pull-request@v7.0.6
           with:
             branch: create-pull-request/manifest
             title: Manifest libraries update
