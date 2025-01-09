@@ -63,9 +63,9 @@ class OrefAlertConfigFlow(ConfigFlow, domain=DOMAIN):
         with contextlib.suppress(HomeAssistantError):
             hass = async_get_hass()
         if hass:
-            self._auto_detected_area = find_area(
-                hass.config.latitude, hass.config.longitude
-            ) or ""
+            self._auto_detected_area = (
+                find_area(hass.config.latitude, hass.config.longitude) or ""
+            )
 
         if not self._auto_detected_area:
             return self.async_show_form(step_id="user", data_schema=CONFIG_SCHEMA)
