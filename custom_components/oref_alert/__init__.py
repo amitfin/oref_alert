@@ -155,7 +155,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             for suffix in [TIME_TO_SHELTER_ID_SUFFIX, END_TIME_ID_SUFFIX]:
                 entity_id = (
                     f"{Platform.SENSOR}."
-                    f"{service_call.data[CONF_ENTITY_ID].split(".")[1]}_{suffix}"
+                    f"{service_call.data[CONF_ENTITY_ID].split('.')[1]}_{suffix}"
                 )
                 if entity_reg.async_get(entity_id) is not None:
                     entity_reg.async_remove(entity_id)

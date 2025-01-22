@@ -161,7 +161,7 @@ class TimeToShelterSensor(OrefAlertTimerSensor):
         self._migun_time: int = AREA_TO_MIGUN_TIME[area]
         self._attr_name = f"{name} {TIME_TO_SHELTER_NAME_SUFFIX}"
         self._attr_unique_id = (
-            f"{name.lower().replace(' ', '_')}_" f"{TIME_TO_SHELTER_ID_SUFFIX}"
+            f"{name.lower().replace(' ', '_')}_{TIME_TO_SHELTER_ID_SUFFIX}"
         )
 
     @property
@@ -210,9 +210,7 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
             CONF_ALERT_ACTIVE_DURATION
         ]
         self._attr_name = f"{name} {END_TIME_NAME_SUFFIX}"
-        self._attr_unique_id = (
-            f"{name.lower().replace(' ', '_')}_" f"{END_TIME_ID_SUFFIX}"
-        )
+        self._attr_unique_id = f"{name.lower().replace(' ', '_')}_{END_TIME_ID_SUFFIX}"
 
     @property
     def native_value(self) -> int | None:
