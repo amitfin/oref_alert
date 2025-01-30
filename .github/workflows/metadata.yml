@@ -30,7 +30,12 @@ jobs:
           shell: "bash"
           env:
             PROXY: ${{ secrets.proxy }}
-          run: scripts/generate_metadata.py --proxy=$PROXY
+          run: |
+            for i in {1..3}; do
+              echo "Attempt $i"
+              scripts/generate_metadata.py --proxy=$PROXY && break
+              sleep 10
+            done
 
         - name: Create Pull Request
           uses: peter-evans/create-pull-request@v7.0.6
