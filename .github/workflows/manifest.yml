@@ -30,6 +30,7 @@ jobs:
           uses: peter-evans/create-pull-request@v7.0.6
           id: pr
           with:
+            token: ${{ secrets.MANIFEST_GITHUB_TOKEN }}
             branch: create-pull-request/manifest
             title: Manifest libraries update
             body: Automated changes by "Manifest" GitHub action
