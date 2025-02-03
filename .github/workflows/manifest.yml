@@ -30,6 +30,7 @@ jobs:
           uses: peter-evans/create-pull-request@v7.0.6
           with:
             branch: create-pull-request/manifest
+            author: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
             title: Manifest libraries update
             body: Automated changes by "Manifest" GitHub action
             commit-message: Manifest update
