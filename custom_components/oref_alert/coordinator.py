@@ -15,6 +15,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
+from custom_components.oref_alert.categories import category_is_alert
+
 from .const import (
     ATTR_CATEGORY,
     ATTR_TITLE,
@@ -104,6 +106,9 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 self._current_to_history_format(current, history) if current else []
             )
             alerts.extend(history)
+            alerts = list(
+                filter(lambda alert: category_is_alert(alert["category"]), alerts)
+            )
             alerts.extend(self._get_synthetic_alerts())
             alerts.sort(key=cmp_to_key(_sort_alerts))
             for unrecognized_area in {alert["data"] for alert in alerts}.difference(
@@ -144,7 +149,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
 
     def _current_to_history_format(
         self, current: dict[str, Any], history: list[dict[str, Any]]
-    ) -> list[dict[str, str]]:
+    ) -> list[dict[str, Any]]:
         """Convert current alerts payload to history format."""
         now = dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S")
         history_last_minute_alerts = self._recent_alerts(

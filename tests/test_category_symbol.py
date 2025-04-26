@@ -2,8 +2,8 @@
 
 import pytest
 
-from custom_components.oref_alert.category_symbol import (
-    CATEGORY_TO_ICON_EMOJI,
+from custom_components.oref_alert.categories import (
+    CATEGORY_METADATA,
     category_to_emoji,
     category_to_icon,
 )
@@ -11,7 +11,7 @@ from custom_components.oref_alert.category_symbol import (
 
 def test_all() -> None:
     """Test all values."""
-    for category, symbols in CATEGORY_TO_ICON_EMOJI.items():
+    for category, symbols in CATEGORY_METADATA.items():
         assert category_to_icon(category) == f"mdi:{symbols[0]}"
         assert category_to_emoji(category) == symbols[1]
 

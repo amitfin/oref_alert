@@ -248,3 +248,20 @@ async def test_http_cache(
     assert len(coordinator.data.alerts) == 1
 
     await coordinator.async_shutdown()
+
+
+async def test_non_alert_category(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test alert category filtering."""
+    freezer.move_to("2025-04-26 03:30:00+03:00")
+    mock_urls(aioclient_mock, None, "alert_categories.json")
+    coordinator = create_coordinator(hass)
+    await coordinator.async_config_entry_first_refresh()
+    coordinator.async_add_listener(lambda: None)
+    expected_alerts = load_json_fixture("alert_categories_expected.json")
+    assert coordinator.data.alerts == expected_alerts
+    assert coordinator.data.active_alerts == expected_alerts
+    await coordinator.async_shutdown()

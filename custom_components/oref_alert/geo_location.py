@@ -19,7 +19,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.util.location import vincenty
 
-from custom_components.oref_alert.category_symbol import (
+from custom_components.oref_alert.categories import (
     category_to_emoji,
     category_to_icon,
 )
