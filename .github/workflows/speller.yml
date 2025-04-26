@@ -32,7 +32,7 @@ jobs:
             !LICENSE
             !pytest.ini
             !custom_components/oref_alert/metadata/*
-            !custom_components/oref_alert/category_symbol.py
+            !custom_components/oref_alert/categories.py
             !scripts/generate_metadata.py
             !scripts/squid/squid.conf
             !tests/fixtures/*
