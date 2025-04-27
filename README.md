@@ -88,6 +88,13 @@ The integration creates an additional set of sensors which monitor the time to t
 
 *Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the service `oref_alert.add_sensor`.*
 
+## Preemptive Update Binary Sensors
+
+The integration creates an additional set of binary sensors which turns on when there is a preemptive warning for a potential future alert. The ID of the entity is similar to the corresponding binary sensor, with the suffix of `_preemptive_update`. For example, `binary_sensor.oref_alert_preemptive_update`. The entity's state turns off when the corresponding binary sensor turns on (i.e. a regular alert has been activated). If the warning is not converted to a real alert, the state turns off after the user-configured active period (10 minutes by default). The entity has the following extra attributes:
+1. `Areas`: the name of the areas.
+2. `Alert active duration`: as configured by the user.
+3. `Selected areas active alerts`: active warnings.
+
 ## Geo Location Entities
 
 Geo-location entities are created for every active alert in Israel (regardless of the selected areas). These entities exist while the corresponding alert is active (10 minutes by default). The state of the entity is the distance in kilometers from HA home's coordinates. In addition, each entity has the following attributes:
@@ -250,6 +257,30 @@ mode: queued
 ```
 
 <img width="400" src="https://github.com/user-attachments/assets/3262dd19-0f65-44f4-8983-270da96200e5">
+
+#### Preemptive Updates
+
+Here is an automation rule for getting mobile notifications for preemptive updates:
+
+```
+alias: Oref Alert Preemptive Updates
+id: oref_alert_preemptive_updates
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.oref_alert_all_areas_preemptive_update
+    attribute: country_active_alerts
+actions:
+  - variables:
+      current: "{{ trigger.to_state.attributes.country_active_alerts | map(attribute='data') | list }}"
+      previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | list }}"
+      alerts: "{{ current | reject('in', previous) | unique | sort | list }}"
+  - condition: "{{ alerts | length > 0 }}"
+  - action: notify.mobile_app_amits_iphone
+    data:
+      title: התרעות מקדימות מפיקוד העורף
+      message: "{{ alerts | join(' | ') }}"
+mode: queued
+```
 
 #### Custom Sound
 
