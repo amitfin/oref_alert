@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 from http import HTTPStatus
+from typing import Any
 
 import homeassistant.util.dt as dt_util
 import pytest
@@ -29,10 +30,64 @@ from custom_components.oref_alert.const import (
 from custom_components.oref_alert.coordinator import (
     OREF_ALERTS_URL,
     OREF_HISTORY_URL,
+    OrefAlertCoordinatorData,
     OrefAlertDataUpdateCoordinator,
 )
 
 from .utils import load_json_fixture, mock_urls
+
+
+@pytest.mark.parametrize(
+    ("data", "alerts", "active_alerts", "preemptive_update"),
+    [
+        ([], [], [], []),
+        (
+            [{"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 1}],
+            [{"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 1}],
+            [{"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 1}],
+            [],
+        ),
+        (
+            [{"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 13}],
+            [],
+            [],
+            [{"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 13}],
+        ),
+        (
+            [
+                {"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 1},
+                {"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 13},
+            ],
+            [{"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 1}],
+            [{"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 1}],
+            [],
+        ),
+        (
+            [
+                {"alertDate": "2025-04-26 03:19:59", "data": "area1", "category": 1},
+                {"alertDate": "2025-04-26 03:19:59", "data": "area1", "category": 13},
+            ],
+            [{"alertDate": "2025-04-26 03:19:59", "data": "area1", "category": 1}],
+            [],
+            [],
+        ),
+    ],
+    ids=("empty", "simple", "preemptive", "active preemptive", "post active"),
+)
+def test_coordinator_data(
+    freezer: FrozenDateTimeFactory,
+    data: list[dict[str, Any]],
+    alerts: list[dict[str, Any]],
+    active_alerts: list[dict[str, Any]],
+    preemptive_update: list[dict[str, Any]],
+) -> None:
+    """Test the coordinator data class."""
+    freezer.move_to("2025-04-26 03:30:00+03:00")
+    coordinator_data = OrefAlertCoordinatorData(data, 10)
+    assert coordinator_data.data == data
+    assert coordinator_data.alerts == alerts
+    assert coordinator_data.active_alerts == active_alerts
+    assert coordinator_data.preemptive_updates == preemptive_update
 
 
 def create_coordinator(
@@ -195,7 +250,7 @@ async def test_synthetic_alert(
         {
             CONF_AREA: "קריית שמונה",
             CONF_DURATION: 40,
-            ATTR_CATEGORY: 5,
+            ATTR_CATEGORY: 4,
             ATTR_TITLE: "test",
         }
     )
@@ -207,7 +262,7 @@ async def test_synthetic_alert(
     assert coordinator.data.alerts[0]["alertDate"] == synthetic_alert_time.strftime(
         "%Y-%m-%d %H:%M:%S"
     )
-    assert coordinator.data.alerts[0]["category"] == 5
+    assert coordinator.data.alerts[0]["category"] == 4
     assert coordinator.data.alerts[0]["title"] == "test"
     freezer.tick(timedelta(seconds=2))
     async_fire_time_changed(hass)

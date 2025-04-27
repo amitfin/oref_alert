@@ -33,6 +33,7 @@ from .const import (
     DATA_COORDINATOR,
     DOMAIN,
     END_TIME_ID_SUFFIX,
+    PREEMPTIVE_UPDATE_ID_SUFFIX,
     REMOVE_SENSOR_SERVICE,
     SYNTHETIC_ALERT_SERVICE,
     TIME_TO_SHELTER_ID_SUFFIX,
@@ -152,6 +153,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 if name != entity_name
             }
             entity_reg.async_remove(service_call.data[CONF_ENTITY_ID])
+            entity_reg.async_remove(
+                f"{service_call.data[CONF_ENTITY_ID]}_{PREEMPTIVE_UPDATE_ID_SUFFIX}"
+            )
             for suffix in [TIME_TO_SHELTER_ID_SUFFIX, END_TIME_ID_SUFFIX]:
                 entity_id = (
                     f"{Platform.SENSOR}."

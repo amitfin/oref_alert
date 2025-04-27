@@ -26,6 +26,7 @@ from custom_components.oref_alert.const import (
     CONF_POLL_INTERVAL,
     DOMAIN,
     OREF_ALERT_UNIQUE_ID,
+    PREEMPTIVE_UPDATE_ID_SUFFIX,
 )
 
 from .utils import load_json_fixture, mock_urls
@@ -261,4 +262,57 @@ async def test_all_areas_sensor(
     expected_alerts = load_json_fixture("single_alert_random_area_history.json")
     assert state.attributes[ATTR_COUNTRY_ACTIVE_ALERTS] == expected_alerts
     assert state.attributes[ATTR_COUNTRY_ALERTS] == expected_alerts
+    await async_shutdown(hass, config_id)
+
+
+async def test_preemptive_state(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test preemptive update entity state."""
+    freezer.move_to("2025-04-26 03:30:00+03:00")
+    mock_urls(aioclient_mock, None, "single_preemptive_alert_history.json")
+    alerts = load_json_fixture("single_preemptive_alert_history.json")
+
+    config_id = await async_setup(hass, {CONF_AREAS: ["פתח תקווה"]})
+    await hass.services.async_call(
+        DOMAIN,
+        ADD_SENSOR_SERVICE,
+        {CONF_NAME: "test", CONF_AREAS: ["פתח תקווה"]},
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    entities = (
+        (
+            f"{ENTITY_ID}_{PREEMPTIVE_UPDATE_ID_SUFFIX}",
+            ATTR_SELECTED_AREAS_ACTIVE_ALERTS,
+        ),
+        (
+            f"{ENTITY_ID}_test_{PREEMPTIVE_UPDATE_ID_SUFFIX}",
+            ATTR_SELECTED_AREAS_ACTIVE_ALERTS,
+        ),
+        (
+            f"{ENTITY_ID}_{ALL_AREAS_ID_SUFFIX}_{PREEMPTIVE_UPDATE_ID_SUFFIX}",
+            ATTR_COUNTRY_ACTIVE_ALERTS,
+        ),
+    )
+
+    for entity_id, attribute in entities:
+        state = hass.states.get(entity_id)
+        assert state is not None
+        assert state.state == STATE_ON
+        assert state.attributes[attribute] == alerts
+
+    freezer.move_to("2025-04-26 03:40:01+03:00")
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    for entity_id, attribute in entities:
+        state = hass.states.get(entity_id)
+        assert state is not None
+        assert state.state == STATE_OFF
+        assert not state.attributes[attribute]
+
     await async_shutdown(hass, config_id)

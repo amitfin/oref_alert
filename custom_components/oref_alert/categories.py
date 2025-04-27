@@ -2,6 +2,7 @@
 
 # Based on the content of: https://www.oref.org.il/alerts/alertCategories.json
 
+# Each category contains: (icon, emoji, is_alert)
 CATEGORY_METADATA = {
     1: ("rocket-launch", "🚀", True),  # missilealert
     2: ("airplane-alert", "✈️", True),  # uav
@@ -34,6 +35,7 @@ CATEGORY_METADATA = {
 }
 
 DEFAULT_CATEGORY = CATEGORY_METADATA[4]
+UPDATE_CATEGORY = 13
 
 
 def category_metadata(category: int) -> tuple[str, str, bool]:
@@ -54,3 +56,8 @@ def category_to_emoji(category: int) -> str:
 def category_is_alert(category: int) -> bool:
     """Return the alert category."""
     return category_metadata(category)[2]
+
+
+def category_is_update(category: int) -> bool:
+    """Check if category is update."""
+    return category == UPDATE_CATEGORY
