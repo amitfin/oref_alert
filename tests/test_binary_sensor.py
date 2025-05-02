@@ -216,7 +216,7 @@ async def test_unrecognized_area(
     mock_urls(aioclient_mock, "unrecognized_alert.json", None)
     config_id = await async_setup(hass)
     assert caplog.text.count("Alert has an unrecognized area: שכם") == 1
-    freezer.tick(datetime.timedelta(seconds=600))
+    freezer.tick(datetime.timedelta(seconds=60))
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert caplog.text.count("Alert has an unrecognized area: שכם") == 1
