@@ -42,37 +42,140 @@ from .utils import load_json_fixture, mock_urls
     [
         ([], [], [], []),
         (
-            [{"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 1}],
-            [{"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 1}],
-            [{"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 1}],
+            [
+                {
+                    "alertDate": "2025-04-26 03:30:00",
+                    "title": "",
+                    "data": "area1",
+                    "category": 1,
+                }
+            ],
+            [
+                {
+                    "alertDate": "2025-04-26 03:30:00",
+                    "title": "",
+                    "data": "area1",
+                    "category": 1,
+                }
+            ],
+            [
+                {
+                    "alertDate": "2025-04-26 03:30:00",
+                    "title": "",
+                    "data": "area1",
+                    "category": 1,
+                }
+            ],
             [],
-        ),
-        (
-            [{"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 13}],
-            [],
-            [],
-            [{"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 13}],
         ),
         (
             [
-                {"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 1},
-                {"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 13},
+                {
+                    "alertDate": "2025-04-26 03:30:00",
+                    "title": "",
+                    "data": "area1",
+                    "category": 13,
+                }
             ],
-            [{"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 1}],
-            [{"alertDate": "2025-04-26 03:30:00", "data": "area1", "category": 1}],
+            [],
+            [],
+            [
+                {
+                    "alertDate": "2025-04-26 03:30:00",
+                    "title": "",
+                    "data": "area1",
+                    "category": 13,
+                }
+            ],
+        ),
+        (
+            [
+                {
+                    "alertDate": "2025-04-26 03:30:00",
+                    "title": "בדקות הקרובות צפויות להתקבל התרעות באזורך",
+                    "data": "area1",
+                    "category": 10,
+                }
+            ],
+            [],
+            [],
+            [
+                {
+                    "alertDate": "2025-04-26 03:30:00",
+                    "title": "בדקות הקרובות צפויות להתקבל התרעות באזורך",
+                    "data": "area1",
+                    "category": 10,
+                }
+            ],
+        ),
+        (
+            [
+                {
+                    "alertDate": "2025-04-26 03:30:00",
+                    "title": "",
+                    "data": "area1",
+                    "category": 1,
+                },
+                {
+                    "alertDate": "2025-04-26 03:30:00",
+                    "title": "",
+                    "data": "area1",
+                    "category": 13,
+                },
+            ],
+            [
+                {
+                    "alertDate": "2025-04-26 03:30:00",
+                    "title": "",
+                    "data": "area1",
+                    "category": 1,
+                }
+            ],
+            [
+                {
+                    "alertDate": "2025-04-26 03:30:00",
+                    "title": "",
+                    "data": "area1",
+                    "category": 1,
+                }
+            ],
             [],
         ),
         (
             [
-                {"alertDate": "2025-04-26 03:19:59", "data": "area1", "category": 1},
-                {"alertDate": "2025-04-26 03:19:59", "data": "area1", "category": 13},
+                {
+                    "alertDate": "2025-04-26 03:19:59",
+                    "title": "",
+                    "data": "area1",
+                    "category": 1,
+                },
+                {
+                    "alertDate": "2025-04-26 03:19:59",
+                    "title": "",
+                    "data": "area1",
+                    "category": 13,
+                },
             ],
-            [{"alertDate": "2025-04-26 03:19:59", "data": "area1", "category": 1}],
+            [
+                {
+                    "alertDate": "2025-04-26 03:19:59",
+                    "title": "",
+                    "data": "area1",
+                    "category": 1,
+                }
+            ],
             [],
             [],
         ),
     ],
-    ids=("empty", "simple", "preemptive", "active preemptive", "post active"),
+    ids=(
+        "empty",
+        "simple",
+        "preemptive",
+        "preemptive title",
+        "active preemptive",
+        "post active",
+    ),
 )
 def test_coordinator_data(
     freezer: FrozenDateTimeFactory,

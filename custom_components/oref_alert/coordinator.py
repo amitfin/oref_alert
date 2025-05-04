@@ -47,6 +47,21 @@ OREF_HEADERS = {
 REQUEST_RETRIES = 3
 REAL_TIME_ALERT_LOGIC_WINDOW = 2
 
+PREEMPTIVE_UPDATE_TITLE = "בדקות הקרובות צפויות להתקבל התרעות באזורך"
+
+
+def _is_update(alert: dict[str, Any]) -> bool:
+    """Check if the alert is an update."""
+    return (
+        category_is_update(alert["category"])
+        or PREEMPTIVE_UPDATE_TITLE in alert["title"]
+    )
+
+
+def _is_alert(alert: dict[str, Any]) -> bool:
+    """Check if the alert is an alert."""
+    return category_is_alert(alert["category"]) and not _is_update(alert)
+
 
 class OrefAlertCoordinatorData:
     """Class for holding coordinator data."""
@@ -54,18 +69,14 @@ class OrefAlertCoordinatorData:
     def __init__(self, data: list[Any], active_duration: int) -> None:
         """Initialize the data."""
         self.data = data
-        self.alerts = list(
-            filter(lambda alert: category_is_alert(alert["category"]), data)
-        )
+        self.alerts = list(filter(lambda alert: _is_alert(alert), data))
         active_alerts = OrefAlertDataUpdateCoordinator.recent_alerts(
             data, active_duration
         )
         preemptive_updates = list(
-            filter(lambda alert: category_is_update(alert["category"]), active_alerts)
+            filter(lambda alert: _is_update(alert), active_alerts)
         )
-        self.active_alerts = list(
-            filter(lambda alert: category_is_alert(alert["category"]), active_alerts)
-        )
+        self.active_alerts = list(filter(lambda alert: _is_alert(alert), active_alerts))
         active_alerts_areas = {alert["data"] for alert in self.active_alerts}
         self.preemptive_updates = list(
             filter(
