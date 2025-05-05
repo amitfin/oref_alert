@@ -72,7 +72,7 @@ from .utils import load_json_fixture, mock_urls
             [
                 {
                     "alertDate": "2025-04-26 03:30:00",
-                    "title": "בדקות הקרובות צפויות להתקבל התרעות באזורך",
+                    "title": "",
                     "data": "area1",
                     "category": 13,
                 }
@@ -82,7 +82,7 @@ from .utils import load_json_fixture, mock_urls
             [
                 {
                     "alertDate": "2025-04-26 03:30:00",
-                    "title": "בדקות הקרובות צפויות להתקבל התרעות באזורך",
+                    "title": "",
                     "data": "area1",
                     "category": 13,
                 }
@@ -98,7 +98,7 @@ from .utils import load_json_fixture, mock_urls
                 },
                 {
                     "alertDate": "2025-04-26 03:30:00",
-                    "title": "בדקות הקרובות צפויות להתקבל התרעות באזורך",
+                    "title": "",
                     "data": "area1",
                     "category": 13,
                 },
@@ -131,7 +131,7 @@ from .utils import load_json_fixture, mock_urls
                 },
                 {
                     "alertDate": "2025-04-26 03:19:59",
-                    "title": "בדקות הקרובות צפויות להתקבל התרעות באזורך",
+                    "title": "",
                     "data": "area1",
                     "category": 13,
                 },
@@ -401,4 +401,17 @@ async def test_non_alert_category(
     expected_alerts = load_json_fixture("alert_categories_expected.json")
     assert coordinator.data.alerts == expected_alerts
     assert coordinator.data.active_alerts == expected_alerts
+    await coordinator.async_shutdown()
+
+
+async def test_unknown_real_time_category(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """Test unknown real time category."""
+    mock_urls(aioclient_mock, "unknown_real_time_category.json", None)
+    coordinator = create_coordinator(hass)
+    await coordinator.async_config_entry_first_refresh()
+    coordinator.async_add_listener(lambda: None)
+    assert coordinator.data.data == []
     await coordinator.async_shutdown()

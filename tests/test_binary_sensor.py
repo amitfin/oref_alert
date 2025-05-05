@@ -265,14 +265,25 @@ async def test_all_areas_sensor(
     await async_shutdown(hass, config_id)
 
 
-async def test_preemptive_state(
+@pytest.mark.parametrize(
+    ("real_time_file", "history_file", "test_expired"),
+    [
+        (None, "single_preemptive_alert_history.json", True),
+        ("single_preemptive_alert_real_time.json", None, False),
+    ],
+    ids=["history", "real_time"],
+)
+async def test_preemptive_state(  # noqa: PLR0913
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
     freezer: FrozenDateTimeFactory,
+    real_time_file: str | None,
+    history_file: str | None,
+    test_expired: bool,  # noqa: FBT001
 ) -> None:
     """Test preemptive update entity state."""
     freezer.move_to("2025-04-26 03:30:00+03:00")
-    mock_urls(aioclient_mock, None, "single_preemptive_alert_history.json")
+    mock_urls(aioclient_mock, real_time_file, history_file)
     alerts = load_json_fixture("single_preemptive_alert_history.json")
 
     config_id = await async_setup(hass, {CONF_AREAS: ["פתח תקווה"]})
@@ -305,14 +316,15 @@ async def test_preemptive_state(
         assert state.state == STATE_ON
         assert state.attributes[attribute] == alerts
 
-    freezer.move_to("2025-04-26 03:40:01+03:00")
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    if test_expired:
+        freezer.move_to("2025-04-26 03:40:01+03:00")
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done(wait_background_tasks=True)
 
-    for entity_id, attribute in entities:
-        state = hass.states.get(entity_id)
-        assert state is not None
-        assert state.state == STATE_OFF
-        assert not state.attributes[attribute]
+        for entity_id, attribute in entities:
+            state = hass.states.get(entity_id)
+            assert state is not None
+            assert state.state == STATE_OFF
+            assert not state.attributes[attribute]
 
     await async_shutdown(hass, config_id)

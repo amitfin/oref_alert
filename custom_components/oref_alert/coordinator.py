@@ -14,7 +14,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from custom_components.oref_alert.categories import category_is_alert
+from custom_components.oref_alert.categories import (
+    category_is_alert,
+    category_is_update,
+    real_time_to_history_category,
+)
 
 from .const import (
     ATTR_CATEGORY,
@@ -44,12 +48,10 @@ OREF_HEADERS = {
 REQUEST_RETRIES = 3
 REAL_TIME_ALERT_LOGIC_WINDOW = 2
 
-PREEMPTIVE_UPDATE_TITLE = "בדקות הקרובות צפויות להתקבל התרעות באזורך"
-
 
 def _is_update(alert: dict[str, Any]) -> bool:
     """Check if the alert is an update."""
-    return PREEMPTIVE_UPDATE_TITLE in alert["title"]
+    return category_is_update(alert["category"])
 
 
 def _is_alert(alert: dict[str, Any]) -> bool:
@@ -174,6 +176,9 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         self, current: dict[str, Any], history: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
         """Convert current alerts payload to history format."""
+        if (category := real_time_to_history_category(int(current["cat"]))) is None:
+            # Unknown category. Wait for the history to include it.
+            return []
         now = dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S")
         history_last_minute_alerts = self.recent_alerts(
             history, REAL_TIME_ALERT_LOGIC_WINDOW
@@ -202,7 +207,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                             "alertDate": now,
                             ATTR_TITLE: current[ATTR_TITLE],
                             "data": area,
-                            ATTR_CATEGORY: int(current["cat"]),
+                            ATTR_CATEGORY: category,
                         }
                     )
         return alerts
