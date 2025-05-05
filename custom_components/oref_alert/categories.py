@@ -16,7 +16,7 @@ CATEGORY_METADATA = {
     10: ("shield-home", "⚔️", True),  # terrorattack
     11: ("home-flood", "🌊", True),  # tsunami
     12: ("biohazard", "☣️", True),  # hazmat
-    13: ("message-alert", "⚠", False),  # update
+    13: ("message-alert", "⚠", True),  # update
     14: ("flash-alert", "⚡", True),  # flash
     15: ("alert-circle-check", "✅", False),  # missilealertdrill
     16: ("alert-circle-check", "✅", False),  # uavdrill
@@ -35,7 +35,6 @@ CATEGORY_METADATA = {
 }
 
 DEFAULT_CATEGORY = CATEGORY_METADATA[4]
-UPDATE_CATEGORY = 13
 
 
 def category_metadata(category: int) -> tuple[str, str, bool]:
@@ -57,7 +56,3 @@ def category_is_alert(category: int) -> bool:
     """Return the alert category."""
     return category_metadata(category)[2]
 
-
-def category_is_update(category: int) -> bool:
-    """Check if category is update."""
-    return category == UPDATE_CATEGORY

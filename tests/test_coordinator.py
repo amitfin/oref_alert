@@ -72,7 +72,7 @@ from .utils import load_json_fixture, mock_urls
             [
                 {
                     "alertDate": "2025-04-26 03:30:00",
-                    "title": "",
+                    "title": "בדקות הקרובות צפויות להתקבל התרעות באזורך",
                     "data": "area1",
                     "category": 13,
                 }
@@ -82,29 +82,9 @@ from .utils import load_json_fixture, mock_urls
             [
                 {
                     "alertDate": "2025-04-26 03:30:00",
-                    "title": "",
+                    "title": "בדקות הקרובות צפויות להתקבל התרעות באזורך",
                     "data": "area1",
                     "category": 13,
-                }
-            ],
-        ),
-        (
-            [
-                {
-                    "alertDate": "2025-04-26 03:30:00",
-                    "title": "בדקות הקרובות צפויות להתקבל התרעות באזורך",
-                    "data": "area1",
-                    "category": 10,
-                }
-            ],
-            [],
-            [],
-            [
-                {
-                    "alertDate": "2025-04-26 03:30:00",
-                    "title": "בדקות הקרובות צפויות להתקבל התרעות באזורך",
-                    "data": "area1",
-                    "category": 10,
                 }
             ],
         ),
@@ -118,7 +98,7 @@ from .utils import load_json_fixture, mock_urls
                 },
                 {
                     "alertDate": "2025-04-26 03:30:00",
-                    "title": "",
+                    "title": "בדקות הקרובות צפויות להתקבל התרעות באזורך",
                     "data": "area1",
                     "category": 13,
                 },
@@ -151,7 +131,7 @@ from .utils import load_json_fixture, mock_urls
                 },
                 {
                     "alertDate": "2025-04-26 03:19:59",
-                    "title": "",
+                    "title": "בדקות הקרובות צפויות להתקבל התרעות באזורך",
                     "data": "area1",
                     "category": 13,
                 },
@@ -172,7 +152,6 @@ from .utils import load_json_fixture, mock_urls
         "empty",
         "simple",
         "preemptive",
-        "preemptive title",
         "active preemptive",
         "post active",
     ),

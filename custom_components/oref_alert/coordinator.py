@@ -14,10 +14,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from custom_components.oref_alert.categories import (
-    category_is_alert,
-    category_is_update,
-)
+from custom_components.oref_alert.categories import category_is_alert
 
 from .const import (
     ATTR_CATEGORY,
@@ -52,10 +49,7 @@ PREEMPTIVE_UPDATE_TITLE = "בדקות הקרובות צפויות להתקבל �
 
 def _is_update(alert: dict[str, Any]) -> bool:
     """Check if the alert is an update."""
-    return (
-        category_is_update(alert["category"])
-        or PREEMPTIVE_UPDATE_TITLE in alert["title"]
-    )
+    return PREEMPTIVE_UPDATE_TITLE in alert["title"]
 
 
 def _is_alert(alert: dict[str, Any]) -> bool:
