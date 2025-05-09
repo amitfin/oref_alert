@@ -1,5 +1,5 @@
 Hebrew,English
-גאליה,Gaul
+גאליה,Ge'alya
 אבן יהודה,Even Yehuda
 אודים,Odim
 אור יהודה,Or Yehuda
@@ -9,7 +9,7 @@ Hebrew,English
 אזור תעשייה הר טוב - צרעה,Har Tov Industrial Zone
 אזור תעשייה חבל מודיעין,Modiin District Industrial Zone
 אזור תעשייה נשר - רמלה,Nesher Industrial Zone
-אזור תעשייה רגמ,Industrial Area of Ram
+אזור תעשייה רגמ,RGM Industrial Area (Afula)
 אחיסמך,Ahisamakh
 אחיעזר,Ahiezer
 אייל,Eyal
@@ -23,11 +23,11 @@ Hebrew,English
 אשתאול,Eshtaol
 באר יעקב,Beer Yaakov
 בארות יצחק,Be'erot Yitzhak
-בית אריה,Lion House
-בית ברל,Berl House
+בית אריה,Beit Aryeh-Ofarim
+בית ברל,Beit Berl
 בית דגן,Beit Dagan
 בית חנן,Beit Hanan
-בית חשמונאי,Hasmonean House
+בית חשמונאי,Beit Hashmonai
 בית יהושע,Beit Yehoshua
 בית מאיר,Beit Meir
 בית נחמיה,Beit Nehemia
@@ -35,8 +35,8 @@ Hebrew,English
 בית עובד,Beit Oved
 בית עוזיאל,Beit Uziel
 בית עלמין מורשה,Morasha Cemetery
-בית עריף,Arif House
-בן שמן,Ben Shemen
+בית עריף,Beit Arif
+בן שמן,Ben Shemen Youth Village
 בני ברק,Bnei Brak
 בני דרור,Bnei Dror
 בני עטרות,Bnei Atarot
@@ -61,16 +61,16 @@ Hebrew,English
 גן שורק,Gan Sorek
 גן שלמה,Kvutzat Shiller (Gan Shlomo)
 גנות,Ganot
-גני הדר,Citrus Gardens
-,Ganei Yohanan
+גני הדר,Ganei Hadar
+גני יוחנן,Ganei Yohanan
 גני עם,Ganei Am
 גני תקווה,Ganei Tikva
 געש,Ga'ash
 גת רימון,Gat Rimon
 הוד השרון,Hod Hasharon
 הראל,Harel
-הרצליה - מערב,Herzliya - West
-הרצליה - מרכז וגליל ים,Herzliya - Center and Sea
+הרצליה - מערב,Herzliya (West)
+הרצליה - מרכז וגליל ים,Herzliya (Center And Sea)
 זיתן,Zeitan
 חגור,Hagor
 חדיד,Hadid
@@ -83,7 +83,7 @@ Hebrew,English
 חרות,Herut
 חשמונאים,Hashmonaim
 טירה,Tira
-טירת יהודה,Yehuda Castle
+טירת יהודה,Tirat Yehuda
 טל שחר,Tal Shahar
 יגל,Yagel
 יד השמונה,Yad HaShmona
@@ -98,7 +98,7 @@ Hebrew,English
 ישרש,Yashresh
 כסלון,Ksalon
 כפר אוריה,Kfar Oriya
-כפר ביל''ו,Bilo Village
+כפר ביל''ו,Kfar Bilu
 כפר בן נון,Kfar Ben Nun
 כפר ברא,Kfar Bara
 כפר דניאל,Kfar Daniel
@@ -124,8 +124,8 @@ Hebrew,English
 מבוא חורון,Mevo Horon
 מבוא מודיעים,Mevo Modi'im
 מגשימים,Magshimim
-מודיעין - ישפרו סנטר,Modiin - Ishpro Center
-מודיעין - ליגד סנטר,Modiin - Ligad Center
+מודיעין - ישפרו סנטר,Modiin (Ishpro Center)
+מודיעין - ליגד סנטר,Modiin (Ligad Center)
 מודיעין מכבים רעות,Modiin Maccabim Reut
 מודיעין עילית,Modiin Ilit
 מזור,Mazor
@@ -168,8 +168,8 @@ Hebrew,English
 נען,Naan
 נצר חזני,Netzer Hazani
 נצר סרני,Netzer Sereni
-נתניה - מזרח,Netanya - East
-נתניה - מערב,Netanya - West
+נתניה - מזרח,Netanya (East)
+נתניה - מערב,Netanya (West)
 סביון,Savyon
 סינמה סיטי גלילות,Cinema City Glilot
 סתריה,Sitria
@@ -195,16 +195,16 @@ Hebrew,English
 קריית יערים,Kiryat Yearim
 קריית עקרון,Kiryat Ekron
 ראש העין,Rosh Haayin
-ראשון לציון - מזרח,Rishon Lezion - East
-ראשון לציון - מערב,Rishon Lezion - West
+ראשון לציון - מזרח,Rishon Lezion (East)
+ראשון לציון - מערב,Rishon Lezion (West)
 רחובות,Rehovot
 רטורנו - גבעת שמש,Givat Shemesh
 רינתיה,Rinatya
 רמות השבים,Ramot HaShavim
 רמות מאיר,Ramot Meir
 רמלה,Ramla
-רמת גן - מזרח,Ramat Gan - East
-רמת גן - מערב,Ramat Gan - West
+רמת גן - מזרח,Ramat Gan (East)
+רמת גן - מערב,Ramat Gan (West)
 רמת הכובש,Ramat HaKovesh
 רמת השרון,Ramat Hasharon
 רמת רזיאל,Ramat Raziel
@@ -229,7 +229,7 @@ Hebrew,English
 תל מונד,Tel Mond
 תעוז,Ta'oz
 תעשיון חצב,Taasi'on Khatsav
-תעשיון צריפין,Tsrifin - Industrial Area
+תעשיון צריפין,Tsrifin (Industrial Area)
 תרום,Tarum
 אבו גוש,Abu Ghosh
 אביחיל,Avichail
@@ -297,7 +297,7 @@ Hebrew,English
 גן הדרום,Southern Garden
 גן יבנה,Gan Yavne
 גנות הדר,Ganot Hadar
-גני טל,Tal Gardens
+גני טל,Ganei Tal
 גפן,Gefen
 דולב,Dolev
 הדר עם,Hadar Am
