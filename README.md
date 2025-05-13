@@ -90,10 +90,12 @@ The integration creates an additional set of sensors which monitor the time to t
 
 ## Preemptive Update Binary Sensors
 
-The integration creates an additional set of binary sensors which turns on when there is a preemptive warning for a potential future alert. The ID of the entity is similar to the corresponding binary sensor, with the suffix of `_preemptive_update`. For example, `binary_sensor.oref_alert_preemptive_update`. The entity's state turns off when the corresponding binary sensor turns on (i.e. a regular alert has been activated). If the warning is not converted to a real alert, the state turns off after the user-configured active period (10 minutes by default). The entity has the following extra attributes:
+The integration creates an additional set of binary sensors which turns on when there is a preemptive warning for a potential future alert. The ID of the entity is similar to the corresponding binary sensor, with the suffix of `_preemptive_update`. For example, `binary_sensor.oref_alert_preemptive_update`. The entity's state turns `off` when the corresponding binary sensor turns `on` (i.e. a regular alert has been activated). If the warning is not converted to a real alert, the state turns `off` after the user-configured active period (10 minutes by default). The entity has the following extra attributes:
 1. `Areas`: the name of the areas.
 2. `Alert active duration`: as configured by the user.
 3. `Selected areas active alerts`: active warnings.
+
+A [synthetic alert](#synthetic-alert) with category `13` can be used to turn `on` this entity for testing purposes.
 
 ## Geo Location Entities
 
