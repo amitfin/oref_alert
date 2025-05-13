@@ -262,24 +262,30 @@ async def test_active_alerts(
     assert coordinator.data.active_alerts == [active_alert]
 
 
+@pytest.mark.parametrize(
+    "alert_file",
+    ["single_alert_real_time.json", "single_preemptive_alert_real_time.json"],
+    ids=("alert", "preemptive"),
+)
 async def test_real_time_timestamp(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
     freezer: FrozenDateTimeFactory,
+    alert_file: str,
 ) -> None:
     """Test real time timestamp."""
     freezer.move_to("2023-10-07 06:30:00+03:00")
-    mock_urls(aioclient_mock, "single_alert_real_time.json", None)
+    mock_urls(aioclient_mock, alert_file, None)
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
     for _ in range(25):
         # Timestamp should stay the same for the first 2 minutes.
-        assert coordinator.data.alerts[0]["alertDate"] == "2023-10-07 06:30:00"
+        assert coordinator.data.data[0]["alertDate"] == "2023-10-07 06:30:00"
         freezer.tick(timedelta(seconds=5))
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
-    assert coordinator.data.alerts[0]["alertDate"] == "2023-10-07 06:32:05"
+    assert coordinator.data.data[0]["alertDate"] == "2023-10-07 06:32:05"
     await coordinator.async_shutdown()
 
 

@@ -184,7 +184,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             history, REAL_TIME_ALERT_LOGIC_WINDOW
         )
         previous_last_minute_alerts = (
-            self.recent_alerts(self.data.active_alerts, REAL_TIME_ALERT_LOGIC_WINDOW)
+            self.recent_alerts(self.data.data, REAL_TIME_ALERT_LOGIC_WINDOW)
             if self.data
             else []
         )
