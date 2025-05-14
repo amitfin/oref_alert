@@ -38,7 +38,7 @@ from .utils import load_json_fixture, mock_urls
 
 
 @pytest.mark.parametrize(
-    ("data", "alerts", "active_alerts", "preemptive_update"),
+    ("items", "alerts", "active_alerts", "preemptive_update"),
     [
         ([], [], [], []),
         (
@@ -158,15 +158,15 @@ from .utils import load_json_fixture, mock_urls
 )
 def test_coordinator_data(
     freezer: FrozenDateTimeFactory,
-    data: list[dict[str, Any]],
+    items: list[dict[str, Any]],
     alerts: list[dict[str, Any]],
     active_alerts: list[dict[str, Any]],
     preemptive_update: list[dict[str, Any]],
 ) -> None:
     """Test the coordinator data class."""
     freezer.move_to("2025-04-26 03:30:00+03:00")
-    coordinator_data = OrefAlertCoordinatorData(data, 10)
-    assert coordinator_data.data == data
+    coordinator_data = OrefAlertCoordinatorData(items, 10)
+    assert coordinator_data.items == items
     assert coordinator_data.alerts == alerts
     assert coordinator_data.active_alerts == active_alerts
     assert coordinator_data.preemptive_updates == preemptive_update
@@ -281,11 +281,11 @@ async def test_real_time_timestamp(
     coordinator.async_add_listener(lambda: None)
     for _ in range(25):
         # Timestamp should stay the same for the first 2 minutes.
-        assert coordinator.data.data[0]["alertDate"] == "2023-10-07 06:30:00"
+        assert coordinator.data.items[0]["alertDate"] == "2023-10-07 06:30:00"
         freezer.tick(timedelta(seconds=5))
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
-    assert coordinator.data.data[0]["alertDate"] == "2023-10-07 06:32:05"
+    assert coordinator.data.items[0]["alertDate"] == "2023-10-07 06:32:05"
     await coordinator.async_shutdown()
 
 
@@ -419,5 +419,5 @@ async def test_unknown_real_time_category(
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
-    assert coordinator.data.data == []
+    assert coordinator.data.items == []
     await coordinator.async_shutdown()

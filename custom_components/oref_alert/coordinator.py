@@ -62,12 +62,12 @@ def _is_alert(alert: dict[str, Any]) -> bool:
 class OrefAlertCoordinatorData:
     """Class for holding coordinator data."""
 
-    def __init__(self, data: list[Any], active_duration: int) -> None:
+    def __init__(self, items: list[Any], active_duration: int) -> None:
         """Initialize the data."""
-        self.data = data
-        self.alerts = list(filter(lambda alert: _is_alert(alert), data))
+        self.items = items
+        self.alerts = list(filter(lambda alert: _is_alert(alert), items))
         active_alerts = OrefAlertDataUpdateCoordinator.recent_alerts(
-            data, active_duration
+            items, active_duration
         )
         preemptive_updates = list(
             filter(lambda alert: _is_update(alert), active_alerts)
@@ -137,11 +137,11 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             alerts.extend(self._get_synthetic_alerts())
             alerts.sort(key=cmp_to_key(_sort_alerts))
             for unrecognized_area in {alert["data"] for alert in alerts}.difference(
-                {alert["data"] for alert in getattr(self.data, "data", [])}
+                {alert["data"] for alert in getattr(self.data, "items", [])}
             ).difference(AREAS):
                 LOGGER.error("Alert has an unrecognized area: %s", unrecognized_area)
         else:
-            alerts = self.data.data
+            alerts = self.data.items
         return OrefAlertCoordinatorData(alerts, self._active_duration)
 
     async def _async_fetch_url(self, url: str) -> tuple[Any, bool]:
@@ -180,23 +180,23 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             # Unknown category. Wait for the history to include it.
             return []
         now = dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S")
-        history_last_minute_alerts = self.recent_alerts(
+        history_recent_alerts = self.recent_alerts(
             history, REAL_TIME_ALERT_LOGIC_WINDOW
         )
-        previous_last_minute_alerts = (
-            self.recent_alerts(self.data.data, REAL_TIME_ALERT_LOGIC_WINDOW)
+        previous_recent_alerts = (
+            self.recent_alerts(self.data.items, REAL_TIME_ALERT_LOGIC_WINDOW)
             if self.data
             else []
         )
         alerts = []
         for alert_area in current["data"]:
             area = self._fix_area_spelling(alert_area)
-            for history_recent_alert in history_last_minute_alerts:
+            for history_recent_alert in history_recent_alerts:
                 if history_recent_alert["data"] == area:
                     # The alert is already in the history list. No need to add it twice.
                     break
             else:
-                for previous_recent_alert in previous_last_minute_alerts:
+                for previous_recent_alert in previous_recent_alerts:
                     if previous_recent_alert["data"] == area:
                         # The alert was already added, so take the original timestamp.
                         alerts.append(previous_recent_alert)
