@@ -276,11 +276,18 @@ actions:
       current: "{{ trigger.to_state.attributes.country_active_alerts | map(attribute='data') | list }}"
       previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | list }}"
       alerts: "{{ current | reject('in', previous) | unique | sort | list }}"
-  - condition: "{{ alerts | length > 0 }}"
-  - action: notify.mobile_app_amits_iphone
-    data:
-      title: התרעות מקדימות מפיקוד העורף
-      message: "{{ alerts | join(' | ') }}"
+      alerts_per_push: "{{ (150 / (alerts | map('length') | average(0) | add(3))) | int }}"
+  - repeat:
+      while:
+        - condition: template
+          value_template: "{{ alerts | length > 0 }}"
+      sequence:
+        - action: notify.mobile_app_amits_iphone
+          data:
+            title: התרעות מקדימות מפיקוד העורף
+            message: "{{ alerts[:alerts_per_push] | join(' | ') }}"
+        - variables:
+            alerts: "{{ alerts[alerts_per_push:] }}"
 mode: queued
 ```
 
