@@ -291,6 +291,8 @@ actions:
 mode: queued
 ```
 
+<img width="400" src="https://github.com/user-attachments/assets/60b6ff3a-0d3d-4b76-bf60-3ea389e3a5c1">
+
 #### Custom Sound
 
 It's possible to set a custom sound for a specific mobile app push notification. Here is an iOS example:
