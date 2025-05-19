@@ -273,21 +273,21 @@ triggers:
     attribute: country_active_alerts
 actions:
   - variables:
-      current: "{{ trigger.to_state.attributes.country_active_alerts | map(attribute='data') | list }}"
-      previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | list }}"
-      alerts: "{{ current | reject('in', previous) | unique | sort | list }}"
-      alerts_per_push: "{{ (150 / (alerts | map('length') | average(0) | add(3))) | int }}"
+      current: "{{ trigger.to_state.attributes.country_active_alerts | map(attribute='data') | map('oref_district') | list }}"
+      previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | map('oref_district') | list }}"
+      districts: "{{ current | reject('in', previous) | unique | sort | list }}"
+      districts_per_push: "{{ (150 / (districts | map('length') | average(0) | add(2))) | int }}"
   - repeat:
       while:
         - condition: template
-          value_template: "{{ alerts | length > 0 }}"
+          value_template: "{{ districts | length > 0 }}"
       sequence:
         - action: notify.mobile_app_amits_iphone
           data:
-            title: התרעות מקדימות מפיקוד העורף
-            message: "{{ alerts[:alerts_per_push] | join(' | ') }}"
+            title: מבזק פיקוד העורף
+            message: "בעקבות זיהוי שיגורים לעבר ישראל, יתכן ויפעלו התרעות בדקות הקרובות במרחבים הבאים: {{ districts[:districts_per_push] | join(', ') }}"
         - variables:
-            alerts: "{{ alerts[alerts_per_push:] }}"
+            alerts: "{{ districts[districts_per_push:] }}"
 mode: queued
 ```
 
