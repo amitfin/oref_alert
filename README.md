@@ -287,7 +287,7 @@ actions:
             title: מבזק פיקוד העורף
             message: "בעקבות זיהוי שיגורים לעבר ישראל, יתכן ויפעלו התרעות בדקות הקרובות במרחבים הבאים: {{ districts[:districts_per_push] | join(', ') }}"
         - variables:
-            alerts: "{{ districts[districts_per_push:] }}"
+            districts: "{{ districts[districts_per_push:] }}"
 mode: queued
 ```
 
