@@ -276,7 +276,7 @@ actions:
       current: "{{ trigger.to_state.attributes.country_active_alerts | map(attribute='data') | map('oref_district') | list }}"
       previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | map('oref_district') | list }}"
       districts: "{{ current | reject('in', previous) | unique | sort | list }}"
-      districts_per_push: "{{ (150 / (districts | map('length') | average(0) | add(2))) | int }}"
+      districts_per_push: "{{ (90 / (districts | map('length') | average(0) | add(2))) | int }}"
   - repeat:
       while:
         - condition: template
