@@ -14,6 +14,7 @@ from homeassistant.helpers.service import async_register_admin_service
 
 from custom_components.oref_alert.areas_checker import AreasChecker
 from custom_components.oref_alert.metadata.areas_and_groups import AREAS_AND_GROUPS
+from custom_components.oref_alert.template import inject_template_extensions
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -187,6 +188,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         synthetic_alert,
         SYNTHETIC_ALERT_SCHEMA,
     )
+
+    inject_template_extensions(hass)
 
     return True
 

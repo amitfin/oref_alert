@@ -17,6 +17,7 @@ AREAS_AND_GROUPS_OUTPUT = "areas_and_groups.py"
 CITY_ALL_AREAS_OUTPUT = "city_all_areas.py"
 AREA_TO_MIGUN_TIME_OUTPUT = "area_to_migun_time.py"
 DISTRICT_TO_AREAS_OUTPUT = "district_to_areas.py"
+AREA_TO_DISTRICT_OUTPUT = "area_to_district.py"
 AREA_TO_POLYGON_OUTPUT = "area_to_polygon.json"
 AREA_INFO_OUTPUT = "area_info.py"
 SERVICES_YAML = "custom_components/oref_alert/services.yaml"
@@ -60,7 +61,9 @@ class OrefMetadata:
         )
         self._city_to_areas: dict[str, list[str]] = self._city_to_areas_map()
         self._area_to_migun_time: dict[str, int] = self._area_to_migun_time_map()
+        self._districts = self._get_districts()
         self._district_to_areas = self._district_to_areas_map()
+        self._area_to_district = self._area_to_district_map()
         self._areas_and_groups = (
             self._areas_no_group
             + list(self._city_to_areas.keys())
@@ -147,13 +150,12 @@ class OrefMetadata:
 
     def _district_to_areas_map(self) -> dict[str, list[str]]:
         """Build the map between districts and their areas."""
-        districts = self._get_districts()
         district_to_areas = {}
-        district_names = list({district["areaname"] for district in districts})
+        district_names = list({district["areaname"] for district in self._districts})
         district_names.sort()
         for district in district_names:
             district_areas = []
-            for area in districts:
+            for area in self._districts:
                 if (
                     area["areaname"] == district
                     and area["label_he"] in self._areas_no_group
@@ -164,6 +166,14 @@ class OrefMetadata:
             district_areas.sort()
             district_to_areas[DISTRICT_PREFIX + district] = district_areas
         return district_to_areas
+
+    def _area_to_district_map(self) -> dict[str, str]:
+        """Build the map between areas and their districts."""
+        return dict(
+            sorted(
+                {area["label_he"]: area["areaname"] for area in self._districts}.items()
+            )
+        )
 
     def _get_tzevaadom_data(self) -> tuple[Any, Any]:
         """Get tzevaadom metadata content."""
@@ -223,6 +233,7 @@ class OrefMetadata:
             (CITY_ALL_AREAS_OUTPUT, "CITY_ALL_AREAS", self._city_to_areas),
             (AREA_TO_MIGUN_TIME_OUTPUT, "AREA_TO_MIGUN_TIME", self._area_to_migun_time),
             (DISTRICT_TO_AREAS_OUTPUT, "DISTRICT_AREAS", self._district_to_areas),
+            (AREA_TO_DISTRICT_OUTPUT, "AREA_TO_DISTRICT", self._area_to_district),
             (
                 AREAS_OUTPUT,
                 "AREAS",
