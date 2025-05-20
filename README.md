@@ -179,7 +179,7 @@ Gets a category (int) and returns the corresponding emoji. If no mapping is foun
 
 `{{ oref_emoji(1) == '🚀' }}`
 
-`{{ [2] | map('oref_emoji') == ['✈️'] }}`
+`{{ [2] | map('oref_emoji') | list == ['✈️'] }}`
 
 ### oref_distance
 
