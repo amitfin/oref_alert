@@ -162,6 +162,7 @@ The integration adds the following template helper functions:
 Gets an area name and returns its district. If no mapping is found, the return value is the input area name. Can be used also as a filter.
 
 `{{ oref_district('פתח תקווה') == 'דן' }}`
+
 `{{ ['ירושלים - מרכז'] | map('oref_district')  == ['ירושלים'] }}`
 
 ### oref_icon
@@ -169,6 +170,7 @@ Gets an area name and returns its district. If no mapping is found, the return v
 Gets a category (int) and returns the corresponding MDI icon (has "mdi:" prefix). If no mapping is found, the return value is "mdi:alert". Can be used also as a filter.
 
 `{{ oref_icon(1) == 'mdi:rocket-launch' }}`
+
 `{{ 2 | oref_icon == 'mdi:airplane-alert' }}`
 
 ### oref_emoji
@@ -176,6 +178,7 @@ Gets a category (int) and returns the corresponding MDI icon (has "mdi:" prefix)
 Gets a category (int) and returns the corresponding emoji. If no mapping is found, the return value is "🚨". Can be used also as a filter.
 
 `{{ oref_emoji(1) == '🚀' }}`
+
 `{{ [2] | map('oref_emoji') == ['✈️'] }}`
 
 ### oref_distance
@@ -183,14 +186,16 @@ Gets a category (int) and returns the corresponding emoji. If no mapping is foun
 Gets an area name and returns the distance (km) from home's coordinates as configured in the system. If the area name is not found, the return value is -1. Can be used also as a filter.
 
 `{{ oref_distance('פתח תקווה') }}`
-`{{ ['פתח תקווה'] | map('oref_distance') }}`
+
+`{{ ['area name'] | map('oref_distance') }}`
 
 ### oref_test_distance
 
 Gets an area name and a distance (km). Returns True if the distance from home's coordinates is less than or equals to the distance . If the area name is not found, the return value is False. Can be used also as a test.
 
 `{{ oref_test_distance('area name', 5)}}`
-`{{ ['ירושלים - מרכז'] | select('oref_test_distance', 5) }}`
+
+`{{ ['area name'] | select('oref_test_distance', 5) }}`
 
 ## Usages
 
