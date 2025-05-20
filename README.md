@@ -153,6 +153,45 @@ Synthetic alerts are useful for testing purposes. The service `oref_alert.synthe
 
 *Note: a synthetic alert is an additional alert. It doesn't override or hide any other alert. A synthetic alert disappears after the amount of seconds supplied to the custom service. This is different from a regular alert which disappears only after 24 hours.*
 
+## Template Functions
+
+The integration adds the following template helper functions:
+
+### oref_district
+
+Gets an area name and returns its district. If no mapping is found, the return value is the input area name. Can be used also as a filter.
+
+`{{ oref_district('פתח תקווה') == 'דן' }}`
+`{{ ['ירושלים - מרכז'] | map('oref_district')  == ['ירושלים'] }}`
+
+### oref_icon
+
+Gets a category (int) and returns the corresponding MDI icon (has "mdi:" prefix). If no mapping is found, the return value is "mdi:alert". Can be used also as a filter.
+
+`{{ oref_icon(1) == 'mdi:rocket-launch' }}`
+`{{ 2 | oref_icon == 'mdi:airplane-alert' }}`
+
+### oref_emoji
+
+Gets a category (int) and returns the corresponding emoji. If no mapping is found, the return value is "🚨". Can be used also as a filter.
+
+`{{ oref_emoji(1) == '🚀' }}`
+`{{ [2] | map('oref_emoji') == ['✈️'] }}`
+
+### oref_distance
+
+Gets an area name and returns the distance (km) from home's coordinates as configured in the system. If the area name is not found, the return value is -1. Can be used also as a filter.
+
+`{{ oref_distance('פתח תקווה') }}`
+`{{ ['פתח תקווה'] | map('oref_distance') }}`
+
+### oref_test_distance
+
+Gets an area name and a distance (km). Returns True if the distance from home's coordinates is less than or equals to the distance . If the area name is not found, the return value is False. Can be used also as a test.
+
+`{{ oref_test_distance('area name', 5)}}`
+`{{ ['ירושלים - מרכז'] | select('oref_test_distance', 5) }}`
+
 ## Usages
 
 The basic usage is to trigger an automation rule when the binary sensor is turning `on`. Some ideas for the `actions` section can be: play a song (can be less stressful when choosing the right song and setting the volume properly), open the lights and TV in the shelter, etc'. It's also possible to trigger an alert when the sensor is turning `off` for getting an indication when it's safe to get out of the shelter.
