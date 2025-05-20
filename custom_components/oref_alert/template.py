@@ -7,18 +7,45 @@ from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.template import Template, TemplateEnvironment
+from homeassistant.util.location import vincenty
 
-from .const import DISTRICT_TEMPLATE_FUNCTION
+from custom_components.oref_alert.categories import category_to_emoji, category_to_icon
+from custom_components.oref_alert.metadata.area_info import AREA_INFO
+
+from .const import (
+    DISTANCE_TEMPLATE_FUNCTION,
+    DISTANCE_TEST_TEMPLATE_FUNCTION,
+    DISTRICT_TEMPLATE_FUNCTION,
+    EMOJI_TEMPLATE_FUNCTION,
+    ICON_TEMPLATE_FUNCTION,
+)
 from .metadata.area_to_district import AREA_TO_DISTRICT
-
-
-def area_to_district(area: str) -> str:
-    """Convert area to district."""
-    return AREA_TO_DISTRICT.get(area, area)
 
 
 def inject_template_extensions(hass: HomeAssistant) -> None:
     """Inject template extension to the Home Assistant instance."""
+
+    def area_to_district(area: str) -> str:
+        """Convert area to district."""
+        return AREA_TO_DISTRICT.get(area, area)
+
+    def area_to_distance(area: str) -> float:
+        """Calculate distance of area from home coordinates."""
+        if (area_info := AREA_INFO.get(area)) is None:
+            return -1
+        return round(
+            vincenty(
+                (hass.config.latitude, hass.config.longitude),
+                (area_info["lat"], area_info["long"]),
+            )
+            or -1,
+            1,
+        )
+
+    def area_distance_test(area: str, distance: float) -> bool:
+        """Check if area is within the distance from home coordinates."""
+        return 0 <= area_to_distance(area) <= distance
+
     original_template_environment_init = TemplateEnvironment.__init__
 
     def patch_environment(env: TemplateEnvironment) -> None:
@@ -26,6 +53,18 @@ def inject_template_extensions(hass: HomeAssistant) -> None:
         env.globals[DISTRICT_TEMPLATE_FUNCTION] = env.filters[
             DISTRICT_TEMPLATE_FUNCTION
         ] = area_to_district
+        env.globals[ICON_TEMPLATE_FUNCTION] = env.filters[ICON_TEMPLATE_FUNCTION] = (
+            category_to_icon
+        )
+        env.globals[EMOJI_TEMPLATE_FUNCTION] = env.filters[EMOJI_TEMPLATE_FUNCTION] = (
+            category_to_emoji
+        )
+        env.globals[DISTANCE_TEMPLATE_FUNCTION] = env.filters[
+            DISTANCE_TEMPLATE_FUNCTION
+        ] = area_to_distance
+        env.globals[DISTANCE_TEST_TEMPLATE_FUNCTION] = env.tests[
+            DISTANCE_TEST_TEMPLATE_FUNCTION
+        ] = area_distance_test
 
     def patched_init(
         self: TemplateEnvironment,
