@@ -116,7 +116,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         )
         self._http_client = async_get_clientsession(hass)
         self._http_cache = {}
-        self._synthetic_alerts: dict[int, dict[str, Any]] = {}
+        self._synthetic_alerts: list[tuple[float, dict[str, Any]]] = []
 
     async def _async_update_data(self) -> OrefAlertCoordinatorData:
         """Request the data from Oref servers.."""
@@ -230,21 +230,27 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
     def add_synthetic_alert(self, details: dict) -> None:
         """Add a synthetic alert for testing purposes."""
         now = dt_util.now(IST)
-        self._synthetic_alerts[int(now.timestamp()) + details[CONF_DURATION]] = {
-            "alertDate": now.strftime("%Y-%m-%d %H:%M:%S"),
-            ATTR_TITLE: details.get(ATTR_TITLE, "התרעה סינטטית לצורכי בדיקות"),
-            "data": details[CONF_AREA],
-            ATTR_CATEGORY: details[ATTR_CATEGORY],
-        }
+        self._synthetic_alerts.append(
+            (
+                now.timestamp() + details[CONF_DURATION],
+                {
+                    "alertDate": now.strftime("%Y-%m-%d %H:%M:%S"),
+                    ATTR_TITLE: details.get(ATTR_TITLE, "התרעה סינטטית לצורכי בדיקות"),
+                    "data": details[CONF_AREA],
+                    ATTR_CATEGORY: details[ATTR_CATEGORY],
+                },
+            )
+        )
 
     def _get_synthetic_alerts(self) -> list[dict[str, Any]]:
         """Return the list of synthetic alerts."""
         now = dt_util.now().timestamp()
-        for expired in [
-            timestamp for timestamp in self._synthetic_alerts if timestamp < now
-        ]:
-            del self._synthetic_alerts[expired]
-        return list(self._synthetic_alerts.values())
+        self._synthetic_alerts = [
+            (expired, alert)
+            for expired, alert in self._synthetic_alerts
+            if expired >= now
+        ]
+        return [alert for _, alert in self._synthetic_alerts]
 
     def _fix_areas_spelling(self, alerts: list[Any]) -> list[Any]:
         """Fix spelling errors in area names."""
