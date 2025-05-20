@@ -163,7 +163,7 @@ Gets an area name and returns its district. If no mapping is found, the return v
 
 `{{ oref_district('פתח תקווה') == 'דן' }}`
 
-`{{ ['ירושלים - מרכז'] | map('oref_district')  == ['ירושלים'] }}`
+`{{ ['area name'] | map('oref_district') }}`
 
 ### oref_icon
 
