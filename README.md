@@ -267,7 +267,7 @@ actions:
   - variables:
       current: "{{ trigger.to_state.attributes.country_active_alerts | map(attribute='data') | list }}"
       previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | list }}"
-      alerts: "{{ current | reject('in', previous) | unique | sort | list }}"
+      alerts: "{{ current | difference(previous) | unique | sort | list }}"
   - condition: "{{ alerts | length > 0 }}"
   - action: notify.mobile_app_amits_iphone
     data:
@@ -319,7 +319,7 @@ actions:
   - variables:
       current: "{{ trigger.to_state.attributes.country_active_alerts | map(attribute='data') | map('oref_district') | list }}"
       previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | map('oref_district') | list }}"
-      districts: "{{ current | reject('in', previous) | unique | sort | list }}"
+      districts: "{{ current | difference(previous) | unique | sort | list }}"
       districts_per_push: "{{ (90 / (districts | map('length') | average(0) | add(2))) | int }}"
   - repeat:
       while:
