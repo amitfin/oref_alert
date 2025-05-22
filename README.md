@@ -183,17 +183,17 @@ Gets a category (int) and returns the corresponding emoji. If no mapping is foun
 
 ### `oref_distance`
 
-Gets an area name and returns the distance (km) from home's coordinates as configured in the system. If the area name is not found, the return value is -1. Can be used also as a filter.
+Gets an area name and measures the distance between the area's coordinates and home, an entity, or coordinates (similar to the built-in [`distance`](https://www.home-assistant.io/docs/configuration/templating/#distance) function). The unit of measurement (kilometers or miles) depends on the system’s configuration settings. If the area name is not found, the return value is -1. Can be used also as a filter.
 
 `{{ oref_distance('פתח תקווה') }}`
 
-`{{ ['area name'] | map('oref_distance') }}`
+`{{ ['area name'] | map('oref_distance', 'device_tracker.amits_iphone') }}`
 
 ### `oref_test_distance`
 
-Gets an area name and a distance (km). Returns True if the distance from home's coordinates is less than or equals to the distance . If the area name is not found, the return value is False. Can be used also as a test.
+Gets an area name and a distance and other optional parameters that will be passed to `oref_distance`. Returns True if the distance is less than or equals to the distance. If the area name is not found, the return value is False. Can be used also as a test.
 
-`{{ oref_test_distance('area name', 5)}}`
+`{{ oref_test_distance('area name', 5, 'device_tracker.amits_iphone')}}`
 
 `{{ ['area name'] | select('oref_test_distance', 5) }}`
 
