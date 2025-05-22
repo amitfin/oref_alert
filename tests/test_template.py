@@ -124,17 +124,15 @@ async def test_distance(hass: HomeAssistant) -> None:
     )
     assert (
         Template(
-            (
-                "{{ 'תל אביב - מרכז העיר'"
-                f" | {DISTANCE_TEMPLATE_FUNCTION}(31.78, 35.23) }}}}"
-            ),
+            "{{ 'תל אביב - מרכז העיר' | "
+            f"{DISTANCE_TEMPLATE_FUNCTION}(31.78, 35.23) }}}}",
             hass,
         ).async_render()
         == 54.208731
     )
     assert (
         Template(f"{{{{ {DISTANCE_TEMPLATE_FUNCTION}('test') }}}}", hass).async_render()
-        == -1
+        is None
     )
 
 
@@ -157,7 +155,8 @@ async def test_distance_check(hass: HomeAssistant) -> None:
     assert (
         Template(
             "{{ ['פתח תקווה', 'תל אביב - מרכז העיר'] | "
-            f"select('{DISTANCE_TEST_TEMPLATE_FUNCTION}', 5) | list }}}}",
+            f"select('{DISTANCE_TEST_TEMPLATE_FUNCTION}', 5, 32.072, 34.879) | "
+            "list }}",
             hass,
         ).async_render(parse_result=False)
         == "['פתח תקווה']"

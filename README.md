@@ -183,7 +183,7 @@ Gets a category (int) and returns the corresponding emoji. If no mapping is foun
 
 ### `oref_distance`
 
-Gets an area name and measures the distance between the area's coordinates and home, an entity, or coordinates (similar to the built-in [`distance`](https://www.home-assistant.io/docs/configuration/templating/#distance) function). The unit of measurement (kilometers or miles) depends on the system’s configuration settings. If the area name is not found, the return value is -1. Can be used also as a filter.
+Gets an area name and measures the distance between the area's coordinates and home, an entity, or coordinates (similar to the built-in [`distance`](https://www.home-assistant.io/docs/configuration/templating/#distance) function). The unit of measurement (kilometers or miles) depends on the system’s configuration settings. If the area name is not found, the return value is None. Can be used also as a filter.
 
 `{{ oref_distance('פתח תקווה') }}`
 
