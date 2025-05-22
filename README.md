@@ -268,15 +268,29 @@ actions:
       current: "{{ trigger.to_state.attributes.country_active_alerts | map(attribute='data') | list }}"
       previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | list }}"
       alerts: "{{ current | difference(previous) | unique | sort | list }}"
-  - condition: "{{ alerts | length > 0 }}"
-  - action: notify.mobile_app_amits_iphone
-    data:
-      title: התרעות פיקוד העורף
-      message: "{{ alerts | join(' | ') }}"
+      alerts_per_push: "{{ (150 / (alerts | map('length') | average(0) | add(3))) | int }}"
+  - repeat:
+      while:
+        - condition: template
+          value_template: "{{ alerts | length > 0 }}"
+      sequence:
+        - action: notify.mobile_app_amits_iphone
+          data:
+            title: התרעות פיקוד העורף
+            message: "{{ alerts[:alerts_per_push] | join(' | ') }}"
+        - variables:
+            alerts: "{{ alerts[alerts_per_push:] }}"
 mode: queued
 ```
 
 <img width="400" src="https://github.com/user-attachments/assets/ab12abf4-042e-4099-a1ef-e26db57b653a">
+
+
+It's possible to get only alerts which are close to home (in the example below it's 10km from home). To do that, the `current` variable should be defined as:
+
+```
+current: "{{ trigger.to_state.attributes.country_active_alerts | map(attribute='data') | select('oref_test_distance', 10) | list }}"
+```
 
 #### Detailed Alerts
 
@@ -317,9 +331,9 @@ triggers:
     attribute: country_active_alerts
 actions:
   - variables:
-      current: "{{ trigger.to_state.attributes.country_active_alerts | map(attribute='data') | map('oref_district') | list }}"
-      previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | map('oref_district') | list }}"
-      districts: "{{ current | difference(previous) | unique | sort | list }}"
+      current: "{{ trigger.to_state.attributes.country_active_alerts | map(attribute='data') | map('oref_district') | unique | list }}"
+      previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | map('oref_district') | unique | list }}"
+      districts: "{{ current | difference(previous) | sort | list }}"
       districts_per_push: "{{ (90 / (districts | map('length') | average(0) | add(2))) | int }}"
   - repeat:
       while:
