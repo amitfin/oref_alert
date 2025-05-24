@@ -97,6 +97,32 @@ async def test_time_to_shelter_state(
     await async_shutdown(hass, config_id)
 
 
+async def test_time_to_shelter_not_going_back(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test time to shelter is not going back despite earlier timestamp in history."""
+    freezer.move_to("2023-10-07 06:30:00+03:00")
+    mock_urls(aioclient_mock, "single_alert_real_time.json", None)
+
+    config_id = await async_setup(hass, {CONF_AREAS: ["תל אביב - מרכז העיר"]})
+
+    state = hass.states.get(TIME_TO_SHELTER_ENTITY_ID)
+    assert state is not None
+    assert state.state == "90"
+
+    mock_urls(aioclient_mock, None, "history_same_as_real_time.json")
+    freezer.tick(datetime.timedelta(seconds=10))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    state = hass.states.get(TIME_TO_SHELTER_ENTITY_ID)
+    assert state is not None
+    assert state.state == "80"
+
+    await async_shutdown(hass, config_id)
+
+
 async def test_time_to_shelter_attributes_no_alert(
     hass: HomeAssistant,
 ) -> None:

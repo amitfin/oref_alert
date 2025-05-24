@@ -89,7 +89,10 @@ class OrefAlertTimerSensor(
         super().__init__(coordinator)
         self._data: OrefAlertCoordinatorData = coordinator.data
         self._config_entry = config_entry
+        self._active_duration: int = config_entry.options[CONF_ALERT_ACTIVE_DURATION]
         self._area: str = area
+        self._alert: dict[str, Any] | None = None
+        self._alert_timestamp: float | None = None
         self._unsub_update: Callable[[], None] | None = None
 
     @callback
@@ -100,18 +103,27 @@ class OrefAlertTimerSensor(
 
     def _get_alert(self) -> dict[str, Any] | None:
         """Return the latest active alert in the area."""
+        if self._alert_timestamp is not None:
+            if (
+                dt_util.now().timestamp() - self._alert_timestamp
+            ) < self._active_duration * 60:
+                return self._alert
+            self._alert = None
+            self._alert_timestamp = None
         for alert in self._data.active_alerts:
             if alert["data"] == self._area:
+                self._alert = alert
+                self._alert_timestamp = (
+                    dt_util.parse_datetime(alert["alertDate"], raise_on_error=True)
+                    .replace(tzinfo=IST)
+                    .timestamp()
+                )
                 return alert
         return None
 
     def _get_alert_timestamp(self) -> float | None:
         """Return the timestamp of the latest active alert in the area."""
-        if alert := self._get_alert():
-            alert_date = dt_util.parse_datetime(alert["alertDate"])
-            if alert_date:
-                return alert_date.replace(tzinfo=IST).timestamp()
-        return None
+        return self._alert_timestamp if self._get_alert() else None
 
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
@@ -206,9 +218,6 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
     ) -> None:
         """Initialize object with defaults."""
         super().__init__(area, coordinator, config_entry)
-        self._ACTIVE_DURATION: int = self._config_entry.options[
-            CONF_ALERT_ACTIVE_DURATION
-        ]
         self._attr_name = f"{name} {END_TIME_NAME_SUFFIX}"
         self._attr_unique_id = f"{name.lower().replace(' ', '_')}_{END_TIME_ID_SUFFIX}"
 
@@ -217,7 +226,7 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
         """Return the remaining seconds till the end of the alert."""
         if alert_timestamp := self._get_alert_timestamp():
             alert_age = dt_util.now().timestamp() - alert_timestamp
-            alert_end_time = int(self._ACTIVE_DURATION * 60 - alert_age)
+            alert_end_time = int(self._active_duration * 60 - alert_age)
             self._update_in_1_second()
             return alert_end_time
         return None
@@ -227,6 +236,6 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
         """Return additional attributes."""
         return {
             ATTR_AREA: self._area,
-            CONF_ALERT_ACTIVE_DURATION: self._ACTIVE_DURATION,
+            CONF_ALERT_ACTIVE_DURATION: self._active_duration,
             ATTR_ALERT: self._get_alert(),
         }
