@@ -175,7 +175,7 @@ Gets an area name and returns its district. If no mapping is found, the return v
 
 ### `oref_coordinate`
 
-Gets an area name and returns the coordinate of the city center as a tuple (lat, long). If no mapping is found, the return value is None. Can be used also as a filter.
+Gets an area name and returns the coordinate of the city center as a tuple (lat, lon). If no mapping is found, the return value is None. Can be used also as a filter.
 
 `{{ oref_coordinate('פתח תקווה') == (32.084, 34.8878) }}`
 
@@ -223,7 +223,7 @@ Gets an area name and a distance and other optional parameters that will be pass
 
 ### `oref_find_area`
 
-Returns area by coordinate (lat, long). The coordinate can be anywhere inside the area's polygon. If no area is found, the return value is None.
+Returns area by coordinate (lat, lon). The coordinate can be anywhere inside the area's polygon. If no area is found, the return value is None.
 
 `{{ oref_find_area(32.072, 34.879) == 'פתח תקווה' }}`
 

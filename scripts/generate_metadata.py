@@ -33,12 +33,12 @@ CITY_ALL_AREAS_SUFFIX_TYPO = " כל - האזורים"
 DISTRICT_PREFIX = "מחוז "
 
 MISSING_CITIES = {
-    "ברחבי הארץ": {"lat": 31.7781, "long": 35.2164},
-    "כל הארץ": {"lat": 31.7781, "long": 35.2164},
-    "אל-ח'וואלד מערב": {"lat": 32.771, "long": 35.1363},
-    "אשדוד -יא,יב,טו,יז,מרינה,סיטי": {"lat": 31.7836, "long": 34.6332},  # noqa: RUF001
-    "כמאנה": {"lat": 32.9085, "long": 35.3358},
-    "נאות חובב": {"lat": 31.1336, "long": 34.7899},
+    "ברחבי הארץ": {"lat": 31.7781, "lon": 35.2164},
+    "כל הארץ": {"lat": 31.7781, "lon": 35.2164},
+    "אל-ח'וואלד מערב": {"lat": 32.771, "lon": 35.1363},
+    "אשדוד -יא,יב,טו,יז,מרינה,סיטי": {"lat": 31.7836, "lon": 34.6332},  # noqa: RUF001
+    "כמאנה": {"lat": 32.9085, "lon": 35.3358},
+    "נאות חובב": {"lat": 31.1336, "lon": 34.7899},
 }
 
 
@@ -220,7 +220,7 @@ class OrefMetadata:
             if area in self._tzeva_cities:
                 areas[area] = {
                     "lat": self._tzeva_cities[area]["lat"],
-                    "long": self._tzeva_cities[area]["lng"],
+                    "lon": self._tzeva_cities[area]["lng"],
                 }
             else:
                 areas[area] = MISSING_CITIES[area]

@@ -84,7 +84,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
         self._hass = hass
         self._attr_name = area
         self._attr_latitude: float = AREA_INFO[area]["lat"]
-        self._attr_longitude: float = AREA_INFO[area]["long"]
+        self._attr_longitude: float = AREA_INFO[area]["lon"]
         self._attr_unit_of_measurement = UnitOfLength.KILOMETERS
         self._attr_distance = round(
             vincenty(

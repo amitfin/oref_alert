@@ -50,7 +50,7 @@ def inject_template_extensions(hass: HomeAssistant) -> None:
         """Get coordinate of area."""
         if (area_info := AREA_INFO.get(area)) is None:
             return None
-        return area_info["lat"], area_info["long"]
+        return area_info["lat"], area_info["lon"]
 
     def area_to_shelter_time(area: str) -> int | None:
         """Get time to shelter for area."""
@@ -60,16 +60,16 @@ def inject_template_extensions(hass: HomeAssistant) -> None:
         """Calculate distance of area from home or provided coordinate."""
         if (area_info := AREA_INFO.get(area)) is None:
             return None
-        return distance_func(hass, area_info["lat"], area_info["long"], *args)
+        return distance_func(hass, area_info["lat"], area_info["lon"], *args)
 
     def area_distance_test(area: str, distance: float, *args: Any) -> bool:
         """Check if area is within the distance from home or provided coordinate."""
         actual = area_to_distance(area, *args)
         return actual is not None and actual <= distance
 
-    def find_area_by_coordinate(lat: float, long: float) -> str | None:
-        """Find an area using lat/long."""
-        return find_area(lat, long)
+    def find_area_by_coordinate(lat: float, lon: float) -> str | None:
+        """Find an area using lat/lon."""
+        return find_area(lat, lon)
 
     original_template_environment_init = TemplateEnvironment.__init__
 
