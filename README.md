@@ -223,9 +223,11 @@ Gets an area name and a distance and other optional parameters that will be pass
 
 ### `oref_find_area`
 
-Returns area by coordinate (lat, lon). The coordinate can be anywhere inside the area's polygon. If no area is found, the return value is None.
+Returns area by coordinate (lat, lon). The coordinate can be anywhere inside the area's polygon. If no area is found, the return value is None.  Can be used also as a filter.
 
 `{{ oref_find_area(32.072, 34.879) == 'פתח תקווה' }}`
+
+`{{ (32.0798, 34.7772) | oref_find_area == 'תל אביב - מרכז העיר' }}`
 
 ## Usages
 

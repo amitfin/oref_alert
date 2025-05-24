@@ -71,6 +71,11 @@ def inject_template_extensions(hass: HomeAssistant) -> None:
         """Find an area using lat/lon."""
         return find_area(lat, lon)
 
+    def find_area_by_coordinate_filter(coordinate: tuple[float, float]) -> str | None:
+        """Find an area using coordinate."""
+        lat, lon = coordinate
+        return find_area(lat, lon)
+
     original_template_environment_init = TemplateEnvironment.__init__
 
     def patch_environment(env: TemplateEnvironment) -> None:
@@ -98,6 +103,7 @@ def inject_template_extensions(hass: HomeAssistant) -> None:
             DISTANCE_TEST_TEMPLATE_FUNCTION
         ] = area_distance_test
         env.globals[FIND_AREA_TEMPLATE_FUNCTION] = find_area_by_coordinate
+        env.filters[FIND_AREA_TEMPLATE_FUNCTION] = find_area_by_coordinate_filter
 
     def patched_init(
         self: TemplateEnvironment,

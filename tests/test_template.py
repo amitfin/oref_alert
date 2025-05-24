@@ -83,6 +83,11 @@ async def async_load_oref_integration(hass: HomeAssistant) -> AsyncGenerator[Non
             ["פתח תקווה"],
         ),
         ("{{ oref_find_area(32.072, 34.879) }}", "פתח תקווה"),
+        (
+            "{{ [oref_coordinate('פתח תקווה'), (32.0798, 34.7772)] | "
+            "map('oref_find_area') | list }}",
+            ["פתח תקווה", "תל אביב - מרכז העיר"],
+        ),
         ("{{ oref_find_area(31.507, 34.460) }}", None),
     ],
     ids=[
@@ -108,7 +113,8 @@ async def async_load_oref_integration(hass: HomeAssistant) -> AsyncGenerator[Non
         "distance_test_func",
         "distance_test_is",
         "distance_test_select_list",
-        "find_area_match",
+        "find_area_func",
+        "find_area_filter",
         "find_area_none",
     ],
 )
