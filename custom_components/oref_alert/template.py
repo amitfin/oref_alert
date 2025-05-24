@@ -17,7 +17,10 @@ from homeassistant.helpers.template import (
 from custom_components.oref_alert.categories import category_to_emoji, category_to_icon
 from custom_components.oref_alert.metadata.area_info import AREA_INFO
 from custom_components.oref_alert.metadata.area_to_migun_time import AREA_TO_MIGUN_TIME
-from custom_components.oref_alert.metadata.area_to_polygon import find_area
+from custom_components.oref_alert.metadata.area_to_polygon import (
+    find_area,
+    init_area_to_polygon,
+)
 from custom_components.oref_alert.metadata.areas import AREAS
 from custom_components.oref_alert.metadata.areas_and_groups import AREAS_AND_GROUPS
 
@@ -35,8 +38,9 @@ from .const import (
 from .metadata.area_to_district import AREA_TO_DISTRICT
 
 
-def inject_template_extensions(hass: HomeAssistant) -> None:
+async def inject_template_extensions(hass: HomeAssistant) -> None:
     """Inject template extension to the Home Assistant instance."""
+    await init_area_to_polygon()
 
     def get_areas(groups: bool = False) -> list[str]:  # noqa: FBT001, FBT002
         """Get all areas."""

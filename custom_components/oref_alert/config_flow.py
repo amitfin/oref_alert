@@ -28,7 +28,7 @@ from .const import (
     DOMAIN,
     TITLE,
 )
-from .metadata.area_to_polygon import find_area
+from .metadata.area_to_polygon import async_find_area
 from .metadata.areas_and_groups import AREAS_AND_GROUPS
 
 AREAS_CONFIG = selector.SelectSelectorConfig(
@@ -64,7 +64,7 @@ class OrefAlertConfigFlow(ConfigFlow, domain=DOMAIN):
             hass = async_get_hass()
         if hass:
             self._auto_detected_area = (
-                find_area(hass.config.latitude, hass.config.longitude) or ""
+                await async_find_area(hass.config.latitude, hass.config.longitude) or ""
             )
 
         if not self._auto_detected_area:

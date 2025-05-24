@@ -118,7 +118,7 @@ async def async_load_oref_integration(hass: HomeAssistant) -> AsyncGenerator[Non
         "find_area_none",
     ],
 )
-async def test_custom_templates(
+def test_custom_templates(
     hass: HomeAssistant, template_str: str, expected: Any
 ) -> None:
     """Test custom templates."""

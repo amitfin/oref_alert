@@ -189,7 +189,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         SYNTHETIC_ALERT_SCHEMA,
     )
 
-    inject_template_extensions(hass)
+    await inject_template_extensions(hass)
 
     return True
 
