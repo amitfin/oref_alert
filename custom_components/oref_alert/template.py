@@ -16,13 +16,21 @@ from homeassistant.helpers.template import (
 
 from custom_components.oref_alert.categories import category_to_emoji, category_to_icon
 from custom_components.oref_alert.metadata.area_info import AREA_INFO
+from custom_components.oref_alert.metadata.area_to_migun_time import AREA_TO_MIGUN_TIME
+from custom_components.oref_alert.metadata.area_to_polygon import find_area
+from custom_components.oref_alert.metadata.areas import AREAS
+from custom_components.oref_alert.metadata.areas_and_groups import AREAS_AND_GROUPS
 
 from .const import (
+    AREAS_TEMPLATE_FUNCTION,
+    COORDINATE_TEMPLATE_FUNCTION,
     DISTANCE_TEMPLATE_FUNCTION,
     DISTANCE_TEST_TEMPLATE_FUNCTION,
     DISTRICT_TEMPLATE_FUNCTION,
     EMOJI_TEMPLATE_FUNCTION,
+    FIND_AREA_TEMPLATE_FUNCTION,
     ICON_TEMPLATE_FUNCTION,
+    SHELTER_TEMPLATE_FUNCTION,
 )
 from .metadata.area_to_district import AREA_TO_DISTRICT
 
@@ -30,28 +38,53 @@ from .metadata.area_to_district import AREA_TO_DISTRICT
 def inject_template_extensions(hass: HomeAssistant) -> None:
     """Inject template extension to the Home Assistant instance."""
 
+    def get_areas(groups: bool = False) -> list[str]:  # noqa: FBT001, FBT002
+        """Get all areas."""
+        return list(AREAS) if not groups else AREAS_AND_GROUPS
+
     def area_to_district(area: str) -> str:
         """Convert area to district."""
         return AREA_TO_DISTRICT.get(area, area)
 
+    def area_coordinate(area: str) -> tuple[float, float] | None:
+        """Get coordinate of area."""
+        if (area_info := AREA_INFO.get(area)) is None:
+            return None
+        return area_info["lat"], area_info["long"]
+
+    def area_to_shelter_time(area: str) -> int | None:
+        """Get time to shelter for area."""
+        return AREA_TO_MIGUN_TIME.get(area)
+
     def area_to_distance(area: str, *args: Any) -> float | None:
-        """Calculate distance of area from home or provided coordinates."""
+        """Calculate distance of area from home or provided coordinate."""
         if (area_info := AREA_INFO.get(area)) is None:
             return None
         return distance_func(hass, area_info["lat"], area_info["long"], *args)
 
     def area_distance_test(area: str, distance: float, *args: Any) -> bool:
-        """Check if area is within the distance from home or provided coordinates."""
+        """Check if area is within the distance from home or provided coordinate."""
         actual = area_to_distance(area, *args)
         return actual is not None and actual <= distance
+
+    def find_area_by_coordinate(lat: float, long: float) -> str | None:
+        """Find an area using lat/long."""
+        return find_area(lat, long)
 
     original_template_environment_init = TemplateEnvironment.__init__
 
     def patch_environment(env: TemplateEnvironment) -> None:
         """Patch the template environment to add custom filters."""
+        env.globals[AREAS_TEMPLATE_FUNCTION] = get_areas
         env.globals[DISTRICT_TEMPLATE_FUNCTION] = env.filters[
             DISTRICT_TEMPLATE_FUNCTION
         ] = area_to_district
+        env.globals[COORDINATE_TEMPLATE_FUNCTION] = env.filters[
+            COORDINATE_TEMPLATE_FUNCTION
+        ] = area_coordinate
+        env.globals[SHELTER_TEMPLATE_FUNCTION] = env.filters[
+            SHELTER_TEMPLATE_FUNCTION
+        ] = area_to_shelter_time
         env.globals[ICON_TEMPLATE_FUNCTION] = env.filters[ICON_TEMPLATE_FUNCTION] = (
             category_to_icon
         )
@@ -64,6 +97,7 @@ def inject_template_extensions(hass: HomeAssistant) -> None:
         env.globals[DISTANCE_TEST_TEMPLATE_FUNCTION] = env.tests[
             DISTANCE_TEST_TEMPLATE_FUNCTION
         ] = area_distance_test
+        env.globals[FIND_AREA_TEMPLATE_FUNCTION] = find_area_by_coordinate
 
     def patched_init(
         self: TemplateEnvironment,

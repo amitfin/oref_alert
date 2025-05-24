@@ -15,5 +15,5 @@ from custom_components.oref_alert.metadata.area_to_polygon import find_area
     ids=("regular", "big city multiple areas", "in the sea"),
 )
 def test_find_area(lat: float, long: float, area: str | None) -> None:
-    """Test finding an area using coordinates."""
+    """Test finding an area using coordinate."""
     assert find_area(lat, long) == area

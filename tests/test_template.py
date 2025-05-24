@@ -8,15 +8,21 @@ from homeassistant.helpers.template import Template
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.oref_alert.const import (
+    AREAS_TEMPLATE_FUNCTION,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
+    COORDINATE_TEMPLATE_FUNCTION,
     DISTANCE_TEMPLATE_FUNCTION,
     DISTANCE_TEST_TEMPLATE_FUNCTION,
     DISTRICT_TEMPLATE_FUNCTION,
     DOMAIN,
     EMOJI_TEMPLATE_FUNCTION,
+    FIND_AREA_TEMPLATE_FUNCTION,
     ICON_TEMPLATE_FUNCTION,
+    SHELTER_TEMPLATE_FUNCTION,
 )
+from custom_components.oref_alert.metadata.areas import AREAS
+from custom_components.oref_alert.metadata.areas_and_groups import AREAS_AND_GROUPS
 
 
 async def async_setup(hass: HomeAssistant) -> str:
@@ -73,6 +79,55 @@ async def test_unknown_area(hass: HomeAssistant) -> None:
             parse_result=False
         )
         == "test"
+    )
+
+
+async def test_get_areas(hass: HomeAssistant) -> None:
+    """Test custom template get areas."""
+    assert Template(
+        f"{{{{ {AREAS_TEMPLATE_FUNCTION}() }}}}", hass
+    ).async_render() == list(AREAS)
+    assert (
+        Template(f"{{{{ {AREAS_TEMPLATE_FUNCTION}(True) }}}}", hass).async_render()
+        == AREAS_AND_GROUPS
+    )
+
+
+async def test_coordinate(hass: HomeAssistant) -> None:
+    """Test custom template area to coordinate."""
+    assert Template(
+        f"{{{{ {COORDINATE_TEMPLATE_FUNCTION}('פתח תקווה') }}}}", hass
+    ).async_render() == (32.084, 34.8878)
+    assert Template(
+        f"{{{{ 'תל אביב - מרכז העיר'  | {COORDINATE_TEMPLATE_FUNCTION} }}}}", hass
+    ).async_render() == (32.0798, 34.7772)
+    assert (
+        Template(
+            f"{{{{ 'test'  | {COORDINATE_TEMPLATE_FUNCTION} }}}}", hass
+        ).async_render()
+        is None
+    )
+
+
+async def test_shelter(hass: HomeAssistant) -> None:
+    """Test custom template area to shelter time."""
+    assert (
+        Template(
+            f"{{{{ {SHELTER_TEMPLATE_FUNCTION}('פתח תקווה') }}}}", hass
+        ).async_render()
+        == 90
+    )
+    assert (
+        Template(
+            f"{{{{ 'בארי'  | {SHELTER_TEMPLATE_FUNCTION} }}}}", hass
+        ).async_render()
+        == 15
+    )
+    assert (
+        Template(
+            f"{{{{ 'test'  | {SHELTER_TEMPLATE_FUNCTION} }}}}", hass
+        ).async_render()
+        is None
     )
 
 
@@ -160,4 +215,20 @@ async def test_distance_check(hass: HomeAssistant) -> None:
             hass,
         ).async_render(parse_result=False)
         == "['פתח תקווה']"
+    )
+
+
+async def test_find_area(hass: HomeAssistant) -> None:
+    """Test custom template find area."""
+    assert (
+        Template(
+            f"{{{{ {FIND_AREA_TEMPLATE_FUNCTION}(32.072, 34.879) }}}}", hass
+        ).async_render()
+        == "פתח תקווה"
+    )
+    assert (
+        Template(
+            f"{{{{ {FIND_AREA_TEMPLATE_FUNCTION}(31.507, 34.460) }}}}", hass
+        ).async_render()
+        is None
     )

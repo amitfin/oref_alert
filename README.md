@@ -27,7 +27,7 @@ The integration should also be added to the configuration. This can be done via 
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=oref_alert)
 
-The setup identifies the area according to the [Home location in the Zones settings](https://my.home-assistant.io/redirect/zones/) (the latitude and longitude coordinates). If the detection fails, the user is asked to select the area manually.
+The setup identifies the area according to the [Home location in the Zones settings](https://my.home-assistant.io/redirect/zones/) (the latitude and longitude coordinate). If the detection fails, the user is asked to select the area manually.
 
 Once the component is installed, it's possible to control additional parameters using the Configure dialog which can be accessed via this My button:
 
@@ -99,7 +99,7 @@ A [synthetic alert](#synthetic-alert) with category `13` can be used to turn `on
 
 ## Geo Location Entities
 
-Geo-location entities are created for every active alert in Israel (regardless of the selected areas). These entities exist while the corresponding alert is active (10 minutes by default). The state of the entity is the distance in kilometers from HA home's coordinates. In addition, each entity has the following attributes:
+Geo-location entities are created for every active alert in Israel (regardless of the selected areas). These entities exist while the corresponding alert is active (10 minutes by default). The state of the entity is the distance in kilometers from HA home's coordinate. In addition, each entity has the following attributes:
 1. `friendly_name`: alert's area
 2. `latitude`
 3. `longitude`
@@ -157,6 +157,14 @@ Synthetic alerts are useful for testing purposes. The service `oref_alert.synthe
 
 The integration adds the following template helper functions:
 
+### `oref_areas`
+
+Returns the list of areas. By default, group of areas (like districts and cities' "all areas" for cities with multiple areas) are not included. It's possible to set the 1st parameter (`groups`) to `True` to include them.
+
+`{{ oref_areas() }}`
+
+`{{ oref_areas(True) }}`
+
 ### `oref_district`
 
 Gets an area name and returns its district. If no mapping is found, the return value is the input area name. Can be used also as a filter.
@@ -164,6 +172,22 @@ Gets an area name and returns its district. If no mapping is found, the return v
 `{{ oref_district('פתח תקווה') == 'דן' }}`
 
 `{{ ['area name'] | map('oref_district') }}`
+
+### `oref_coordinate`
+
+Gets an area name and returns the coordinate of the city center as a tuple (lat, long). If no mapping is found, the return value is None. Can be used also as a filter.
+
+`{{ oref_coordinate('פתח תקווה') == (32.084, 34.8878) }}`
+
+`{{ 'area name' | oref_coordinate }}`
+
+### `oref_shelter`
+
+Gets an area name and returns its time to shelter (seconds). If no mapping is found, the return value is None. Can be used also as a filter.
+
+`{{ oref_shelter('פתח תקווה') == 90 }}`
+
+`{{ 'area name' | oref_shelter }}`
 
 ### `oref_icon`
 
@@ -183,7 +207,7 @@ Gets a category (int) and returns the corresponding emoji. If no mapping is foun
 
 ### `oref_distance`
 
-Gets an area name and measures the distance between the area's coordinates and home, an entity, or coordinates (similar to the built-in [`distance`](https://www.home-assistant.io/docs/configuration/templating/#distance) function). The unit of measurement (kilometers or miles) depends on the system’s configuration settings. If the area name is not found, the return value is None. Can be used also as a filter.
+Gets an area name and measures the distance between the area's coordinate and home, an entity, or coordinate (similar to the built-in [`distance`](https://www.home-assistant.io/docs/configuration/templating/#distance) function). The unit of measurement (kilometers or miles) depends on the system’s configuration settings. If the area name is not found, the return value is None. Can be used also as a filter.
 
 `{{ oref_distance('פתח תקווה') }}`
 
@@ -196,6 +220,12 @@ Gets an area name and a distance and other optional parameters that will be pass
 `{{ oref_test_distance('area name', 5, 'device_tracker.amits_iphone')}}`
 
 `{{ ['area name'] | select('oref_test_distance', 5) }}`
+
+### `oref_find_area`
+
+Returns area by coordinate (lat, long). The coordinate can be anywhere inside the area's polygon. If no area is found, the return value is None.
+
+`{{ oref_find_area(32.072, 34.879) == 'פתח תקווה' }}`
 
 ## Usages
 
@@ -224,7 +254,7 @@ Note that it depends on the installation of [card-mod](https://github.com/thomas
 
 ### Presenting Active Alerts in Israel
 
-Here is a [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting all active alerts sorted by their distance from HA's home coordinates (the list of categories is based on [this file](https://www.oref.org.il/alerts/alertCategories.json)):
+Here is a [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting all active alerts sorted by their distance from HA's home coordinate (the list of categories is based on [this file](https://www.oref.org.il/alerts/alertCategories.json)):
 
 ```
 type: markdown

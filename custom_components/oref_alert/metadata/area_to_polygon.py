@@ -2,11 +2,13 @@
 
 import json
 import zipfile
+from functools import lru_cache
 from pathlib import Path
 
 from shapely.geometry import Point, Polygon
 
 
+@lru_cache(maxsize=1)
 def _load_area_to_polygon() -> dict[str, list[list[float]]]:
     """Return the map of area to list of tuples with (lat, long) coordinates."""
     with (
