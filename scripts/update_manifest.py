@@ -29,7 +29,12 @@ class UpdateManifest:
             requirement.split("==")[0] for requirement in self._manifest["requirements"]
         ]
         self._manifest["requirements"] = [
-            f"{requirement}=={self._requirements[requirement]}"
+            f"{requirement}"
+            + (
+                f"=={self._requirements[requirement]}"
+                if self._requirements.get(requirement)
+                else ""
+            )
             for requirement in requirements
         ]
         with MANIFEST_FILE.open("w") as manifest:
