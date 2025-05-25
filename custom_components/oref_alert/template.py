@@ -38,14 +38,15 @@ from .const import (
 )
 from .metadata.area_to_district import AREA_TO_DISTRICT
 
-_original_template_environment_init = TemplateEnvironment.__init__
-_original_template_environment_init_signature = inspect.signature(
+_template_environment_init_signature = inspect.signature(
     TemplateEnvironment.__init__
 )
 
 
 async def inject_template_extensions(hass: HomeAssistant) -> None:
     """Inject template extension to the Home Assistant instance."""
+    template_environment_init = TemplateEnvironment.__init__
+
     await init_area_to_polygon()
 
     def get_areas(groups: bool = False) -> list[str]:  # noqa: FBT001, FBT002
@@ -119,9 +120,9 @@ async def inject_template_extensions(hass: HomeAssistant) -> None:
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        _original_template_environment_init(self, *args, **kwargs)
+        template_environment_init(self, *args, **kwargs)
 
-        params = _original_template_environment_init_signature.bind_partial(
+        params = _template_environment_init_signature.bind_partial(
             self, *args, **kwargs
         )
         params.apply_defaults()
