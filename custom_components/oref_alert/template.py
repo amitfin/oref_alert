@@ -38,9 +38,7 @@ from .const import (
 )
 from .metadata.area_to_district import AREA_TO_DISTRICT
 
-_template_environment_init_signature = inspect.signature(
-    TemplateEnvironment.__init__
-)
+_template_environment_init_signature = inspect.signature(TemplateEnvironment.__init__)
 
 
 async def inject_template_extensions(hass: HomeAssistant) -> None:
