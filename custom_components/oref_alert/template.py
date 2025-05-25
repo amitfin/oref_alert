@@ -3,6 +3,7 @@
 # The injection logic is based on:
 # https://github.com/PiotrMachowski/Home-Assistant-custom-components-Custom-Templates/blob/master/custom_components/custom_templates/__init__.py
 
+import inspect
 from typing import Any
 
 from homeassistant.core import HomeAssistant
@@ -36,6 +37,11 @@ from .const import (
     SHELTER_TEMPLATE_FUNCTION,
 )
 from .metadata.area_to_district import AREA_TO_DISTRICT
+
+_original_template_environment_init = TemplateEnvironment.__init__
+_original_template_environment_init_signature = inspect.signature(
+    TemplateEnvironment.__init__
+)
 
 
 async def inject_template_extensions(hass: HomeAssistant) -> None:
@@ -80,9 +86,7 @@ async def inject_template_extensions(hass: HomeAssistant) -> None:
         lat, lon = coordinate
         return find_area(lat, lon)
 
-    original_template_environment_init = TemplateEnvironment.__init__
-
-    def patch_environment(env: TemplateEnvironment) -> None:
+    def patch_environment(env: TemplateEnvironment, limited: bool) -> None:  # noqa: FBT001
         """Patch the template environment to add custom filters."""
         env.globals[AREAS_TEMPLATE_FUNCTION] = get_areas
         env.globals[DISTRICT_TEMPLATE_FUNCTION] = env.filters[
@@ -106,24 +110,31 @@ async def inject_template_extensions(hass: HomeAssistant) -> None:
         env.globals[DISTANCE_TEST_TEMPLATE_FUNCTION] = env.tests[
             DISTANCE_TEST_TEMPLATE_FUNCTION
         ] = area_distance_test
-        env.globals[FIND_AREA_TEMPLATE_FUNCTION] = find_area_by_coordinate
-        env.filters[FIND_AREA_TEMPLATE_FUNCTION] = find_area_by_coordinate_filter
+        if not limited:
+            env.globals[FIND_AREA_TEMPLATE_FUNCTION] = find_area_by_coordinate
+            env.filters[FIND_AREA_TEMPLATE_FUNCTION] = find_area_by_coordinate_filter
 
     def patched_init(
         self: TemplateEnvironment,
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        original_template_environment_init(self, *args, **kwargs)
-        patch_environment(self)
+        _original_template_environment_init(self, *args, **kwargs)
+
+        params = _original_template_environment_init_signature.bind_partial(
+            self, *args, **kwargs
+        )
+        params.apply_defaults()
+
+        patch_environment(self, params.arguments.get("limited", False))
 
     # Patch "init" for new instances of TemplateEnvironment.
     TemplateEnvironment.__init__ = patched_init  # type: ignore  # noqa: PGH003
 
     # Patch the 3 existing instances of TemplateEnvironment.
-    tpl = Template("", hass)
-    for strict, limited in ((False, False), (True, False), (False, True)):
-        tpl._strict = strict  # noqa: SLF001
-        tpl._limited = limited  # noqa: SLF001
-        if (env := tpl._env) is not None:  # noqa: SLF001
-            patch_environment(env)
+    template = Template("", hass)
+    for limited, strict in ((False, False), (True, False), (False, True)):
+        template._limited = limited  # noqa: SLF001
+        template._strict = strict  # noqa: SLF001
+        if (env := template._env) is not None:  # noqa: SLF001
+            patch_environment(env, limited)

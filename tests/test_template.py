@@ -123,3 +123,20 @@ def test_custom_templates(
 ) -> None:
     """Test custom templates."""
     assert Template(template_str, hass).async_render() == expected
+
+
+def test_limited_environment(hass: HomeAssistant) -> None:
+    """Test limited environment."""
+    statement = "{{ oref_find_area(32.072, 34.879) == 'פתח תקווה' }}"
+
+    assert Template(statement, hass).async_render() is True
+
+    with pytest.raises(
+        Exception, match="UndefinedError: 'oref_find_area' is undefined"
+    ):
+        Template(statement, hass).async_render(limited=True)
+
+    with pytest.raises(
+        Exception, match="UndefinedError: 'oref_find_area' is undefined"
+    ):
+        Template(statement, hass).async_render(limited=True, log_fn=lambda _1, _2: None)
