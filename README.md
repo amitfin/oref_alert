@@ -223,7 +223,7 @@ Gets an area name and a distance and other optional parameters that will be pass
 
 ### `oref_find_area`
 
-Returns area by coordinate (lat, lon). The coordinate can be anywhere inside the area's polygon. If no area is found, the return value is None.  Can be used also as a filter.
+Returns area by coordinate (lat, lon). The coordinate can be anywhere inside the area's polygon. If no area is found, the return value is None.  Can be used also as a filter. Unavailable for [limited templates](https://www.home-assistant.io/docs/configuration/templating/#limited-templates).
 
 `{{ oref_find_area(32.072, 34.879) == 'פתח תקווה' }}`
 
