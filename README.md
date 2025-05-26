@@ -229,6 +229,8 @@ Returns area by coordinate (lat, lon). The coordinate can be anywhere inside the
 
 `{{ (32.0798, 34.7772) | oref_find_area == 'תל אביב - מרכז העיר' }}`
 
+`{{ oref_find_area(state_attr('device_tracker.amits_iphone', 'latitude'), state_attr('device_tracker.amits_iphone', 'longitude')) }}`
+
 ## Usages
 
 The basic usage is to trigger an automation rule when the binary sensor is turning `on`. Some ideas for the `actions` section can be: play a song (can be less stressful when choosing the right song and setting the volume properly), open the lights and TV in the shelter, etc'. It's also possible to trigger an alert when the sensor is turning `off` for getting an indication when it's safe to get out of the shelter.
