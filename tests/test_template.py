@@ -5,6 +5,7 @@ from typing import Any
 
 import pytest
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.template import Template
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -135,12 +136,12 @@ def test_limited_environment(hass: HomeAssistant, load_oref_integration: None) -
     assert Template(statement, hass).async_render() is True
 
     with pytest.raises(
-        Exception, match="UndefinedError: 'oref_find_area' is undefined"
+        TemplateError, match="UndefinedError: 'oref_find_area' is undefined"
     ):
         Template(statement, hass).async_render(limited=True)
 
     with pytest.raises(
-        Exception, match="UndefinedError: 'oref_find_area' is undefined"
+        TemplateError, match="UndefinedError: 'oref_find_area' is undefined"
     ):
         Template(statement, hass).async_render(limited=True, log_fn=lambda _1, _2: None)
 
@@ -151,5 +152,7 @@ async def test_unload(hass: HomeAssistant) -> None:
     config_id = await async_setup(hass)
     assert Template(statement, hass).async_render() is True
     await async_shutdown(hass, config_id)
-    with pytest.raises(Exception, match="UndefinedError: 'oref_areas' is undefined"):
+    with pytest.raises(
+        TemplateError, match="UndefinedError: 'oref_areas' is undefined"
+    ):
         Template(statement, hass).async_render()
