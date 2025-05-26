@@ -4,6 +4,7 @@
 # https://github.com/PiotrMachowski/Home-Assistant-custom-components-Custom-Templates/blob/master/custom_components/custom_templates/__init__.py
 
 import inspect
+from collections.abc import Callable
 from typing import Any
 
 from homeassistant.core import HomeAssistant
@@ -41,7 +42,7 @@ from .metadata.area_to_district import AREA_TO_DISTRICT
 _template_environment_init_signature = inspect.signature(TemplateEnvironment.__init__)
 
 
-async def inject_template_extensions(hass: HomeAssistant) -> None:
+async def inject_template_extensions(hass: HomeAssistant) -> Callable[[], None]:  # noqa: PLR0915
     """Inject template extension to the Home Assistant instance."""
     template_environment_init = TemplateEnvironment.__init__
 
@@ -113,6 +114,22 @@ async def inject_template_extensions(hass: HomeAssistant) -> None:
             env.globals[FIND_AREA_TEMPLATE_FUNCTION] = find_area_by_coordinate
             env.filters[FIND_AREA_TEMPLATE_FUNCTION] = find_area_by_coordinate_filter
 
+    def revert_environment(env: TemplateEnvironment, *_: Any) -> None:
+        """Remove template extensions."""
+        for extensions in (env.globals, env.filters, env.tests):
+            for function in (
+                AREAS_TEMPLATE_FUNCTION,
+                DISTRICT_TEMPLATE_FUNCTION,
+                COORDINATE_TEMPLATE_FUNCTION,
+                SHELTER_TEMPLATE_FUNCTION,
+                ICON_TEMPLATE_FUNCTION,
+                EMOJI_TEMPLATE_FUNCTION,
+                DISTANCE_TEMPLATE_FUNCTION,
+                DISTANCE_TEST_TEMPLATE_FUNCTION,
+                FIND_AREA_TEMPLATE_FUNCTION,
+            ):
+                extensions.pop(function, None)
+
     def patched_init(
         self: TemplateEnvironment,
         *args: Any,
@@ -127,13 +144,24 @@ async def inject_template_extensions(hass: HomeAssistant) -> None:
 
         patch_environment(self, params.arguments.get("limited", False))
 
+    def fix_cached_environments(fix_function: Callable) -> None:
+        """Patch the 3 existing instances of TemplateEnvironment."""
+        template = Template("", hass)
+        for limited, strict in ((False, False), (True, False), (False, True)):
+            template._limited = limited  # noqa: SLF001
+            template._strict = strict  # noqa: SLF001
+            if (env := template._env) is not None:  # noqa: SLF001
+                fix_function(env, limited)
+
     # Patch "init" for new instances of TemplateEnvironment.
     TemplateEnvironment.__init__ = patched_init  # type: ignore  # noqa: PGH003
 
-    # Patch the 3 existing instances of TemplateEnvironment.
-    template = Template("", hass)
-    for limited, strict in ((False, False), (True, False), (False, True)):
-        template._limited = limited  # noqa: SLF001
-        template._strict = strict  # noqa: SLF001
-        if (env := template._env) is not None:  # noqa: SLF001
-            patch_environment(env, limited)
+    # Patch existing instances of TemplateEnvironment.
+    fix_cached_environments(patch_environment)
+
+    def unload_template_extensions() -> None:
+        """Remove template extensions."""
+        TemplateEnvironment.__init__ = template_environment_init
+        fix_cached_environments(revert_environment)
+
+    return unload_template_extensions

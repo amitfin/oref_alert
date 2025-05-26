@@ -36,8 +36,8 @@ async def async_shutdown(hass: HomeAssistant, config_id: str) -> None:
     await hass.async_block_till_done(wait_background_tasks=True)
 
 
-@pytest.fixture(autouse=True)
-async def async_load_oref_integration(hass: HomeAssistant) -> AsyncGenerator[None]:
+@pytest.fixture
+async def load_oref_integration(hass: HomeAssistant) -> AsyncGenerator[None]:
     """Prepare the test environment."""
     config_id = await async_setup(hass)
     yield
@@ -119,13 +119,16 @@ async def async_load_oref_integration(hass: HomeAssistant) -> AsyncGenerator[Non
     ],
 )
 def test_custom_templates(
-    hass: HomeAssistant, template_str: str, expected: Any
+    hass: HomeAssistant,
+    load_oref_integration: None,  # noqa: ARG001
+    template_str: str,
+    expected: Any,
 ) -> None:
     """Test custom templates."""
     assert Template(template_str, hass).async_render() == expected
 
 
-def test_limited_environment(hass: HomeAssistant) -> None:
+def test_limited_environment(hass: HomeAssistant, load_oref_integration: None) -> None:  # noqa: ARG001
     """Test limited environment."""
     statement = "{{ oref_find_area(32.072, 34.879) == 'פתח תקווה' }}"
 
@@ -140,3 +143,13 @@ def test_limited_environment(hass: HomeAssistant) -> None:
         Exception, match="UndefinedError: 'oref_find_area' is undefined"
     ):
         Template(statement, hass).async_render(limited=True, log_fn=lambda _1, _2: None)
+
+
+async def test_unload(hass: HomeAssistant) -> None:
+    """Test no template extensions after unload."""
+    statement = "{{ oref_areas() | length > 0 }}"
+    config_id = await async_setup(hass)
+    assert Template(statement, hass).async_render() is True
+    await async_shutdown(hass, config_id)
+    with pytest.raises(Exception, match="UndefinedError: 'oref_areas' is undefined"):
+        Template(statement, hass).async_render()

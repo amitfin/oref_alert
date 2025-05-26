@@ -44,6 +44,7 @@ from .coordinator import OrefAlertDataUpdateCoordinator
 from .metadata.areas import AREAS
 
 AREAS_CHECKER: Final = "areas_checker"
+UNLOAD_TEMPLATE_EXTENSIONS: Final = "unload_template_extensions"
 PLATFORMS = (Platform.BINARY_SENSOR, Platform.SENSOR, Platform.GEO_LOCATION)
 
 ADD_SENSOR_SCHEMA = vol.Schema(
@@ -113,10 +114,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator = OrefAlertDataUpdateCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
+
+    unload_template_extensions = await inject_template_extensions(hass)
+
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         DATA_COORDINATOR: coordinator,
         AREAS_CHECKER: AreasChecker(hass),
+        UNLOAD_TEMPLATE_EXTENSIONS: unload_template_extensions,
     }
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def add_sensor(service_call: ServiceCall) -> None:
@@ -189,8 +195,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         SYNTHETIC_ALERT_SCHEMA,
     )
 
-    await inject_template_extensions(hass)
-
     return True
 
 
@@ -205,6 +209,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return True
     if (data := hass.data[DOMAIN].pop(entry.entry_id)) is not None:
         data[AREAS_CHECKER].stop()
+        data[UNLOAD_TEMPLATE_EXTENSIONS]()
     for service in [ADD_SENSOR_SERVICE, REMOVE_SENSOR_SERVICE, SYNTHETIC_ALERT_SERVICE]:
         hass.services.async_remove(DOMAIN, service)
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
