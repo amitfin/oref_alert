@@ -21,7 +21,6 @@ from .const import (
     CONF_AREAS,
     CONF_SENSORS,
     DATA_COORDINATOR,
-    DOMAIN,
     END_TIME_ID_SUFFIX,
     END_TIME_NAME_SUFFIX,
     IST,
@@ -43,12 +42,12 @@ SECONDS_IN_A_MINUTE = 60
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    _: HomeAssistant,
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize config entry."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
+    coordinator = config_entry.runtime_data[DATA_COORDINATOR]
     entities = [
         (name, areas[0])
         for name, areas in [

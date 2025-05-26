@@ -138,9 +138,9 @@ class OrefAlertLocationEventManager:
         self._hass = hass
         self._config_entry = config_entry
         self._async_add_entities = async_add_entities
-        self._coordinator: OrefAlertDataUpdateCoordinator = hass.data[DOMAIN][
-            config_entry.entry_id
-        ][DATA_COORDINATOR]
+        self._coordinator: OrefAlertDataUpdateCoordinator = config_entry.runtime_data[
+            DATA_COORDINATOR
+        ]
         self._coordinator.async_add_listener(self._async_update)
         self._async_update()
 

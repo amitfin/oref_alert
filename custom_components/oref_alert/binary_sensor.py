@@ -28,7 +28,6 @@ from .const import (
     DATA_COORDINATOR,
     DEFAULT_OFF_ICON,
     DEFAULT_ON_ICON,
-    DOMAIN,
     OREF_ALERT_UNIQUE_ID,
     PREEMPTIVE_UPDATE_ID_SUFFIX,
     PREEMPTIVE_UPDATE_NAME_SUFFIX,
@@ -41,12 +40,12 @@ if TYPE_CHECKING:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    _: HomeAssistant,
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize config entry."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
+    coordinator = config_entry.runtime_data[DATA_COORDINATOR]
     names = [None, *list(config_entry.options.get(CONF_SENSORS, {}).keys())]
     async_add_entities(
         [AlertSensor(name, config_entry, coordinator) for name in names]

@@ -117,7 +117,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     unload_template_extensions = await inject_template_extensions(hass)
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
+    entry.runtime_data = {
         DATA_COORDINATOR: coordinator,
         AREAS_CHECKER: AreasChecker(hass),
         UNLOAD_TEMPLATE_EXTENSIONS: unload_template_extensions,
@@ -205,11 +205,11 @@ async def config_entry_update_listener(hass: HomeAssistant, entry: ConfigEntry) 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if DOMAIN not in hass.data:
+    if not getattr(entry, "runtime_data", None):
         return True
-    if (data := hass.data[DOMAIN].pop(entry.entry_id)) is not None:
-        data[AREAS_CHECKER].stop()
-        data[UNLOAD_TEMPLATE_EXTENSIONS]()
+    entry.runtime_data[AREAS_CHECKER].stop()
+    entry.runtime_data[UNLOAD_TEMPLATE_EXTENSIONS]()
+    entry.runtime_data = None
     for service in [ADD_SENSOR_SERVICE, REMOVE_SENSOR_SERVICE, SYNTHETIC_ALERT_SERVICE]:
         hass.services.async_remove(DOMAIN, service)
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
