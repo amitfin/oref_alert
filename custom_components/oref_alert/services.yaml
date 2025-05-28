@@ -1504,7 +1504,7 @@ synthetic_alert:
       selector:
         select:
           mode: dropdown
-          multiple: false
+          multiple: true
           custom_value: false
           options:
           - אבו גוש

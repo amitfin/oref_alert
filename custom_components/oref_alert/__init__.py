@@ -74,7 +74,9 @@ REMOVE_SENSOR_SCHEMA = vol.Schema(
 
 SYNTHETIC_ALERT_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_AREA): vol.All(cv.string, vol.In(AREAS)),
+        vol.Required(CONF_AREA): vol.All(
+            cv.ensure_list, [vol.All(cv.string, vol.In(AREAS))]
+        ),
         vol.Required(CONF_DURATION, default=10): cv.positive_int,
         vol.Required(ATTR_CATEGORY, default=1): cv.positive_int,
         vol.Optional(ATTR_TITLE): cv.string,

@@ -334,9 +334,10 @@ async def test_synthetic_alert(
     coordinator.async_add_listener(lambda: None)
     assert len(coordinator.data.alerts) == 0
     synthetic_alert_time = dt_util.now(IST)
+    areas = ["אילת", "קריית שמונה"]
     coordinator.add_synthetic_alert(
         {
-            CONF_AREA: "קריית שמונה",
+            CONF_AREA: areas,
             CONF_DURATION: 40,
             ATTR_CATEGORY: 4,
             ATTR_TITLE: "test",
@@ -345,13 +346,14 @@ async def test_synthetic_alert(
     freezer.tick(timedelta(seconds=39))
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert len(coordinator.data.alerts) == 1
-    assert coordinator.data.alerts[0]["data"] == "קריית שמונה"
-    assert coordinator.data.alerts[0]["alertDate"] == synthetic_alert_time.strftime(
-        "%Y-%m-%d %H:%M:%S"
-    )
-    assert coordinator.data.alerts[0]["category"] == 4
-    assert coordinator.data.alerts[0]["title"] == "test"
+    assert len(coordinator.data.alerts) == 2
+    for index, area in enumerate(areas):
+        assert coordinator.data.alerts[index]["data"] == area
+        assert coordinator.data.alerts[index][
+            "alertDate"
+        ] == synthetic_alert_time.strftime("%Y-%m-%d %H:%M:%S")
+        assert coordinator.data.alerts[index]["category"] == 4
+        assert coordinator.data.alerts[index]["title"] == "test"
     freezer.tick(timedelta(seconds=2))
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)

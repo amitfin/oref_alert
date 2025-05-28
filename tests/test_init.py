@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
+import pytest
 from homeassistant.const import (
     CONF_ENTITY_ID,
     CONF_NAME,
@@ -113,9 +114,16 @@ async def test_add_remove_sensor_service(hass: HomeAssistant) -> None:
     assert entity_reg.async_get(entity_id) is None
 
 
+@pytest.mark.parametrize(
+    "areas",
+    [
+        "קריית שמונה",
+        ["קריית שמונה", "תל אביב - דרום העיר ויפו"],
+    ],
+    ids=("str", "list"),
+)
 async def test_synthetic_alert_service(
-    hass: HomeAssistant,
-    freezer: FrozenDateTimeFactory,
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory, areas: str | list
 ) -> None:
     """Test synthetic_alert custom service."""
     config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
@@ -125,7 +133,7 @@ async def test_synthetic_alert_service(
     await hass.services.async_call(
         DOMAIN,
         SYNTHETIC_ALERT_SERVICE,
-        {CONF_AREA: "קריית שמונה", CONF_DURATION: 20},
+        {CONF_AREA: areas, CONF_DURATION: 20},
         blocking=True,
     )
     freezer.tick(timedelta(seconds=10))
@@ -133,8 +141,13 @@ async def test_synthetic_alert_service(
     await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(ENTITY_ID)
     assert state is not None
-    assert len(state.attributes[ATTR_COUNTRY_ALERTS]) == 1
-    assert state.attributes[ATTR_COUNTRY_ALERTS][0]["data"] == "קריית שמונה"
+    assert (
+        len(state.attributes[ATTR_COUNTRY_ALERTS]) == 1
+        if isinstance(areas, str)
+        else len(areas)
+    )
+    for index, area in enumerate([areas] if isinstance(areas, str) else areas):
+        assert state.attributes[ATTR_COUNTRY_ALERTS][index]["data"] == area
 
 
 async def test_max_age_deprecation(hass: HomeAssistant) -> None:

@@ -62,7 +62,7 @@
             "fields": {
                 "area": {
                     "name": "Area",
-                    "description": "The area of the alert"
+                    "description": "The area(s) of the alert(s)"
                 },
                 "duration": {
                     "name": "Duration",

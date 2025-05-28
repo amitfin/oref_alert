@@ -230,17 +230,20 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
     def add_synthetic_alert(self, details: dict) -> None:
         """Add a synthetic alert for testing purposes."""
         now = dt_util.now(IST)
-        self._synthetic_alerts.append(
-            (
-                now.timestamp() + details[CONF_DURATION],
-                {
-                    "alertDate": now.strftime("%Y-%m-%d %H:%M:%S"),
-                    ATTR_TITLE: details.get(ATTR_TITLE, "התרעה סינטטית לצורכי בדיקות"),
-                    "data": details[CONF_AREA],
-                    ATTR_CATEGORY: details[ATTR_CATEGORY],
-                },
+        for area in details[CONF_AREA]:
+            self._synthetic_alerts.append(
+                (
+                    now.timestamp() + details[CONF_DURATION],
+                    {
+                        "alertDate": now.strftime("%Y-%m-%d %H:%M:%S"),
+                        ATTR_TITLE: details.get(
+                            ATTR_TITLE, "התרעה סינטטית לצורכי בדיקות"
+                        ),
+                        "data": area,
+                        ATTR_CATEGORY: details[ATTR_CATEGORY],
+                    },
+                )
             )
-        )
 
     def _get_synthetic_alerts(self) -> list[dict[str, Any]]:
         """Return the list of synthetic alerts."""
