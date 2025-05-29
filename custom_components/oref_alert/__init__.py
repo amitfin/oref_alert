@@ -114,16 +114,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 },
             )
 
-    coordinator = OrefAlertDataUpdateCoordinator(hass, entry)
-    await coordinator.async_config_entry_first_refresh()
-
-    unload_template_extensions = await inject_template_extensions(hass)
-
     entry.runtime_data = {
-        DATA_COORDINATOR: coordinator,
+        DATA_COORDINATOR: OrefAlertDataUpdateCoordinator(hass, entry),
         AREAS_CHECKER: AreasChecker(hass),
-        UNLOAD_TEMPLATE_EXTENSIONS: unload_template_extensions,
+        UNLOAD_TEMPLATE_EXTENSIONS: await inject_template_extensions(hass),
     }
+
+    await entry.runtime_data[DATA_COORDINATOR].async_config_entry_first_refresh()
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -187,7 +184,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def synthetic_alert(service_call: ServiceCall) -> None:
         """Add a synthetic alert for testing purposes."""
-        coordinator.add_synthetic_alert(service_call.data)
+        entry.runtime_data[DATA_COORDINATOR].add_synthetic_alert(service_call.data)
 
     async_register_admin_service(
         hass,
