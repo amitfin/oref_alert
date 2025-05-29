@@ -26,6 +26,7 @@ from custom_components.oref_alert.metadata.area_to_polygon import (
 from custom_components.oref_alert.metadata.areas import AREAS
 from custom_components.oref_alert.metadata.areas_and_groups import AREAS_AND_GROUPS
 
+from . import const
 from .const import (
     AREAS_TEMPLATE_FUNCTION,
     COORDINATE_TEMPLATE_FUNCTION,
@@ -116,19 +117,14 @@ async def inject_template_extensions(hass: HomeAssistant) -> Callable[[], None]:
 
     def revert_environment(env: TemplateEnvironment, *_: Any) -> None:
         """Remove template extensions."""
+        functions = [
+            function
+            for function in dir(const)
+            if function.endswith("TEMPLATE_FUNCTION")
+        ]
         for extensions in (env.globals, env.filters, env.tests):
-            for function in (
-                AREAS_TEMPLATE_FUNCTION,
-                DISTRICT_TEMPLATE_FUNCTION,
-                COORDINATE_TEMPLATE_FUNCTION,
-                SHELTER_TEMPLATE_FUNCTION,
-                ICON_TEMPLATE_FUNCTION,
-                EMOJI_TEMPLATE_FUNCTION,
-                DISTANCE_TEMPLATE_FUNCTION,
-                DISTANCE_TEST_TEMPLATE_FUNCTION,
-                FIND_AREA_TEMPLATE_FUNCTION,
-            ):
-                extensions.pop(function, None)
+            for function in functions:
+                extensions.pop(getattr(const, function), None)
 
     def patched_init(
         self: TemplateEnvironment,
