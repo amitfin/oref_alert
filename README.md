@@ -48,15 +48,15 @@ There are 5 configuration fields:
 
 ## Additional Sensors
 
-It's possible to create additional sensors using the service `oref_alert.add_sensor`. The service can be accessed via this My button:
+It's possible to create additional sensors using the action `oref_alert.add_sensor`. The action can be accessed via this My button:
 
-[![Open your Home Assistant instance and show your service developer tools with a specific service selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.add_sensor)
+[![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.add_sensor)
 
 The selected areas of an additional sensor can be different (non overlapping) than the primary sensor. Additional sensors can be re-added (with the same name) for overriding their configuration (there is no edit page).
 
-The service `oref_alert.remove_sensor` can be used for deleting an additional sensor. The service can be accessed via this My button:
+The action `oref_alert.remove_sensor` can be used for deleting an additional sensor. The action can be accessed via this My button:
 
-[![Open your Home Assistant instance and show your service developer tools with a specific service selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.remove_sensor)
+[![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.remove_sensor)
 
 Note: additional sensors created before v2.2.0 use a different implementation. It's better to delete such entities and to create new sensors using the new functionality (old sensors are not broken and can be used).
 
@@ -77,7 +77,7 @@ The integration creates an additional set of sensors which monitor the time to s
 2. `Time to shelter`: as provided by Pikud Haoref for the selected area (constant value).
 3. `Alert`: the active alert (when there is such).
 
-*Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the service `oref_alert.add_sensor`.*
+*Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the action `oref_alert.add_sensor`.*
 
 ## Alert End Time Sensors
 
@@ -86,7 +86,7 @@ The integration creates an additional set of sensors which monitor the time to t
 2. `Alert active duration`: as configured by the user.
 3. `Alert`: the active alert (when there is such).
 
-*Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the service `oref_alert.add_sensor`.*
+*Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the action `oref_alert.add_sensor`.*
 
 ## Preemptive Update Binary Sensors
 
@@ -147,11 +147,11 @@ In the [Mobile Notifications: Detailed Alerts](#detailed-alerts) section there i
 
 ## Synthetic Alert
 
-Synthetic alerts are useful for testing purposes. The service `oref_alert.synthetic_alert` can be used to create a synthetic alert. The service can be accessed via this My button:
+Synthetic alerts are useful for testing purposes. The action `oref_alert.synthetic_alert` can be used to create a synthetic alert. The action can be accessed via this My button:
 
-[![Open your Home Assistant instance and show your service developer tools with a specific service selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.synthetic_alert)
+[![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.synthetic_alert)
 
-*Note: a synthetic alert is an additional alert. It doesn't override or hide any other alert. A synthetic alert disappears after the amount of seconds supplied to the custom service. This is different from a regular alert which disappears only after 24 hours.*
+*Note: a synthetic alert is an additional alert. It doesn't override or hide any other alert. A synthetic alert disappears after the amount of seconds supplied to the action. This is different from a regular alert which disappears only after 24 hours.*
 
 ## Template Functions
 
