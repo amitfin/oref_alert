@@ -62,7 +62,7 @@
             "fields": {
                 "area": {
                     "name": "\u05d0\u05d6\u05d5\u05e8",
-                    "description": "\u05d0\u05d6\u05d5\u05e8\u0020\u05d4\u05d4\u05ea\u05e8\u05e2\u05d4"
+                    "description": "\u05d0\u05d6\u05d5\u05e8\u0028\u05d9\u0029\u0020\u05d4\u05d4\u05ea\u05e8\u05e2\u05d4"
                 },
                 "duration": {
                     "name": "\u05de\u05e9\u05da\u0020\u05d4\u05d6\u05de\u05df",
