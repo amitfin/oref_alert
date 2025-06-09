@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from abc import abstractmethod
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
@@ -16,6 +17,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import (
     ATTR_ALERT,
     ATTR_AREA,
+    ATTR_DISPLAY,
     ATTR_TIME_TO_SHELTER,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
@@ -148,6 +150,28 @@ class OrefAlertTimerSensor(
             dt_util.now() + timedelta(seconds=1),
         )
 
+    @abstractmethod
+    def oref_value_seconds(self) -> int | None:
+        """Abstract method for getting the state's value in seconds."""
+
+    @property
+    def native_value(self) -> int | None:
+        """Return the value and schedule another update when needed."""
+        if seconds := self.oref_value_seconds():
+            self._update_in_1_second()
+        return seconds
+
+    def oref_display_value(self) -> str | None:
+        """Return the state as mm:ss."""
+        if (seconds := self.oref_value_seconds()) is None:
+            return None
+        sign = "-" if seconds < 0 else ""
+        seconds = abs(seconds)
+        return (
+            f"{sign}{seconds // SECONDS_IN_A_MINUTE:02}:"
+            f"{seconds % SECONDS_IN_A_MINUTE:02}"
+        )
+
 
 class TimeToShelterSensor(OrefAlertTimerSensor):
     """Representation of the time to shelter sensor."""
@@ -157,6 +181,7 @@ class TimeToShelterSensor(OrefAlertTimerSensor):
             ATTR_AREA,
             ATTR_TIME_TO_SHELTER,
             ATTR_ALERT,
+            ATTR_DISPLAY,
         }
     )
 
@@ -175,15 +200,13 @@ class TimeToShelterSensor(OrefAlertTimerSensor):
             f"{name.lower().replace(' ', '_')}_{TIME_TO_SHELTER_ID_SUFFIX}"
         )
 
-    @property
-    def native_value(self) -> int | None:
+    def oref_value_seconds(self) -> int | None:
         """Return the remaining seconds to shelter."""
         if alert_timestamp := self._get_alert_timestamp():
             alert_age = dt_util.now().timestamp() - alert_timestamp
             time_to_shelter = int(self._migun_time - alert_age)
             # Count till "-60" (a minute past the time to shelter).
             if time_to_shelter > -1 * SECONDS_IN_A_MINUTE:
-                self._update_in_1_second()
                 return time_to_shelter
         return None
 
@@ -194,6 +217,7 @@ class TimeToShelterSensor(OrefAlertTimerSensor):
             ATTR_AREA: self._area,
             ATTR_TIME_TO_SHELTER: self._migun_time,
             ATTR_ALERT: self._get_alert(),
+            ATTR_DISPLAY: self.oref_display_value(),
         }
 
 
@@ -205,6 +229,7 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
             ATTR_AREA,
             CONF_ALERT_ACTIVE_DURATION,
             ATTR_ALERT,
+            ATTR_DISPLAY,
         }
     )
 
@@ -220,14 +245,11 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
         self._attr_name = f"{name} {END_TIME_NAME_SUFFIX}"
         self._attr_unique_id = f"{name.lower().replace(' ', '_')}_{END_TIME_ID_SUFFIX}"
 
-    @property
-    def native_value(self) -> int | None:
+    def oref_value_seconds(self) -> int | None:
         """Return the remaining seconds till the end of the alert."""
         if alert_timestamp := self._get_alert_timestamp():
             alert_age = dt_util.now().timestamp() - alert_timestamp
-            alert_end_time = int(self._active_duration * 60 - alert_age)
-            self._update_in_1_second()
-            return alert_end_time
+            return int(self._active_duration * 60 - alert_age)
         return None
 
     @property
@@ -237,4 +259,5 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
             ATTR_AREA: self._area,
             CONF_ALERT_ACTIVE_DURATION: self._active_duration,
             ATTR_ALERT: self._get_alert(),
+            ATTR_DISPLAY: self.oref_display_value(),
         }

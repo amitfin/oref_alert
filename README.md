@@ -76,6 +76,7 @@ The integration creates an additional set of sensors which monitor the time to s
 1. `Area`: the name of the area.
 2. `Time to shelter`: as provided by Pikud Haoref for the selected area (constant value).
 3. `Alert`: the active alert (when there is such).
+4. `Display`: a user-friendly string of the time in the format of "mm:ss".
 
 *Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the action `oref_alert.add_sensor`.*
 
@@ -85,6 +86,7 @@ The integration creates an additional set of sensors which monitor the time to t
 1. `Area`: the name of the area.
 2. `Alert active duration`: as configured by the user.
 3. `Alert`: the active alert (when there is such).
+4. `Display`: a user-friendly string of the time in the format of "mm:ss".
 
 *Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the action `oref_alert.add_sensor`.*
 
@@ -255,6 +257,19 @@ entities:
 
 
 Note that it depends on the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.
+
+### Displaying Timers
+
+```
+type: entities
+entities:
+  - entity: sensor.oref_alert_time_to_shelter
+    type: attribute
+    attribute: display
+  - entity: sensor.oref_alert_end_time
+    type: attribute
+    attribute: display
+```
 
 ### Presenting Active Alerts in Israel
 

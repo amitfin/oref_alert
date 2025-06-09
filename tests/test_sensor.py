@@ -15,6 +15,7 @@ from custom_components.oref_alert.const import (
     ADD_SENSOR_SERVICE,
     ATTR_ALERT,
     ATTR_AREA,
+    ATTR_DISPLAY,
     ATTR_TIME_TO_SHELTER,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
@@ -82,6 +83,7 @@ async def test_time_to_shelter_state(
         state.attributes[ATTR_ALERT]
         == load_json_fixture("single_alert_history.json")[0]
     )
+    assert state.attributes[ATTR_DISPLAY] == f"00:{time_to_shelter:02}"
 
     for _ in range(100):
         freezer.tick(datetime.timedelta(seconds=1))
@@ -93,6 +95,18 @@ async def test_time_to_shelter_state(
         assert state.state == (
             str(time_to_shelter) if time_to_shelter > -60 else STATE_UNKNOWN
         )
+        if time_to_shelter >= 0:
+            assert (
+                state.attributes[ATTR_DISPLAY]
+                == f"{time_to_shelter // 60:02}:{time_to_shelter % 60:02}"
+            )
+        elif time_to_shelter > -60:
+            assert (
+                state.attributes[ATTR_DISPLAY]
+                == f"-{abs(time_to_shelter) // 60:02}:{abs(time_to_shelter) % 60:02}"
+            )
+        else:
+            assert state.attributes[ATTR_DISPLAY] is None
 
     await async_shutdown(hass, config_id)
 
@@ -133,6 +147,7 @@ async def test_time_to_shelter_attributes_no_alert(
     assert state.attributes[ATTR_AREA] == "בארי"
     assert state.attributes[ATTR_TIME_TO_SHELTER] == 15
     assert state.attributes[ATTR_ALERT] is None
+    assert state.attributes[ATTR_DISPLAY] is None
     await async_shutdown(hass, config_id)
 
 
@@ -160,6 +175,10 @@ async def test_alert_end_time_state(
         state = hass.states.get(END_TIME_ENTITY_ID)
         assert state is not None
         assert state.state == str(alert_end_time)
+        assert (
+            state.attributes[ATTR_DISPLAY]
+            == f"{alert_end_time // 60:02}:{alert_end_time % 60:02}"
+        )
         freezer.tick(datetime.timedelta(seconds=60))
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
@@ -168,6 +187,7 @@ async def test_alert_end_time_state(
     state = hass.states.get(END_TIME_ENTITY_ID)
     assert state is not None
     assert state.state == STATE_UNKNOWN
+    assert state.attributes[ATTR_DISPLAY] is None
     await async_shutdown(hass, config_id)
 
 
@@ -181,6 +201,7 @@ async def test_alert_end_time_attributes_no_alert(
     assert state.attributes[ATTR_AREA] == "בארי"
     assert state.attributes[CONF_ALERT_ACTIVE_DURATION] == 10
     assert state.attributes[ATTR_ALERT] is None
+    assert state.attributes[ATTR_DISPLAY] is None
     await async_shutdown(hass, config_id)
 
 
