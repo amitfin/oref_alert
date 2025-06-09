@@ -258,7 +258,7 @@ entities:
 
 Note that it depends on the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.
 
-### Displaying Timers
+### Displaying Countdown Timers
 
 ```
 type: entities
@@ -270,6 +270,9 @@ entities:
     type: attribute
     attribute: display
 ```
+
+<kbd>![image](https://github.com/user-attachments/assets/bede82e5-022a-41d8-abd7-502821c7d558)</kbd>
+
 
 ### Presenting Active Alerts in Israel
 
