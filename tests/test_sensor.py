@@ -258,7 +258,7 @@ async def test_remove_sensors(
     await hass.services.async_call(
         DOMAIN,
         REMOVE_SENSOR_SERVICE,
-        {CONF_ENTITY_ID: "binary_sensor.oref_alert_test"},
+        {CONF_ENTITY_ID: "binary_sensor.oref_alert_test_preemptive_update"},
         blocking=True,
     )
     await hass.async_block_till_done(wait_background_tasks=True)

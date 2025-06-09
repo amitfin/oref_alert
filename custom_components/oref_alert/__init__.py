@@ -61,7 +61,9 @@ REMOVE_SENSOR_SCHEMA = vol.Schema(
             selector.EntitySelectorConfig(
                 exclude_entities=[
                     "binary_sensor.oref_alert",
+                    "binary_sensor.oref_alert_preemptive_update",
                     "binary_sensor.oref_alert_all_areas",
+                    "binary_sensor.oref_alert_all_areas_preemptive_update",
                 ],
                 filter=selector.EntityFilterSelectorConfig(
                     integration="oref_alert", domain="binary_sensor"
@@ -148,9 +150,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def remove_sensor(service_call: ServiceCall) -> None:
         """Remove an additional sensor."""
         entity_reg = entity_registry.async_get(hass)
-        entity_name = getattr(
-            entity_reg.async_get(service_call.data[CONF_ENTITY_ID]), "original_name", ""
+        entity_id = service_call.data[CONF_ENTITY_ID].removesuffix(
+            f"_{PREEMPTIVE_UPDATE_ID_SUFFIX}"
         )
+        entity_name = getattr(entity_reg.async_get(entity_id), "original_name", "")
         config_entry = hass.config_entries.async_get_entry(entry.entry_id)
         if config_entry is not None:
             sensors = {
@@ -158,17 +161,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 for name, areas in config_entry.options.get(CONF_SENSORS, {}).items()
                 if name != entity_name
             }
-            entity_reg.async_remove(service_call.data[CONF_ENTITY_ID])
-            entity_reg.async_remove(
-                f"{service_call.data[CONF_ENTITY_ID]}_{PREEMPTIVE_UPDATE_ID_SUFFIX}"
-            )
+            entity_reg.async_remove(entity_id)
+            entity_reg.async_remove(f"{entity_id}_{PREEMPTIVE_UPDATE_ID_SUFFIX}")
             for suffix in [TIME_TO_SHELTER_ID_SUFFIX, END_TIME_ID_SUFFIX]:
-                entity_id = (
-                    f"{Platform.SENSOR}."
-                    f"{service_call.data[CONF_ENTITY_ID].split('.')[1]}_{suffix}"
-                )
-                if entity_reg.async_get(entity_id) is not None:
-                    entity_reg.async_remove(entity_id)
+                delete_entity = f"{Platform.SENSOR}.{entity_id.split('.')[1]}_{suffix}"
+                if entity_reg.async_get(delete_entity) is not None:
+                    entity_reg.async_remove(delete_entity)
             hass.config_entries.async_update_entry(
                 config_entry,
                 options={**config_entry.options, CONF_SENSORS: sensors},

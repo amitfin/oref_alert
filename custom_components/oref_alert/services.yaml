@@ -6,7 +6,9 @@ remove_sensor:
         entity:
           exclude_entities:
           - binary_sensor.oref_alert
+          - binary_sensor.oref_alert_preemptive_update
           - binary_sensor.oref_alert_all_areas
+          - binary_sensor.oref_alert_all_areas_preemptive_update
           filter:
           - integration: oref_alert
             domain: binary_sensor
