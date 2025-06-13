@@ -20,8 +20,8 @@ async def _areas_check(
     checker = AreasChecker(hass)
     freezer.tick(timedelta(minutes=10))
     async_fire_time_changed(hass)
-    checker.stop()
     await hass.async_block_till_done(wait_background_tasks=True)
+    checker.stop()
 
 
 async def test_areas_check_failure(

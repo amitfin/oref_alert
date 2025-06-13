@@ -24,15 +24,15 @@ class AreasChecker:
         """Initialize areas checker."""
         self._hass = hass
         self._http_client = async_get_clientsession(hass)
-        self._unsub__next_check = event.async_track_point_in_time(
+        self._unsub_next_check = event.async_track_point_in_time(
             hass, self._check, dt_util.now() + timedelta(minutes=1)
         )
 
     def stop(self) -> None:
         """Cancel next check."""
-        if self._unsub__next_check is not None:
-            self._unsub__next_check()
-            self._unsub__next_check = None
+        if self._unsub_next_check is not None:
+            self._unsub_next_check()
+            self._unsub_next_check = None
 
     @callback
     async def _check(self, _: datetime | None = None) -> None:
@@ -71,6 +71,6 @@ class AreasChecker:
                     translation_key="upgrade_required",
                 )
         finally:
-            self._unsub__next_check = event.async_track_point_in_time(
+            self._unsub_next_check = event.async_track_point_in_time(
                 self._hass, self._check, dt_util.now() + timedelta(hours=12)
             )
