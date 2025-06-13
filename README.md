@@ -97,7 +97,7 @@ The integration creates an additional set of binary sensors which turns on when 
 2. `Alert active duration`: as configured by the user.
 3. `Selected areas active alerts`: active warnings.
 
-A [synthetic alert](#synthetic-alert) with category `13` can be used to turn `on` this entity for testing purposes.
+A [synthetic alert](#synthetic-alert) with category `התרעה מקדימה` can be used to turn `on` this entity for testing purposes.
 
 ## Geo Location Entities
 
@@ -375,33 +375,22 @@ mode: queued
 Here is an automation rule for getting mobile notifications for preemptive updates:
 
 ```
-alias: Oref Alert Preemptive Updates
-id: oref_alert_preemptive_updates
+alias: Oref Alert Preemptive
 triggers:
   - trigger: state
-    entity_id: binary_sensor.oref_alert_all_areas_preemptive_update
-    attribute: country_active_alerts
+    entity_id:
+      - binary_sensor.oref_alert_preemptive_update
+    to: "on"
 actions:
-  - variables:
-      current: "{{ trigger.to_state.attributes.country_active_alerts | map(attribute='data') | map('oref_district') | unique | list }}"
-      previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | map('oref_district') | unique | list }}"
-      districts: "{{ current | difference(previous) | sort | list }}"
-      districts_per_push: "{{ (90 / (districts | map('length') | average(0) | add(2))) | int }}"
-  - repeat:
-      while:
-        - condition: template
-          value_template: "{{ districts | length > 0 }}"
-      sequence:
-        - action: notify.mobile_app_amits_iphone
-          data:
-            title: מבזק פיקוד העורף
-            message: "בעקבות זיהוי שיגורים לעבר ישראל, יתכן ויפעלו התרעות בדקות הקרובות במרחבים הבאים: {{ districts[:districts_per_push] | join(', ') }}"
-        - variables:
-            districts: "{{ districts[districts_per_push:] }}"
-mode: queued
+  - action: notify.mobile_app_amits_iphone
+    data:
+      title: הודעה מפיקוד העורף לאזורך
+      message: >-
+        {{ state_attr('binary_sensor.oref_alert_preemptive_update',
+        'selected_areas_active_alerts')[0]["title"] }}
 ```
 
-<img width="400" src="https://github.com/user-attachments/assets/60b6ff3a-0d3d-4b76-bf60-3ea389e3a5c1">
+<img width="400" src="https://github.com/user-attachments/assets/62a4aab5-39e8-4f5b-bb98-33f55d43ca51">
 
 #### Custom Sound
 
