@@ -46,6 +46,7 @@ async def test_areas_check_failure(
     assert repairs[0].data["domain"] == DOMAIN
     assert repairs[0].data["issue_id"] == "upgrade_required"
     unregister()
+    await hass.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_areas_check_pass(
