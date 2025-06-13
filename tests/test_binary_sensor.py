@@ -285,6 +285,8 @@ async def test_preemptive_state(  # noqa: PLR0913
     freezer.move_to("2025-04-26 03:30:00+03:00")
     mock_urls(aioclient_mock, real_time_file, history_file)
     alerts = load_json_fixture("single_preemptive_alert_history.json")
+    if real_time_file:
+        alerts[0]["category"] = 13
 
     config_id = await async_setup(hass, {CONF_AREAS: ["פתח תקווה"]})
     await hass.services.async_call(
@@ -326,5 +328,50 @@ async def test_preemptive_state(  # noqa: PLR0913
             assert state is not None
             assert state.state == STATE_OFF
             assert not state.attributes[attribute]
+
+    await async_shutdown(hass, config_id)
+
+
+@pytest.mark.parametrize(
+    ("real_time_file", "history_file", "alias"),
+    [
+        (None, "single_all_areas_alert_history.json", "כל הארץ"),
+        ("single_all_areas_alert_real_time.json", None, "ברחבי הארץ"),
+    ],
+    ids=["history", "real_time"],
+)
+async def test_all_areas_alert(  # noqa: PLR0913
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+    real_time_file: str | None,
+    history_file: str | None,
+    alias: str,
+) -> None:
+    """Test all areas alert."""
+    freezer.move_to("2025-06-13 03:00:00+03:00")
+    mock_urls(aioclient_mock, real_time_file, history_file)
+    alerts = load_json_fixture("single_all_areas_alert_history.json")
+    alerts[0]["data"] = alias
+
+    config_id = await async_setup(hass, {CONF_AREAS: ["פתח תקווה"]})
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    entities = (
+        (
+            ENTITY_ID,
+            ATTR_SELECTED_AREAS_ACTIVE_ALERTS,
+        ),
+        (
+            f"{ENTITY_ID}_{ALL_AREAS_ID_SUFFIX}",
+            ATTR_COUNTRY_ACTIVE_ALERTS,
+        ),
+    )
+
+    for entity_id, attribute in entities:
+        state = hass.states.get(entity_id)
+        assert state is not None
+        assert state.state == STATE_ON
+        assert state.attributes[attribute] == alerts, state.attributes[attribute]
 
     await async_shutdown(hass, config_id)

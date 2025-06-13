@@ -17,7 +17,7 @@ CATEGORY_METADATA = {
     11: ("home-flood", "🌊", True),  # tsunami
     12: ("biohazard", "☣️", True),  # hazmat
     13: ("message-alert", "⚠", False),  # update
-    14: ("flash-alert", "⚡", True),  # flash
+    14: ("flash-alert", "⚡", False),  # flash
     15: ("alert-circle-check", "✅", False),  # missilealertdrill
     16: ("alert-circle-check", "✅", False),  # uavdrill
     17: ("alert-circle-check", "✅", False),  # nonconventionaldrill
@@ -35,7 +35,7 @@ CATEGORY_METADATA = {
 }
 
 DEFAULT_CATEGORY = CATEGORY_METADATA[4]
-UPDATE_CATEGORY = 13
+UPDATE_CATEGORIES = [13, 14]
 FIRST_DRILL_CATEGORY = 15
 
 # Reverse engineered mapping from real-time to history categories.
@@ -77,7 +77,7 @@ def category_is_alert(category: int) -> bool:
 
 def category_is_update(category: int) -> bool:
     """Check if category is update."""
-    return category == UPDATE_CATEGORY
+    return category in UPDATE_CATEGORIES
 
 
 def real_time_to_history_category(category: int) -> int | None:

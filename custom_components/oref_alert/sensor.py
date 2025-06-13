@@ -14,6 +14,8 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import event as event_helper
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
+
 from .const import (
     ATTR_ALERT,
     ATTR_AREA,
@@ -112,7 +114,7 @@ class OrefAlertTimerSensor(
             self._alert = None
             self._alert_timestamp = None
         for alert in self._data.active_alerts:
-            if alert["data"] == self._area:
+            if alert["data"] == self._area or alert["data"] in ALL_AREAS_ALIASES:
                 self._alert = alert
                 self._alert_timestamp = (
                     dt_util.parse_datetime(alert["alertDate"], raise_on_error=True)

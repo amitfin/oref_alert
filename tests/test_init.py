@@ -16,7 +16,6 @@ from homeassistant.helpers import entity_registry
 from homeassistant.helpers import issue_registry as ir
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
-    async_capture_events,
     async_fire_time_changed,
 )
 
@@ -168,7 +167,11 @@ async def test_max_age_deprecation(hass: HomeAssistant) -> None:
 
 async def test_unknown_area(hass: HomeAssistant) -> None:
     """Test repair ticket of an unknown area."""
-    repairs = async_capture_events(hass, ir.EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED)
+    repairs = []
+    unregister = hass.bus.async_listen(
+        ir.EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED,
+        lambda event, repairs=repairs: repairs.append(event),
+    )
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         options={
@@ -187,3 +190,4 @@ async def test_unknown_area(hass: HomeAssistant) -> None:
         assert repairs[i].data["action"] == "create"
         assert repairs[i].data["domain"] == DOMAIN
         assert repairs[i].data["issue_id"] == f"{DOMAIN}_unknown{i + 1}"
+    unregister()

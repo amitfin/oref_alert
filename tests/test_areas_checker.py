@@ -6,10 +6,7 @@ import pytest
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
-from pytest_homeassistant_custom_component.common import (
-    async_capture_events,
-    async_fire_time_changed,
-)
+from pytest_homeassistant_custom_component.common import async_fire_time_changed
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
 from custom_components.oref_alert.areas_checker import CITIES_MIX_URL, AreasChecker
@@ -34,7 +31,11 @@ async def test_areas_check_failure(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test failed areas check."""
-    repairs = async_capture_events(hass, ir.EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED)
+    repairs = []
+    unregister = hass.bus.async_listen(
+        ir.EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED,
+        lambda event, repairs=repairs: repairs.append(event),
+    )
     aioclient_mock.clear_requests()
     aioclient_mock.get(CITIES_MIX_URL, text='[{"label_he": "test"}]')
     await _areas_check(hass, freezer)
@@ -44,6 +45,8 @@ async def test_areas_check_failure(
     assert repairs[0].data["action"] == "create"
     assert repairs[0].data["domain"] == DOMAIN
     assert repairs[0].data["issue_id"] == "upgrade_required"
+    unregister()
+    await hass.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_areas_check_pass(

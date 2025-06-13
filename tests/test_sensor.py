@@ -265,3 +265,29 @@ async def test_remove_sensors(
     assert len(hass.states.async_entity_ids(Platform.BINARY_SENSOR)) == 4
     assert len(hass.states.async_entity_ids(Platform.SENSOR)) == 2
     await async_shutdown(hass, config_id)
+
+
+async def test_all_areas_alert(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test alert with all areas alias."""
+    freezer.move_to("2025-06-13 03:00:00+03:00")
+    mock_urls(aioclient_mock, None, "single_all_areas_alert_history.json")
+    alert = load_json_fixture("single_all_areas_alert_history.json")[0]
+
+    config_id = await async_setup(hass)
+
+    entities = (
+        (TIME_TO_SHELTER_ENTITY_ID, "15"),
+        (END_TIME_ENTITY_ID, "600"),
+    )
+
+    for entity_id, value in entities:
+        state = hass.states.get(entity_id)
+        assert state is not None
+        assert state.state == value
+        assert state.attributes[ATTR_ALERT] == alert
+
+    await async_shutdown(hass, config_id)

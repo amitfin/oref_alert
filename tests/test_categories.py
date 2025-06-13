@@ -34,7 +34,7 @@ def test_out_of_range(category: int) -> None:
         (1, True),
         (5, False),
         (13, False),
-        (14, True),
+        (14, False),
         (15, False),
         (100, False),
     ],
@@ -47,7 +47,8 @@ def test_category_is_alert(category: int, expected: bool) -> None:  # noqa: FBT0
 def test_category_is_update() -> None:
     """Test category_is_update."""
     assert category_is_update(13) is True
-    assert category_is_update(14) is False
+    assert category_is_update(14) is True
+    assert category_is_update(12) is False
     assert category_is_update(real_time_to_history_category(10) or 0) is True
     assert category_is_update(real_time_to_history_category(13) or 0) is False
 
