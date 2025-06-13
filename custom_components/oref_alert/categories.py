@@ -35,7 +35,7 @@ CATEGORY_METADATA = {
 }
 
 DEFAULT_CATEGORY = CATEGORY_METADATA[4]
-UPDATE_CATEGORIES = [13, 14]
+UPDATE_CATEGORIES = {13, 14}
 FIRST_DRILL_CATEGORY = 15
 
 # Reverse engineered mapping from real-time to history categories.
