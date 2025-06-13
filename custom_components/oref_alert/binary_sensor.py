@@ -8,6 +8,8 @@ from homeassistant.components import binary_sensor
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
+
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -121,7 +123,7 @@ class AlertAreaSensorBase(AlertSensorBase):
 
     def is_selected_area(self, alert: dict[str, str]) -> bool:
         """Check is the alert is among the selected areas."""
-        return alert["data"] in self._areas
+        return alert["data"] in self._areas or alert["data"] in ALL_AREAS_ALIASES
 
 
 class AlertSensor(AlertAreaSensorBase):
