@@ -285,6 +285,8 @@ async def test_preemptive_state(  # noqa: PLR0913
     freezer.move_to("2025-04-26 03:30:00+03:00")
     mock_urls(aioclient_mock, real_time_file, history_file)
     alerts = load_json_fixture("single_preemptive_alert_history.json")
+    if real_time_file:
+        alerts[0]["category"] = 13
 
     config_id = await async_setup(hass, {CONF_AREAS: ["פתח תקווה"]})
     await hass.services.async_call(
