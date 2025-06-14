@@ -247,6 +247,30 @@ async def test_alerts_processing(
     assert coordinator.data.active_alerts == load_json_fixture("combined_alerts.json")
 
 
+async def test_cached_content_on_failure(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test getting cached content on fetch error."""
+    freezer.move_to("2023-10-07 06:30:00+03:00")
+    mock_urls(
+        aioclient_mock, "multi_alerts_real_time.json", "multi_alerts_history.json"
+    )
+    alerts = load_json_fixture("combined_alerts.json")
+    coordinator = create_coordinator(hass)
+    await coordinator.async_config_entry_first_refresh()
+    assert coordinator.data.alerts == alerts
+    assert coordinator.data.active_alerts == alerts
+
+    mock_urls(aioclient_mock, None, None, exc=Exception("dummy log for testing"))
+    await coordinator.async_refresh()
+    assert "dummy log for testing" in caplog.text
+    assert coordinator.data.alerts == alerts
+    assert coordinator.data.active_alerts == alerts
+
+
 async def test_active_alerts(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,

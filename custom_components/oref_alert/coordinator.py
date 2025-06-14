@@ -169,7 +169,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             except Exception as ex:  # noqa: BLE001
                 exc_info = ex
         LOGGER.error("Failed to fetch '%s'", url, exc_info=exc_info)
-        if last_modified:
+        if url in self._http_cache:
             # Return the cached content if available to prevent entities unavailability.
             return cached_content, False
         raise exc_info
