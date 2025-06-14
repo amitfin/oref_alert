@@ -38,7 +38,7 @@ from .utils import load_json_fixture, mock_urls
 
 
 @pytest.mark.parametrize(
-    ("items", "alerts", "active_alerts", "preemptive_update"),
+    ("items", "alerts", "active_alerts", "update"),
     [
         ([], [], [], []),
         (
@@ -151,8 +151,8 @@ from .utils import load_json_fixture, mock_urls
     ids=(
         "empty",
         "simple",
-        "preemptive",
-        "active preemptive",
+        "update",
+        "active update",
         "post active",
     ),
 )
@@ -161,7 +161,7 @@ def test_coordinator_data(
     items: list[dict[str, Any]],
     alerts: list[dict[str, Any]],
     active_alerts: list[dict[str, Any]],
-    preemptive_update: list[dict[str, Any]],
+    update: list[dict[str, Any]],
 ) -> None:
     """Test the coordinator data class."""
     freezer.move_to("2025-04-26 03:30:00+03:00")
@@ -169,7 +169,7 @@ def test_coordinator_data(
     assert coordinator_data.items == items
     assert coordinator_data.alerts == alerts
     assert coordinator_data.active_alerts == active_alerts
-    assert coordinator_data.preemptive_updates == preemptive_update
+    assert coordinator_data.updates == update
 
 
 def create_coordinator(
@@ -264,8 +264,8 @@ async def test_active_alerts(
 
 @pytest.mark.parametrize(
     "alert_file",
-    ["single_alert_real_time.json", "single_preemptive_alert_real_time.json"],
-    ids=("alert", "preemptive"),
+    ["single_alert_real_time.json", "single_update_real_time.json"],
+    ids=("alert", "update"),
 )
 async def test_real_time_timestamp(
     hass: HomeAssistant,

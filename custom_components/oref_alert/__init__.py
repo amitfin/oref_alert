@@ -34,7 +34,6 @@ from .const import (
     DATA_COORDINATOR,
     DOMAIN,
     END_TIME_ID_SUFFIX,
-    PREEMPTIVE_UPDATE_ID_SUFFIX,
     REMOVE_SENSOR_SERVICE,
     SYNTHETIC_ALERT_SERVICE,
     TIME_TO_SHELTER_ID_SUFFIX,
@@ -61,9 +60,7 @@ REMOVE_SENSOR_SCHEMA = vol.Schema(
             selector.EntitySelectorConfig(
                 exclude_entities=[
                     "binary_sensor.oref_alert",
-                    "binary_sensor.oref_alert_preemptive_update",
                     "binary_sensor.oref_alert_all_areas",
-                    "binary_sensor.oref_alert_all_areas_preemptive_update",
                 ],
                 filter=selector.EntityFilterSelectorConfig(
                     integration="oref_alert", domain="binary_sensor"
@@ -150,9 +147,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def remove_sensor(service_call: ServiceCall) -> None:
         """Remove an additional sensor."""
         entity_reg = entity_registry.async_get(hass)
-        entity_id = service_call.data[CONF_ENTITY_ID].removesuffix(
-            f"_{PREEMPTIVE_UPDATE_ID_SUFFIX}"
-        )
+        entity_id = service_call.data[CONF_ENTITY_ID]
         entity_name = getattr(entity_reg.async_get(entity_id), "original_name", "")
         config_entry = hass.config_entries.async_get_entry(entry.entry_id)
         if config_entry is not None:
@@ -162,7 +157,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 if name != entity_name
             }
             entity_reg.async_remove(entity_id)
-            entity_reg.async_remove(f"{entity_id}_{PREEMPTIVE_UPDATE_ID_SUFFIX}")
             for suffix in [TIME_TO_SHELTER_ID_SUFFIX, END_TIME_ID_SUFFIX]:
                 delete_entity = f"{Platform.SENSOR}.{entity_id.split('.')[1]}_{suffix}"
                 if entity_reg.async_get(delete_entity) is not None:

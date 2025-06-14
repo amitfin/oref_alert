@@ -251,18 +251,18 @@ async def test_remove_sensors(
         blocking=True,
     )
     await hass.async_block_till_done(wait_background_tasks=True)
-    # There are 6 binary sensors: (default, all_areas, test) * (regular, preemptive)
-    assert len(hass.states.async_entity_ids(Platform.BINARY_SENSOR)) == 6
-    # There are 4 sensors: time-to-shelter & end-time times default & test
+    # There are 3 binary sensors: default, all_areas, test
+    assert len(hass.states.async_entity_ids(Platform.BINARY_SENSOR)) == 3
+    # There are 4 sensors: (time-to-shelter & end-time times) * (default & test)
     assert len(hass.states.async_entity_ids(Platform.SENSOR)) == 4
     await hass.services.async_call(
         DOMAIN,
         REMOVE_SENSOR_SERVICE,
-        {CONF_ENTITY_ID: "binary_sensor.oref_alert_test_preemptive_update"},
+        {CONF_ENTITY_ID: "binary_sensor.oref_alert_test"},
         blocking=True,
     )
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert len(hass.states.async_entity_ids(Platform.BINARY_SENSOR)) == 4
+    assert len(hass.states.async_entity_ids(Platform.BINARY_SENSOR)) == 2
     assert len(hass.states.async_entity_ids(Platform.SENSOR)) == 2
     await async_shutdown(hass, config_id)
 

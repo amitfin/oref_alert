@@ -17,8 +17,10 @@ from custom_components.oref_alert.const import (
     ALL_AREAS_ID_SUFFIX,
     ATTR_COUNTRY_ACTIVE_ALERTS,
     ATTR_COUNTRY_ALERTS,
+    ATTR_COUNTRY_UPDATES,
     ATTR_SELECTED_AREAS_ACTIVE_ALERTS,
     ATTR_SELECTED_AREAS_ALERTS,
+    ATTR_SELECTED_AREAS_UPDATES,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_OFF_ICON,
@@ -26,7 +28,6 @@ from custom_components.oref_alert.const import (
     CONF_POLL_INTERVAL,
     DOMAIN,
     OREF_ALERT_UNIQUE_ID,
-    PREEMPTIVE_UPDATE_ID_SUFFIX,
 )
 
 from .utils import load_json_fixture, mock_urls
@@ -268,12 +269,12 @@ async def test_all_areas_sensor(
 @pytest.mark.parametrize(
     ("real_time_file", "history_file", "test_expired"),
     [
-        (None, "single_preemptive_alert_history.json", True),
-        ("single_preemptive_alert_real_time.json", None, False),
+        (None, "single_update_history.json", True),
+        ("single_update_real_time.json", None, False),
     ],
     ids=["history", "real_time"],
 )
-async def test_preemptive_state(  # noqa: PLR0913
+async def test_updates_attribute(  # noqa: PLR0913
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
     freezer: FrozenDateTimeFactory,
@@ -281,10 +282,10 @@ async def test_preemptive_state(  # noqa: PLR0913
     history_file: str | None,
     test_expired: bool,  # noqa: FBT001
 ) -> None:
-    """Test preemptive update entity state."""
+    """Test updates attribute."""
     freezer.move_to("2025-04-26 03:30:00+03:00")
     mock_urls(aioclient_mock, real_time_file, history_file)
-    alerts = load_json_fixture("single_preemptive_alert_history.json")
+    alerts = load_json_fixture("single_update_history.json")
     if real_time_file:
         alerts[0]["category"] = 13
 
@@ -299,23 +300,23 @@ async def test_preemptive_state(  # noqa: PLR0913
 
     entities = (
         (
-            f"{ENTITY_ID}_{PREEMPTIVE_UPDATE_ID_SUFFIX}",
-            ATTR_SELECTED_AREAS_ACTIVE_ALERTS,
+            f"{ENTITY_ID}_test",
+            ATTR_SELECTED_AREAS_UPDATES,
         ),
         (
-            f"{ENTITY_ID}_test_{PREEMPTIVE_UPDATE_ID_SUFFIX}",
-            ATTR_SELECTED_AREAS_ACTIVE_ALERTS,
+            f"{ENTITY_ID}_test",
+            ATTR_COUNTRY_UPDATES,
         ),
         (
-            f"{ENTITY_ID}_{ALL_AREAS_ID_SUFFIX}_{PREEMPTIVE_UPDATE_ID_SUFFIX}",
-            ATTR_COUNTRY_ACTIVE_ALERTS,
+            f"{ENTITY_ID}_{ALL_AREAS_ID_SUFFIX}",
+            ATTR_COUNTRY_UPDATES,
         ),
     )
 
     for entity_id, attribute in entities:
         state = hass.states.get(entity_id)
         assert state is not None
-        assert state.state == STATE_ON
+        assert state.state == STATE_OFF
         assert state.attributes[attribute] == alerts
 
     if test_expired:

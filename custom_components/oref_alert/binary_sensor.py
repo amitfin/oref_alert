@@ -20,8 +20,10 @@ from .const import (
     ALL_AREAS_NAME_SUFFIX,
     ATTR_COUNTRY_ACTIVE_ALERTS,
     ATTR_COUNTRY_ALERTS,
+    ATTR_COUNTRY_UPDATES,
     ATTR_SELECTED_AREAS_ACTIVE_ALERTS,
     ATTR_SELECTED_AREAS_ALERTS,
+    ATTR_SELECTED_AREAS_UPDATES,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_OFF_ICON,
@@ -31,8 +33,6 @@ from .const import (
     DEFAULT_OFF_ICON,
     DEFAULT_ON_ICON,
     OREF_ALERT_UNIQUE_ID,
-    PREEMPTIVE_UPDATE_ID_SUFFIX,
-    PREEMPTIVE_UPDATE_NAME_SUFFIX,
     TITLE,
 )
 from .coordinator import OrefAlertCoordinatorData, OrefAlertDataUpdateCoordinator
@@ -51,9 +51,7 @@ async def async_setup_entry(
     names = [None, *list(config_entry.options.get(CONF_SENSORS, {}).keys())]
     async_add_entities(
         [AlertSensor(name, config_entry, coordinator) for name in names]
-        + [AlertPreemptiveAreaSensor(name, config_entry, coordinator) for name in names]
         + [AlertSensorAllAreas(config_entry, coordinator)]
-        + [AlertSensorAllAreasPreemptiveUpdate(config_entry, coordinator)],
     )
 
 
@@ -68,8 +66,10 @@ class AlertSensorBase(
         {
             ATTR_COUNTRY_ACTIVE_ALERTS,
             ATTR_COUNTRY_ALERTS,
+            ATTR_COUNTRY_UPDATES,
             ATTR_SELECTED_AREAS_ACTIVE_ALERTS,
             ATTR_SELECTED_AREAS_ALERTS,
+            ATTR_SELECTED_AREAS_UPDATES,
             CONF_AREAS,
             CONF_ALERT_ACTIVE_DURATION,
         }
@@ -168,56 +168,12 @@ class AlertSensor(AlertAreaSensorBase):
             ATTR_SELECTED_AREAS_ALERTS: [
                 alert for alert in self._data.alerts if self.is_selected_area(alert)
             ],
+            ATTR_SELECTED_AREAS_UPDATES: [
+                alert for alert in self._data.updates if self.is_selected_area(alert)
+            ],
             ATTR_COUNTRY_ACTIVE_ALERTS: self._data.active_alerts,
             ATTR_COUNTRY_ALERTS: self._data.alerts,
-        }
-
-
-class AlertPreemptiveAreaSensor(AlertAreaSensorBase):
-    """Representation of the preemptive area alert sensor."""
-
-    def __init__(
-        self,
-        name: str | None,
-        config_entry: ConfigEntry,
-        coordinator: OrefAlertDataUpdateCoordinator,
-    ) -> None:
-        """Initialize object with defaults."""
-        super().__init__(
-            config_entry.options[CONF_AREAS]
-            if not name
-            else config_entry.options[CONF_SENSORS][name],
-            config_entry,
-            coordinator,
-        )
-        if not name:
-            self._attr_name = f"{TITLE} {PREEMPTIVE_UPDATE_NAME_SUFFIX}"
-            self._attr_unique_id = (
-                f"{OREF_ALERT_UNIQUE_ID}_{PREEMPTIVE_UPDATE_ID_SUFFIX}"
-            )
-        else:
-            self._attr_name = f"{name} {PREEMPTIVE_UPDATE_NAME_SUFFIX}"
-            self._attr_unique_id = (
-                f"{name.lower().replace(' ', '_')}_{PREEMPTIVE_UPDATE_ID_SUFFIX}"
-            )
-
-    @property
-    def is_on(self) -> bool:
-        """Return True is sensor is on."""
-        return any(
-            self.is_selected_area(alert) for alert in self._data.preemptive_updates
-        )
-
-    @property
-    def extra_state_attributes(self) -> Mapping[str, Any] | None:
-        """Return additional attributes."""
-        return {
-            **self._common_area_sensor_attributes,
-            ATTR_SELECTED_AREAS_ACTIVE_ALERTS: [
-                alert
-                for alert in self._data.preemptive_updates
-                if self.is_selected_area(alert)
-            ],
+            ATTR_COUNTRY_UPDATES: self._data.updates,
         }
 
 
@@ -246,37 +202,5 @@ class AlertSensorAllAreas(AlertSensorBase):
             **self._common_attributes,
             ATTR_COUNTRY_ACTIVE_ALERTS: self._data.active_alerts,
             ATTR_COUNTRY_ALERTS: self._data.alerts,
-        }
-
-
-class AlertSensorAllAreasPreemptiveUpdate(AlertSensorBase):
-    """Representation of the preemptive update alert sensor for all areas."""
-
-    def __init__(
-        self,
-        config_entry: ConfigEntry,
-        coordinator: OrefAlertDataUpdateCoordinator,
-    ) -> None:
-        """Initialize object with defaults."""
-        super().__init__(config_entry, coordinator)
-        self._attr_name = (
-            f"{TITLE} {ALL_AREAS_NAME_SUFFIX} {PREEMPTIVE_UPDATE_NAME_SUFFIX}"
-        )
-        self._attr_unique_id = (
-            f"{OREF_ALERT_UNIQUE_ID}_"
-            f"{ALL_AREAS_ID_SUFFIX}_"
-            f"{PREEMPTIVE_UPDATE_ID_SUFFIX}"
-        )
-
-    @property
-    def is_on(self) -> bool:
-        """Return True is sensor is on."""
-        return len(self._data.preemptive_updates) > 0
-
-    @property
-    def extra_state_attributes(self) -> Mapping[str, Any] | None:
-        """Return additional attributes."""
-        return {
-            **self._common_attributes,
-            ATTR_COUNTRY_ACTIVE_ALERTS: self._data.preemptive_updates,
+            ATTR_COUNTRY_UPDATES: self._data.updates,
         }

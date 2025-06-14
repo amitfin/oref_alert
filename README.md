@@ -90,15 +90,6 @@ The integration creates an additional set of sensors which monitor the time to t
 
 *Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the action `oref_alert.add_sensor`.*
 
-## Preemptive Update Binary Sensors
-
-The integration creates an additional set of binary sensors which turns on when there is a preemptive warning for a potential future alert. The ID of the entity is similar to the corresponding binary sensor, with the suffix of `_preemptive_update`. For example, `binary_sensor.oref_alert_preemptive_update`. The entity's state turns `off` when the corresponding binary sensor turns `on` (i.e. a regular alert has been activated). If the warning is not converted to a real alert, the state turns `off` after the user-configured active period (10 minutes by default). The entity has the following extra attributes:
-1. `Areas`: the name of the areas.
-2. `Alert active duration`: as configured by the user.
-3. `Selected areas active alerts`: active warnings.
-
-A [synthetic alert](#synthetic-alert) with category `התרעה מקדימה` can be used to turn `on` this entity for testing purposes.
-
 ## Geo Location Entities
 
 Geo-location entities are created for every active alert in Israel (regardless of the selected areas). These entities exist while the corresponding alert is active (10 minutes by default). The state of the entity is the distance in kilometers from HA home's coordinate. In addition, each entity has the following attributes:
@@ -370,24 +361,31 @@ mode: queued
 
 <img width="400" src="https://github.com/user-attachments/assets/3262dd19-0f65-44f4-8983-270da96200e5">
 
-#### Preemptive Updates
+#### Updates
 
-Here is an automation rule for getting mobile notifications for preemptive updates:
+Here is an automation rule for getting mobile notifications for updates:
 
 ```
-alias: Oref Alert Preemptive
+alias: Oref Alert Updates
 triggers:
   - trigger: state
-    entity_id:
-      - binary_sensor.oref_alert_preemptive_update
-    to: "on"
+    entity_id: binary_sensor.oref_alert
+    attribute: selected_areas_updates
 actions:
-  - action: notify.mobile_app_amits_iphone
-    data:
+  - variables:
       title: הודעה מפיקוד העורף לאזורך
       message: >-
-        {{ state_attr('binary_sensor.oref_alert_preemptive_update',
-        'selected_areas_active_alerts')[0]["title"] }}
+        {{ state_attr('binary_sensor.oref_alert',
+        'selected_areas_updates')[0]['title'] }}
+  - action: notify.mobile_app_amits_iphone
+    data:
+      title: "{{ title }}"
+      message: "{{ message }}"
+  - action: tts.google_translate_say
+    data:
+      entity_id: media_player.shelter_speaker
+      language: iw
+      message: "{{ title }}: {{ message }}"
 ```
 
 <img width="400" src="https://github.com/user-attachments/assets/62a4aab5-39e8-4f5b-bb98-33f55d43ca51">
