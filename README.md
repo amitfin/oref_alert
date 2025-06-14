@@ -374,6 +374,7 @@ triggers:
     entity_id: binary_sensor.oref_alert
     attribute: selected_areas_updates
 actions:
+  - condition: "{{ (state_attr('binary_sensor.oref_alert', 'selected_areas_updates') | length) > 0 }}"
   - variables:
       title: הודעה מפיקוד העורף לאזורך
       message: >-
