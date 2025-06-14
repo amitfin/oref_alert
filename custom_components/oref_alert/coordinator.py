@@ -168,6 +168,10 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                     return content, not (content is None and cached_content is None)
             except Exception as ex:  # noqa: BLE001
                 exc_info = ex
+        LOGGER.error("Failed to fetch '%s'", url, exc_info=exc_info)
+        if last_modified:
+            # Return the cached content if available to prevent entities unavailability.
+            return cached_content, False
         raise exc_info
 
     def _current_to_history_format(
