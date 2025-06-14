@@ -66,9 +66,11 @@ All sensors have the following extra attributes:
 1. `Areas`: the list of areas provided by the user.
 2. `Alert active duration`: as configured by the user.
 3. `Selected areas active alerts`: when the sensor is `on`, the alerts are listed here.
-4. `Selected areas alerts`: active and inactive alerts in the selected areas.
-5. `Country active alerts`: all active alerts in Israel.
-6. `Country alerts`: all alerts in Israel.
+4. `Selected areas updates`: the list of updates for the selected areas.
+5. `Selected areas alerts`: active and inactive alerts in the selected areas.
+6. `Country active alerts`: all active alerts in Israel.
+7. `Country updates`: all updates in Israel.
+8. `Country alerts`: all alerts in Israel.
 
 ## Time To Shelter Sensors
 
