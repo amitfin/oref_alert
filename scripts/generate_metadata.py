@@ -4,12 +4,17 @@
 import argparse
 import json
 import subprocess
+import sys
 import zipfile
 from pathlib import Path
 from typing import Any
 
 import requests
 import yaml
+
+sys.path.insert(0, str((Path(__file__).parent / "..").resolve()))
+
+from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
 
 RELATIVE_OUTPUT_DIRECTORY = "custom_components/oref_alert/metadata/"
 AREAS_OUTPUT = "areas.py"
@@ -252,9 +257,9 @@ class OrefMetadata:
             encoding="utf-8",
         ) as services_yaml:
             services = yaml.load(services_yaml, Loader=yaml.SafeLoader)
-        services["add_sensor"]["fields"]["areas"]["selector"]["select"]["options"] = (
-            self._areas_and_groups
-        )
+        services["add_sensor"]["fields"]["areas"]["selector"]["select"]["options"] = [
+            area for area in self._areas_and_groups if area not in ALL_AREAS_ALIASES
+        ]
         services["synthetic_alert"]["fields"]["area"]["selector"]["select"][
             "options"
         ] = self._areas_no_group

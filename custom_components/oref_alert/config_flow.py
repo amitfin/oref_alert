@@ -12,6 +12,8 @@ from homeassistant.core import async_get_hass, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import selector
 
+from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
+
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigFlowResult
 
@@ -32,7 +34,7 @@ from .metadata.area_to_polygon import async_find_area
 from .metadata.areas_and_groups import AREAS_AND_GROUPS
 
 AREAS_CONFIG = selector.SelectSelectorConfig(
-    options=AREAS_AND_GROUPS,
+    options=[area for area in AREAS_AND_GROUPS if area not in ALL_AREAS_ALIASES],
     mode=selector.SelectSelectorMode.DROPDOWN,
     multiple=True,
     custom_value=False,
