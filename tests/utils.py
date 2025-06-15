@@ -21,12 +21,12 @@ def mock_urls(
     aioclient_mock.clear_requests()
     aioclient_mock.get(
         OREF_ALERTS_URL,
-        text=load_fixture(real_time_fixture) if real_time_fixture else "",
+        text=load_fixture(real_time_fixture) if real_time_fixture else "[]",
         **kwargs,
     )
     aioclient_mock.get(
         OREF_HISTORY_URL,
-        text=load_fixture(history_fixture) if history_fixture else "",
+        text=load_fixture(history_fixture) if history_fixture else "[]",
         **kwargs,
     )
     aioclient_mock.get(
