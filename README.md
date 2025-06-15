@@ -385,17 +385,19 @@ Here is an automation rule for getting mobile notifications for updates:
 ```
 alias: Oref Alert Updates
 id: oref_alert_updates
+mode: parallel
 triggers:
   - trigger: state
     entity_id: binary_sensor.oref_alert
     attribute: selected_areas_updates
 actions:
-  - condition: "{{ (state_attr('binary_sensor.oref_alert', 'selected_areas_updates') | length) > 0 }}"
   - variables:
       title: הודעה מפיקוד העורף לאזורך
-      message: >-
-        {{ state_attr('binary_sensor.oref_alert',
-        'selected_areas_updates')[0]['title'] }}
+      previous_length: "{{ trigger.from_state.attributes.selected_areas_updates | length }}"
+      previous_message: "{{ trigger.from_state.attributes.selected_areas_updates[0]['title'] if previous_length > 0 else None }}"
+      length: "{{ trigger.to_state.attributes.selected_areas_updates | length }}"
+      message: "{{ trigger.to_state.attributes.selected_areas_updates[0]['title'] if length > 0 else None }}"
+  - condition: "{{ message and message != previous_message }}"
   - action: notify.mobile_app_amits_iphone
     data:
       title: "{{ title }}"
