@@ -15,6 +15,7 @@ from homeassistant.helpers.service import async_register_admin_service
 from custom_components.oref_alert.areas_checker import AreasChecker
 from custom_components.oref_alert.metadata.areas_and_groups import AREAS_AND_GROUPS
 from custom_components.oref_alert.template import inject_template_extensions
+from custom_components.oref_alert.update_events import OrefAlertUpdateEventManager
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -122,6 +123,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await entry.runtime_data[DATA_COORDINATOR].async_config_entry_first_refresh()
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    OrefAlertUpdateEventManager(hass, entry)
 
     async def add_sensor(service_call: ServiceCall) -> None:
         """Add an additional sensor (different areas)."""

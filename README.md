@@ -140,6 +140,21 @@ data:
 
 In the [Mobile Notifications: Detailed Alerts](#detailed-alerts) section there is an example for usage of this event.
 
+Events are also fired for updates. Their type is `oref_alert_update_event` instead of `oref_alert_event`. Here is an example of such an event:
+
+```
+event_type: oref_alert_update_event
+data:
+  area: תל אביב - מרכז העיר
+  home_distance: 9.7
+  latitude: 32.0798
+  longitude: 34.7772
+  category: 13
+  title: ניתן לצאת מהמרחב המוגן
+  icon: mdi:message-alert
+  emoji: ⚠
+```
+
 ## Synthetic Alert
 
 Synthetic alerts are useful for testing purposes. The action `oref_alert.synthetic_alert` can be used to create a synthetic alert. The action can be accessed via this My button:
