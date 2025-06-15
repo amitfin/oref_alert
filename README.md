@@ -369,6 +369,7 @@ Here is an automation rule for getting mobile notifications for updates:
 
 ```
 alias: Oref Alert Updates
+id: oref_aler_updates
 triggers:
   - trigger: state
     entity_id: binary_sensor.oref_alert
