@@ -154,10 +154,9 @@ class OrefAlertLocationEventManager:
                     for key, value in alert.items()
                     if key not in {"data", "alertDate"}
                 }
-                if (
-                    alert_date := dt_util.parse_datetime(alert["alertDate"])
-                ) is not None:
-                    attributes[ATTR_DATE] = alert_date.replace(tzinfo=IST)
+                attributes[ATTR_DATE] = dt_util.parse_datetime(
+                    alert["alertDate"], raise_on_error=True
+                ).replace(tzinfo=IST)
                 attributes[ATTR_ICON] = category_to_icon(attributes[ATTR_CATEGORY])
                 attributes[ATTR_EMOJI] = category_to_emoji(attributes[ATTR_CATEGORY])
                 break
