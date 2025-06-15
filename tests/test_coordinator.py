@@ -385,6 +385,24 @@ async def test_synthetic_alert(
     await coordinator.async_shutdown()
 
 
+async def test_is_synthetic_alert(
+    hass: HomeAssistant,
+) -> None:
+    """Test is_synthetic_alert method."""
+    coordinator = create_coordinator(hass)
+    coordinator.add_synthetic_alert(
+        {
+            CONF_AREA: ["אליפז ומכרות תמנע"],
+            CONF_DURATION: 10,
+            ATTR_CATEGORY: 2,
+            ATTR_TITLE: "test",
+        }
+    )
+    await coordinator.async_config_entry_first_refresh()
+    assert coordinator.is_synthetic_alert(coordinator.data.alerts[0])
+    await coordinator.async_shutdown()
+
+
 async def test_http_cache(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,

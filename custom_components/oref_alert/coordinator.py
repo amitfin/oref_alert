@@ -262,6 +262,10 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         ]
         return [alert for _, alert in self._synthetic_alerts]
 
+    def is_synthetic_alert(self, alert: dict[str, Any]) -> bool:
+        """Check if the alert is a synthetic alert."""
+        return any(alert == entry[1] for entry in self._synthetic_alerts)
+
     def _fix_areas_spelling(self, alerts: list[Any]) -> list[Any]:
         """Fix spelling errors in area names."""
         for alert in alerts:

@@ -22,12 +22,15 @@ from custom_components.oref_alert.const import (
     ATTR_SELECTED_AREAS_ALERTS,
     ATTR_SELECTED_AREAS_UPDATES,
     CONF_ALERT_ACTIVE_DURATION,
+    CONF_AREA,
     CONF_AREAS,
+    CONF_DURATION,
     CONF_OFF_ICON,
     CONF_ON_ICON,
     CONF_POLL_INTERVAL,
     DOMAIN,
     OREF_ALERT_UNIQUE_ID,
+    SYNTHETIC_ALERT_SERVICE,
 )
 
 from .utils import load_json_fixture, mock_urls
@@ -153,7 +156,11 @@ async def test_interval(
     assert config_entry is not None
     hass.config_entries.async_update_entry(
         config_entry,
-        options={**config_entry.options, CONF_POLL_INTERVAL: 125},
+        options={
+            **config_entry.options,
+            CONF_POLL_INTERVAL: 125,
+            CONF_ALERT_ACTIVE_DURATION: 1,
+        },
     )
     await hass.async_block_till_done(wait_background_tasks=True)
 
@@ -170,6 +177,74 @@ async def test_interval(
     assert state.state == STATE_ON
 
     freezer.tick(datetime.timedelta(seconds=10))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    state = hass.states.get(ENTITY_ID)
+    assert state is not None
+    assert state.state == STATE_OFF
+
+    await async_shutdown(hass, config_id)
+
+
+async def test_state_on_caching(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test that state 'on' is cached properly."""
+    mock_urls(aioclient_mock, "single_alert_real_time.json", None)
+    config_id = await async_setup(
+        hass,
+        {
+            CONF_AREAS: ["תל אביב - כל האזורים"],
+        },
+    )
+
+    state = hass.states.get(ENTITY_ID)
+    assert state is not None
+    assert state.state == STATE_ON
+    mock_urls(aioclient_mock, None, None)
+
+    freezer.tick(datetime.timedelta(seconds=595))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    state = hass.states.get(ENTITY_ID)
+    assert state is not None
+    assert state.state == STATE_ON
+
+    freezer.tick(datetime.timedelta(seconds=10))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    state = hass.states.get(ENTITY_ID)
+    assert state is not None
+    assert state.state == STATE_OFF
+
+    await async_shutdown(hass, config_id)
+
+
+async def test_state_no_caching_for_synthetic(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test that state 'on' is not cached for synthetic alerts."""
+    mock_urls(aioclient_mock, None, None)
+    config_id = await async_setup(hass)
+    await hass.services.async_call(
+        DOMAIN,
+        SYNTHETIC_ALERT_SERVICE,
+        {CONF_AREA: DEFAULT_OPTIONS[CONF_AREAS][0], CONF_DURATION: 20},
+        blocking=True,
+    )
+
+    freezer.tick(datetime.timedelta(seconds=10))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    state = hass.states.get(ENTITY_ID)
+    assert state is not None
+    assert state.state == STATE_ON
+
+    freezer.tick(datetime.timedelta(seconds=11))
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(ENTITY_ID)

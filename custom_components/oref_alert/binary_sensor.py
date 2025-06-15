@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import homeassistant.util.dt as dt_util
 from homeassistant.components import binary_sensor
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -32,6 +33,7 @@ from .const import (
     DATA_COORDINATOR,
     DEFAULT_OFF_ICON,
     DEFAULT_ON_ICON,
+    IST,
     OREF_ALERT_UNIQUE_ID,
     TITLE,
 )
@@ -39,6 +41,8 @@ from .coordinator import OrefAlertCoordinatorData, OrefAlertDataUpdateCoordinato
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+SECONDS_IN_A_MINUTE = 60
 
 
 async def async_setup_entry(
@@ -143,6 +147,10 @@ class AlertSensor(AlertAreaSensorBase):
             config_entry,
             coordinator,
         )
+        self._active_seconds: int = (
+            config_entry.options[CONF_ALERT_ACTIVE_DURATION] * SECONDS_IN_A_MINUTE
+        )
+        self._is_on_timestamp: float = 0
         if not name:
             self._attr_name = TITLE
             self._attr_unique_id = OREF_ALERT_UNIQUE_ID
@@ -153,7 +161,18 @@ class AlertSensor(AlertAreaSensorBase):
     @property
     def is_on(self) -> bool:
         """Return True is sensor is on."""
-        return any(self.is_selected_area(alert) for alert in self._data.active_alerts)
+        if (dt_util.now().timestamp() - self._is_on_timestamp) < self._active_seconds:
+            # The state should stay "on" for the active duration.
+            return True
+
+        for alert in self._data.active_alerts:
+            if self.is_selected_area(alert):
+                if not self.coordinator.is_synthetic_alert(alert) and (
+                    alert_date := dt_util.parse_datetime(alert["alertDate"])
+                ):
+                    self._is_on_timestamp = alert_date.replace(tzinfo=IST).timestamp()
+                return True
+        return False
 
     @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:
