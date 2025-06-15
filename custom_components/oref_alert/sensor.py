@@ -116,11 +116,12 @@ class OrefAlertTimerSensor(
         for alert in self._data.active_alerts:
             if alert["data"] == self._area or alert["data"] in ALL_AREAS_ALIASES:
                 self._alert = alert
-                self._alert_timestamp = (
-                    dt_util.parse_datetime(alert["alertDate"], raise_on_error=True)
-                    .replace(tzinfo=IST)
-                    .timestamp()
-                )
+                if not self.coordinator.is_synthetic_alert(alert):
+                    self._alert_timestamp = (
+                        dt_util.parse_datetime(alert["alertDate"], raise_on_error=True)
+                        .replace(tzinfo=IST)
+                        .timestamp()
+                    )
                 return alert
         return None
 

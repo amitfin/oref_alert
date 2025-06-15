@@ -167,10 +167,12 @@ class AlertSensor(AlertAreaSensorBase):
 
         for alert in self._data.active_alerts:
             if self.is_selected_area(alert):
-                if not self.coordinator.is_synthetic_alert(alert) and (
-                    alert_date := dt_util.parse_datetime(alert["alertDate"])
-                ):
-                    self._is_on_timestamp = alert_date.replace(tzinfo=IST).timestamp()
+                if not self.coordinator.is_synthetic_alert(alert):
+                    self._is_on_timestamp = (
+                        dt_util.parse_datetime(alert["alertDate"], raise_on_error=True)
+                        .replace(tzinfo=IST)
+                        .timestamp()
+                    )
                 return True
         return False
 
