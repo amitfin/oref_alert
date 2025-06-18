@@ -458,11 +458,7 @@ async def test_all_areas_alert(  # noqa: PLR0913
     await async_shutdown(hass, config_id)
 
 
-async def test_all_alerts_attributes_is_off(
-    hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
-    freezer: FrozenDateTimeFactory,
-) -> None:
+async def test_all_alerts_attributes_is_off(hass: HomeAssistant) -> None:
     """Test that all alerts attributes are not included when the option is off."""
     config_id = await async_setup(
         hass,
