@@ -126,11 +126,12 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             or not self.data
             or self._synthetic_alerts
         ):
-            history = self._fix_areas_spelling(history) if history else []
+            history = history or []
             if not self._all_alerts:
                 history = OrefAlertDataUpdateCoordinator.recent_alerts(
                     history, self._active_duration
                 )
+            history = self._fix_areas_spelling(history)
             alerts = (
                 self._current_to_history_format(current, history) if current else []
             )
