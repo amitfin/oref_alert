@@ -68,15 +68,8 @@ class OrefAlertCoordinatorData:
         active_alerts = OrefAlertDataUpdateCoordinator.recent_alerts(
             items, active_duration
         )
-        updates = list(filter(lambda alert: _is_update(alert), active_alerts))
         self.active_alerts = list(filter(lambda alert: _is_alert(alert), active_alerts))
-        active_alerts_areas = {alert["data"] for alert in self.active_alerts}
-        self.updates = list(
-            filter(
-                lambda alert: alert["data"] not in active_alerts_areas,
-                updates,
-            )
-        )
+        self.updates = list(filter(lambda alert: _is_update(alert), active_alerts))
 
 
 def _sort_alerts(item1: dict[str, Any], item2: dict[str, Any]) -> int:

@@ -119,7 +119,14 @@ from .utils import load_json_fixture, mock_urls
                     "category": 1,
                 }
             ],
-            [],
+            [
+                {
+                    "alertDate": "2025-04-26 03:30:00",
+                    "title": "",
+                    "data": "area1",
+                    "category": 13,
+                },
+            ],
         ),
         (
             [
