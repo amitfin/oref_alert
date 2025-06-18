@@ -22,6 +22,7 @@ from custom_components.oref_alert.const import (
     ATTR_SELECTED_AREAS_ALERTS,
     ATTR_SELECTED_AREAS_UPDATES,
     CONF_ALERT_ACTIVE_DURATION,
+    CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREA,
     CONF_AREAS,
     CONF_DURATION,
@@ -42,7 +43,11 @@ if TYPE_CHECKING:
         AiohttpClientMocker,
     )
 
-DEFAULT_OPTIONS = {CONF_AREAS: ["בארי"], CONF_ALERT_ACTIVE_DURATION: 10}
+DEFAULT_OPTIONS = {
+    CONF_AREAS: ["בארי"],
+    CONF_ALERT_ACTIVE_DURATION: 10,
+    CONF_ALL_ALERTS_ATTRIBUTES: True,
+}
 ENTITY_ID = f"{Platform.BINARY_SENSOR}.{OREF_ALERT_UNIQUE_ID}"
 
 
@@ -449,5 +454,30 @@ async def test_all_areas_alert(  # noqa: PLR0913
         assert state is not None
         assert state.state == STATE_ON
         assert state.attributes[attribute] == alerts, state.attributes[attribute]
+
+    await async_shutdown(hass, config_id)
+
+
+async def test_all_alerts_attributes_is_off(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test that all alerts attributes are not included when the option is off."""
+    config_id = await async_setup(
+        hass,
+        {
+            CONF_AREAS: ["פתח תקווה"],
+            CONF_ALL_ALERTS_ATTRIBUTES: False,
+        },
+    )
+    state = hass.states.get(ENTITY_ID)
+    assert state is not None
+    assert ATTR_SELECTED_AREAS_ALERTS not in state.attributes
+    assert ATTR_COUNTRY_ALERTS not in state.attributes
+
+    state = hass.states.get(f"{ENTITY_ID}_{ALL_AREAS_ID_SUFFIX}")
+    assert state is not None
+    assert ATTR_COUNTRY_ALERTS not in state.attributes
 
     await async_shutdown(hass, config_id)

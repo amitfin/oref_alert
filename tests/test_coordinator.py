@@ -20,6 +20,7 @@ from custom_components.oref_alert.const import (
     ATTR_CATEGORY,
     ATTR_TITLE,
     CONF_ALERT_ACTIVE_DURATION,
+    CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREA,
     CONF_DURATION,
     CONF_POLL_INTERVAL,
@@ -187,6 +188,7 @@ def create_coordinator(
         domain=DOMAIN,
         options={
             CONF_ALERT_ACTIVE_DURATION: DEFAULT_ALERT_ACTIVE_DURATION,
+            CONF_ALL_ALERTS_ATTRIBUTES: True,
             **(options if options else {}),
         },
     )
@@ -471,4 +473,23 @@ async def test_unknown_real_time_category(
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
     assert coordinator.data.items == []
+    await coordinator.async_shutdown()
+
+
+async def test_disable_all_alerts(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test disabling all alerts."""
+    freezer.move_to("2023-10-07 06:30:00+03:00")
+    mock_urls(aioclient_mock, None, "single_alert_history.json")
+    coordinator = create_coordinator(hass, {CONF_ALL_ALERTS_ATTRIBUTES: False})
+    coordinator.async_add_listener(lambda: None)
+    await coordinator.async_config_entry_first_refresh()
+    assert len(coordinator.data.alerts) == 1
+    freezer.tick(timedelta(seconds=601))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert len(coordinator.data.alerts) == 0
     await coordinator.async_shutdown()

@@ -26,7 +26,8 @@
                     "alert_active_duration": "Alert's active duration (minutes)",
                     "poll_interval": "Update frequency (seconds)",
                     "on_icon": "Active alerts in selected areas icon",
-                    "off_icon": "Normal time icon"
+                    "off_icon": "Normal time icon",
+                    "all_alerts_attributes": "Add 'all alerts' attributes"
                 }
             }
         }

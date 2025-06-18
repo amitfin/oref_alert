@@ -23,6 +23,7 @@ from .const import (
     ATTR_CATEGORY,
     ATTR_TITLE,
     CONF_ALERT_ACTIVE_DURATION,
+    CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREA,
     CONF_DURATION,
     CONF_POLL_INTERVAL,
@@ -104,6 +105,9 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         self._active_duration = config_entry.options.get(
             CONF_ALERT_ACTIVE_DURATION, DEFAULT_ALERT_ACTIVE_DURATION
         )
+        self._all_alerts: bool = config_entry.options.get(
+            CONF_ALL_ALERTS_ATTRIBUTES, False
+        )
         self._http_client = async_get_clientsession(hass)
         self._http_cache = {}
         self._synthetic_alerts: list[tuple[float, dict[str, Any]]] = []
@@ -123,6 +127,10 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             or self._synthetic_alerts
         ):
             history = self._fix_areas_spelling(history) if history else []
+            if not self._all_alerts:
+                history = OrefAlertDataUpdateCoordinator.recent_alerts(
+                    history, self._active_duration
+                )
             alerts = (
                 self._current_to_history_format(current, history) if current else []
             )

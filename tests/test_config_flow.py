@@ -7,6 +7,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.oref_alert.const import (
     CONF_ALERT_ACTIVE_DURATION,
+    CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREAS,
     CONF_OFF_ICON,
     CONF_ON_ICON,
@@ -26,6 +27,7 @@ DEFAULT_OPTIONS = {
     CONF_POLL_INTERVAL: DEFAULT_POLL_INTERVAL,
     CONF_ON_ICON: DEFAULT_ON_ICON,
     CONF_OFF_ICON: DEFAULT_OFF_ICON,
+    CONF_ALL_ALERTS_ATTRIBUTES: False,
 }
 DEFAULT_SENSORS = {"dummy": ["dummy"]}
 
@@ -102,8 +104,13 @@ async def test_options_flow(hass: HomeAssistant) -> None:
 
     result2 = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        user_input={**DEFAULT_OPTIONS, CONF_ALERT_ACTIVE_DURATION: 15},
+        user_input={
+            **DEFAULT_OPTIONS,
+            CONF_ALERT_ACTIVE_DURATION: 15,
+            CONF_ALL_ALERTS_ATTRIBUTES: True,
+        },
     )
     assert result2.get("type") == FlowResultType.CREATE_ENTRY
     options[CONF_ALERT_ACTIVE_DURATION] = 15
+    options[CONF_ALL_ALERTS_ATTRIBUTES] = True
     assert result2.get("data") == options

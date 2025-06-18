@@ -26,6 +26,7 @@ from .const import (
     ATTR_SELECTED_AREAS_ALERTS,
     ATTR_SELECTED_AREAS_UPDATES,
     CONF_ALERT_ACTIVE_DURATION,
+    CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREAS,
     CONF_OFF_ICON,
     CONF_ON_ICON,
@@ -95,6 +96,9 @@ class AlertSensorBase(
                 CONF_ALERT_ACTIVE_DURATION
             ],
         }
+        self._add_all_alerts_attributes: bool = config_entry.options.get(
+            CONF_ALL_ALERTS_ATTRIBUTES, False
+        )
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -186,14 +190,28 @@ class AlertSensor(AlertAreaSensorBase):
                 for alert in self._data.active_alerts
                 if self.is_selected_area(alert)
             ],
-            ATTR_SELECTED_AREAS_ALERTS: [
-                alert for alert in self._data.alerts if self.is_selected_area(alert)
-            ],
+            **(
+                {
+                    ATTR_SELECTED_AREAS_ALERTS: [
+                        alert
+                        for alert in self._data.alerts
+                        if self.is_selected_area(alert)
+                    ],
+                }
+                if self._add_all_alerts_attributes
+                else {}
+            ),
             ATTR_SELECTED_AREAS_UPDATES: [
                 alert for alert in self._data.updates if self.is_selected_area(alert)
             ],
             ATTR_COUNTRY_ACTIVE_ALERTS: self._data.active_alerts,
-            ATTR_COUNTRY_ALERTS: self._data.alerts,
+            **(
+                {
+                    ATTR_COUNTRY_ALERTS: self._data.alerts,
+                }
+                if self._add_all_alerts_attributes
+                else {}
+            ),
             ATTR_COUNTRY_UPDATES: self._data.updates,
         }
 
@@ -222,6 +240,12 @@ class AlertSensorAllAreas(AlertSensorBase):
         return {
             **self._common_attributes,
             ATTR_COUNTRY_ACTIVE_ALERTS: self._data.active_alerts,
-            ATTR_COUNTRY_ALERTS: self._data.alerts,
+            **(
+                {
+                    ATTR_COUNTRY_ALERTS: self._data.alerts,
+                }
+                if self._add_all_alerts_attributes
+                else {}
+            ),
             ATTR_COUNTRY_UPDATES: self._data.updates,
         }

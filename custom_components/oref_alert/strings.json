@@ -26,7 +26,8 @@
                     "alert_active_duration": "Alert's active duration (minutes)",
                     "poll_interval": "Update frequency (seconds)",
                     "on_icon": "Active alerts in selected areas icon",
-                    "off_icon": "Normal time icon"
+                    "off_icon": "Normal time icon",
+                    "all_alerts_attributes": "Add 'all alerts' attributes"
                 }
             }
         }
@@ -84,7 +85,7 @@
             "title": "Oref Alert Unknown Area",
             "description": "The area \"{area}\" doesn't exist. Please remove it and select the relevant area from the list."
         },
-        "upgrade_required" : {
+        "upgrade_required": {
             "title": "Oref Alert Upgrade Required",
             "description": "The list of areas was changed. Please install the latest version of Oref Alert integration."
         }

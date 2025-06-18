@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 from .const import (
     CONF_ALERT_ACTIVE_DURATION,
+    CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREAS,
     CONF_OFF_ICON,
     CONF_ON_ICON,
@@ -88,6 +89,7 @@ class OrefAlertConfigFlow(ConfigFlow, domain=DOMAIN):
                     CONF_POLL_INTERVAL: DEFAULT_POLL_INTERVAL,
                     CONF_ON_ICON: DEFAULT_ON_ICON,
                     CONF_OFF_ICON: DEFAULT_OFF_ICON,
+                    CONF_ALL_ALERTS_ATTRIBUTES: False,
                 },
             )
         return self.async_show_form(
@@ -146,6 +148,12 @@ class OptionsFlowHandler(OptionsFlow):
                             CONF_OFF_ICON, DEFAULT_OFF_ICON
                         ),
                     ): selector.IconSelector(),
+                    vol.Required(
+                        CONF_ALL_ALERTS_ATTRIBUTES,
+                        default=self._config_entry.options.get(
+                            CONF_ALL_ALERTS_ATTRIBUTES, False
+                        ),
+                    ): selector.BooleanSelector(),
                 }
             ),
         )

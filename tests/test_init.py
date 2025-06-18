@@ -24,6 +24,7 @@ from custom_components.oref_alert.const import (
     ATTR_COUNTRY_ALERTS,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_ALERT_MAX_AGE_DEPRECATED,
+    CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREA,
     CONF_AREAS,
     CONF_DURATION,
@@ -39,7 +40,11 @@ if TYPE_CHECKING:
     from freezegun.api import FrozenDateTimeFactory
     from homeassistant.core import HomeAssistant
 
-DEFAULT_OPTIONS = {CONF_AREAS: [], CONF_ALERT_ACTIVE_DURATION: 10}
+DEFAULT_OPTIONS = {
+    CONF_AREAS: [],
+    CONF_ALERT_ACTIVE_DURATION: 10,
+    CONF_ALL_ALERTS_ATTRIBUTES: True,
+}
 ENTITY_ID = f"{Platform.BINARY_SENSOR}.{OREF_ALERT_UNIQUE_ID}"
 
 
