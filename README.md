@@ -33,14 +33,15 @@ Once the component is installed, it's possible to control additional parameters 
 
 [![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=oref_alert)
 
-There are 5 configuration fields:
+There are 6 configuration fields:
 1. Selected areas: list of areas to monitor. It's also possible to select a district (מחוז) and all-areas (כל האזורים) for cities with sub-areas.
 2. Active duration of an alert: this is the alert's active time period (in minutes). The default is 10 minutes.
 3. Update frequency: the time to wait between updates of the sensor (in seconds). The default is 2 seconds.
 4. On icon: the icon to be used when there are active alerts in one of the selected areas. This is the icon which is displayed when the state of the binary sensor is "on".
 5. Off icon: the icon to  be used when the state of the binary sensor is "off".
+6. Add 'All Alerts' attributes: when it's off (the default) the attributes `Country alerts` and `Selected areas alerts` are not added to the binary sensors. These attributes hold the list of all alerts over the last 24-hours which can be long and cause performance issues on weaker systems. Both attributes are not used often and are not part of any example below.
 
-<kbd><img src="https://github.com/amitfin/oref_alert/assets/19599059/2422d891-15f5-4393-b713-59d09f20c308" width="400"></kbd>
+<kbd><img src="https://github.com/user-attachments/assets/7a3e27f5-f8f9-4126-a2f3-beea20351270" width="400"></kbd>
 
 ## All Areas Sensor
 
@@ -67,10 +68,10 @@ All sensors have the following extra attributes:
 2. `Alert active duration`: as configured by the user.
 3. `Selected areas active alerts`: when the sensor is `on`, the alerts are listed here.
 4. `Selected areas updates`: the list of updates for the selected areas.
-5. `Selected areas alerts`: active and inactive alerts in the selected areas.
+5. `Selected areas alerts`: active and inactive alerts in the selected areas. Exists only when the [configuration](https://my.home-assistant.io/redirect/integration/?domain=oref_alert) "Add 'All Alerts' attributes" is turned on.
 6. `Country active alerts`: all active alerts in Israel.
 7. `Country updates`: all updates in Israel.
-8. `Country alerts`: all alerts in Israel.
+8. `Country alerts`: all alerts in Israel. Exists only when the [configuration](https://my.home-assistant.io/redirect/integration/?domain=oref_alert) "Add 'All Alerts' attributes" is turned on.
 
 ## Time To Shelter Sensors
 
