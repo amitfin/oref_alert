@@ -197,20 +197,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entity_id = service_call.data[CONF_ENTITY_ID]
         entity_name = getattr(entity_reg.async_get(entity_id), "original_name", "")
         config_entry = hass.config_entries.async_get_entry(entry.entry_id)
-        if config_entry is None:
-            return
-        sensors = {**config_entry.options.get(CONF_SENSORS, {})}
-        if not (areas := sensors.get(entity_name)):
-            return
-        sensors[entity_name] = [
-            area
-            for area in (areas + service_call.data[ADD_AREAS])
-            if area not in service_call.data[REMOVE_AREAS]
-        ]
-        hass.config_entries.async_update_entry(
-            config_entry,
-            options={**config_entry.options, CONF_SENSORS: sensors},
-        )
+        if config_entry is not None:
+            sensors = {**config_entry.options.get(CONF_SENSORS, {})}
+            if areas := sensors.get(entity_name):
+                sensors[entity_name] = [
+                    area
+                    for area in (areas + service_call.data[ADD_AREAS])
+                    if area not in service_call.data[REMOVE_AREAS]
+                ]
+                hass.config_entries.async_update_entry(
+                    config_entry,
+                    options={**config_entry.options, CONF_SENSORS: sensors},
+                )
 
     async_register_admin_service(
         hass,
