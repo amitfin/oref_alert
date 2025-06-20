@@ -13,7 +13,7 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.oref_alert.const import (
-    ADD_SENSOR_SERVICE,
+    ADD_SENSOR_ACTION,
     ALL_AREAS_ID_SUFFIX,
     ATTR_COUNTRY_ACTIVE_ALERTS,
     ATTR_COUNTRY_ALERTS,
@@ -31,7 +31,7 @@ from custom_components.oref_alert.const import (
     CONF_POLL_INTERVAL,
     DOMAIN,
     OREF_ALERT_UNIQUE_ID,
-    SYNTHETIC_ALERT_SERVICE,
+    SYNTHETIC_ALERT_ACTION,
 )
 
 from .utils import load_json_fixture, mock_urls
@@ -237,7 +237,7 @@ async def test_state_no_caching_for_synthetic(
     config_id = await async_setup(hass)
     await hass.services.async_call(
         DOMAIN,
-        SYNTHETIC_ALERT_SERVICE,
+        SYNTHETIC_ALERT_ACTION,
         {CONF_AREA: DEFAULT_OPTIONS[CONF_AREAS][0], CONF_DURATION: 20},
         blocking=True,
     )
@@ -317,7 +317,7 @@ async def test_additional_sensor(
     assert state.state == STATE_OFF
     await hass.services.async_call(
         DOMAIN,
-        ADD_SENSOR_SERVICE,
+        ADD_SENSOR_ACTION,
         {CONF_NAME: "test", CONF_AREAS: ["תל אביב - כל האזורים"]},
         blocking=True,
     )
@@ -372,7 +372,7 @@ async def test_updates_attribute(  # noqa: PLR0913
     config_id = await async_setup(hass, {CONF_AREAS: ["פתח תקווה"]})
     await hass.services.async_call(
         DOMAIN,
-        ADD_SENSOR_SERVICE,
+        ADD_SENSOR_ACTION,
         {CONF_NAME: "test", CONF_AREAS: ["פתח תקווה"]},
         blocking=True,
     )

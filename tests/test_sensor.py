@@ -12,7 +12,7 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.oref_alert.const import (
-    ADD_SENSOR_SERVICE,
+    ADD_SENSOR_ACTION,
     ATTR_ALERT,
     ATTR_AREA,
     ATTR_DISPLAY,
@@ -23,7 +23,7 @@ from custom_components.oref_alert.const import (
     DOMAIN,
     END_TIME_ID_SUFFIX,
     OREF_ALERT_UNIQUE_ID,
-    REMOVE_SENSOR_SERVICE,
+    REMOVE_SENSOR_ACTION,
     TIME_TO_SHELTER_ID_SUFFIX,
 )
 
@@ -226,7 +226,7 @@ async def test_additional_sensor(
     config_id = await async_setup(hass, {CONF_AREAS: ["תל אביב - כל האזורים"]})
     await hass.services.async_call(
         DOMAIN,
-        ADD_SENSOR_SERVICE,
+        ADD_SENSOR_ACTION,
         {CONF_NAME: "test", CONF_AREAS: ["רעננה"]},
         blocking=True,
     )
@@ -251,7 +251,7 @@ async def test_remove_sensors(
     config_id = await async_setup(hass)
     await hass.services.async_call(
         DOMAIN,
-        ADD_SENSOR_SERVICE,
+        ADD_SENSOR_ACTION,
         {CONF_NAME: "test", CONF_AREAS: ["רעננה"]},
         blocking=True,
     )
@@ -262,7 +262,7 @@ async def test_remove_sensors(
     assert len(hass.states.async_entity_ids(Platform.SENSOR)) == 4
     await hass.services.async_call(
         DOMAIN,
-        REMOVE_SENSOR_SERVICE,
+        REMOVE_SENSOR_ACTION,
         {CONF_ENTITY_ID: "binary_sensor.oref_alert_test"},
         blocking=True,
     )

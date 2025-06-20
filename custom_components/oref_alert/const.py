@@ -41,12 +41,12 @@ DEFAULT_ON_ICON: Final = "mdi:home-alert-outline"
 DEFAULT_OFF_ICON: Final = "mdi:home-outline"
 DEFAULT_POLL_INTERVAL: Final = 2
 
-ADD_SENSOR_SERVICE: Final = "add_sensor"
-REMOVE_SENSOR_SERVICE: Final = "remove_sensor"
-EDIT_SENSOR_SERVICE: Final = "edit_sensor"
+ADD_SENSOR_ACTION: Final = "add_sensor"
+REMOVE_SENSOR_ACTION: Final = "remove_sensor"
+EDIT_SENSOR_ACTION: Final = "edit_sensor"
 ADD_AREAS: Final = "add_areas"
 REMOVE_AREAS: Final = "remove_areas"
-SYNTHETIC_ALERT_SERVICE: Final = "synthetic_alert"
+SYNTHETIC_ALERT_ACTION: Final = "synthetic_alert"
 OREF_ALERT_UNIQUE_ID: Final = DOMAIN
 ALL_AREAS_ID_SUFFIX: Final = "all_areas"
 ALL_AREAS_NAME_SUFFIX: Final = "All Areas"

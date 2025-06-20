@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 from .config_flow import AREAS_CONFIG
 from .const import (
     ADD_AREAS,
-    ADD_SENSOR_SERVICE,
+    ADD_SENSOR_ACTION,
     ATTR_CATEGORY,
     ATTR_TITLE,
     CONF_ALERT_ACTIVE_DURATION,
@@ -35,11 +35,11 @@ from .const import (
     CONF_SENSORS,
     DATA_COORDINATOR,
     DOMAIN,
-    EDIT_SENSOR_SERVICE,
+    EDIT_SENSOR_ACTION,
     END_TIME_ID_SUFFIX,
     REMOVE_AREAS,
-    REMOVE_SENSOR_SERVICE,
-    SYNTHETIC_ALERT_SERVICE,
+    REMOVE_SENSOR_ACTION,
+    SYNTHETIC_ALERT_ACTION,
     TIME_TO_SHELTER_ID_SUFFIX,
     TITLE,
 )
@@ -156,7 +156,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async_register_admin_service(
         hass,
         DOMAIN,
-        ADD_SENSOR_SERVICE,
+        ADD_SENSOR_ACTION,
         add_sensor,
         ADD_SENSOR_SCHEMA,
     )
@@ -186,7 +186,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async_register_admin_service(
         hass,
         DOMAIN,
-        REMOVE_SENSOR_SERVICE,
+        REMOVE_SENSOR_ACTION,
         remove_sensor,
         REMOVE_SENSOR_SCHEMA,
     )
@@ -215,7 +215,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async_register_admin_service(
         hass,
         DOMAIN,
-        EDIT_SENSOR_SERVICE,
+        EDIT_SENSOR_ACTION,
         edit_sensor,
         EDIT_SENSOR_SCHEMA,
     )
@@ -227,7 +227,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async_register_admin_service(
         hass,
         DOMAIN,
-        SYNTHETIC_ALERT_SERVICE,
+        SYNTHETIC_ALERT_ACTION,
         synthetic_alert,
         SYNTHETIC_ALERT_SCHEMA,
     )
@@ -248,10 +248,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.runtime_data[UNLOAD_TEMPLATE_EXTENSIONS]()
     entry.runtime_data = None
     for service in [
-        ADD_SENSOR_SERVICE,
-        REMOVE_SENSOR_SERVICE,
-        EDIT_SENSOR_SERVICE,
-        SYNTHETIC_ALERT_SERVICE,
+        ADD_SENSOR_ACTION,
+        REMOVE_SENSOR_ACTION,
+        EDIT_SENSOR_ACTION,
+        SYNTHETIC_ALERT_ACTION,
     ]:
         hass.services.async_remove(DOMAIN, service)
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

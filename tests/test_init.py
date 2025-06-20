@@ -21,7 +21,7 @@ from pytest_homeassistant_custom_component.common import (
 
 from custom_components.oref_alert.const import (
     ADD_AREAS,
-    ADD_SENSOR_SERVICE,
+    ADD_SENSOR_ACTION,
     ATTR_COUNTRY_ALERTS,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_ALERT_MAX_AGE_DEPRECATED,
@@ -31,11 +31,11 @@ from custom_components.oref_alert.const import (
     CONF_DURATION,
     CONF_SENSORS,
     DOMAIN,
-    EDIT_SENSOR_SERVICE,
+    EDIT_SENSOR_ACTION,
     OREF_ALERT_UNIQUE_ID,
     REMOVE_AREAS,
-    REMOVE_SENSOR_SERVICE,
-    SYNTHETIC_ALERT_SERVICE,
+    REMOVE_SENSOR_ACTION,
+    SYNTHETIC_ALERT_ACTION,
     TITLE,
 )
 
@@ -89,14 +89,14 @@ async def test_config_update(hass: HomeAssistant) -> None:
     await hass.async_block_till_done(wait_background_tasks=True)
 
 
-async def test_add_remove_sensor_service(hass: HomeAssistant) -> None:
-    """Test add_sensor and remove_sensor custom services."""
+async def test_add_remove_sensor_action(hass: HomeAssistant) -> None:
+    """Test add_sensor and remove_sensor custom actions."""
     config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
     await hass.services.async_call(
-        DOMAIN, ADD_SENSOR_SERVICE, {CONF_NAME: "test", CONF_AREAS: []}, blocking=True
+        DOMAIN, ADD_SENSOR_ACTION, {CONF_NAME: "test", CONF_AREAS: []}, blocking=True
     )
     await hass.async_block_till_done(wait_background_tasks=True)
     entity_id = f"{ENTITY_ID}_test"
@@ -112,7 +112,7 @@ async def test_add_remove_sensor_service(hass: HomeAssistant) -> None:
 
     await hass.services.async_call(
         DOMAIN,
-        REMOVE_SENSOR_SERVICE,
+        REMOVE_SENSOR_ACTION,
         {CONF_ENTITY_ID: entity_id},
         blocking=True,
     )
@@ -121,8 +121,8 @@ async def test_add_remove_sensor_service(hass: HomeAssistant) -> None:
     assert entity_reg.async_get(entity_id) is None
 
 
-async def test_edit_sensor_service(hass: HomeAssistant) -> None:
-    """Test edit_sensor custom services."""
+async def test_edit_sensor_actions(hass: HomeAssistant) -> None:
+    """Test edit_sensor custom action."""
     config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
@@ -130,7 +130,7 @@ async def test_edit_sensor_service(hass: HomeAssistant) -> None:
 
     await hass.services.async_call(
         DOMAIN,
-        ADD_SENSOR_SERVICE,
+        ADD_SENSOR_ACTION,
         {CONF_NAME: "test", CONF_AREAS: ["פתח תקווה"]},
         blocking=True,
     )
@@ -142,7 +142,7 @@ async def test_edit_sensor_service(hass: HomeAssistant) -> None:
 
     await hass.services.async_call(
         DOMAIN,
-        EDIT_SENSOR_SERVICE,
+        EDIT_SENSOR_ACTION,
         {
             CONF_ENTITY_ID: entity_id,
             ADD_AREAS: ["גבעת שמואל"],
@@ -164,17 +164,17 @@ async def test_edit_sensor_service(hass: HomeAssistant) -> None:
     ],
     ids=("str", "list"),
 )
-async def test_synthetic_alert_service(
+async def test_synthetic_alert_action(
     hass: HomeAssistant, freezer: FrozenDateTimeFactory, areas: str | list
 ) -> None:
-    """Test synthetic_alert custom service."""
+    """Test synthetic_alert custom action."""
     config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
     await hass.services.async_call(
         DOMAIN,
-        SYNTHETIC_ALERT_SERVICE,
+        SYNTHETIC_ALERT_ACTION,
         {CONF_AREA: areas, CONF_DURATION: 20},
         blocking=True,
     )
