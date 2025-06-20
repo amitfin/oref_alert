@@ -140,7 +140,7 @@ async def test_edit_sensor_actions(hass: HomeAssistant) -> None:
     assert state is not None
     assert state.attributes[CONF_AREAS] == ["פתח תקווה"]
 
-    await hass.services.async_call(
+    response = await hass.services.async_call(
         DOMAIN,
         EDIT_SENSOR_ACTION,
         {
@@ -149,11 +149,28 @@ async def test_edit_sensor_actions(hass: HomeAssistant) -> None:
             REMOVE_AREAS: ["פתח תקווה"],
         },
         blocking=True,
+        return_response=True,
     )
     await hass.async_block_till_done(wait_background_tasks=True)
+    assert response == {CONF_AREAS: ["גבעת שמואל"]}
     state = hass.states.get(entity_id)
     assert state is not None
     assert state.attributes[CONF_AREAS] == ["גבעת שמואל"]
+
+    response = await hass.services.async_call(
+        DOMAIN,
+        EDIT_SENSOR_ACTION,
+        {
+            CONF_ENTITY_ID: entity_id,
+            ADD_AREAS: ["פתח תקווה"],
+        },
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert response is None
+    state = hass.states.get(entity_id)
+    assert state is not None
+    assert state.attributes[CONF_AREAS] == ["גבעת שמואל", "פתח תקווה"]
 
 
 @pytest.mark.parametrize(

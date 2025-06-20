@@ -19,7 +19,15 @@ from custom_components.oref_alert.update_events import OrefAlertUpdateEventManag
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
-    from homeassistant.core import HomeAssistant, ServiceCall
+    from homeassistant.core import (
+        HomeAssistant,
+        ServiceCall,
+        ServiceResponse,
+    )
+
+from homeassistant.core import (
+    SupportsResponse,
+)
 
 from .config_flow import AREAS_CONFIG
 from .const import (
@@ -99,7 +107,7 @@ SYNTHETIC_ALERT_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: PLR0915
     """Set up entity from a config entry."""
     entry.async_on_unload(entry.add_update_listener(config_entry_update_listener))
 
@@ -191,7 +199,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         REMOVE_SENSOR_SCHEMA,
     )
 
-    async def edit_sensor(service_call: ServiceCall) -> None:
+    async def edit_sensor(service_call: ServiceCall) -> ServiceResponse | None:
         """Edit sensor."""
         entity_reg = entity_registry.async_get(hass)
         entity_id = service_call.data[CONF_ENTITY_ID]
@@ -209,6 +217,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     config_entry,
                     options={**config_entry.options, CONF_SENSORS: sensors},
                 )
+                if service_call.return_response:
+                    return {CONF_AREAS: sensors[entity_name]}
+        return None
 
     async_register_admin_service(
         hass,
@@ -216,6 +227,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         EDIT_SENSOR_ACTION,
         edit_sensor,
         EDIT_SENSOR_SCHEMA,
+        SupportsResponse.OPTIONAL,
     )
 
     async def synthetic_alert(service_call: ServiceCall) -> None:
