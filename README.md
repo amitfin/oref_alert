@@ -53,11 +53,15 @@ It's possible to create additional sensors using the action `oref_alert.add_sens
 
 [![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.add_sensor)
 
-The selected areas of an additional sensor can be different (non overlapping) than the primary sensor. Additional sensors can be re-added (with the same name) for overriding their configuration (there is no edit page).
+The selected areas of an additional sensor can be different (non overlapping) than the primary sensor.
 
 The action `oref_alert.remove_sensor` can be used for deleting an additional sensor. The action can be accessed via this My button:
 
 [![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.remove_sensor)
+
+The action `oref_alert.edit_sensor` can be used for editing an additional sensor by adding or removing areas. The action can be accessed via this My button:
+
+[![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.edit_sensor)
 
 Note: additional sensors created before v2.2.0 use a different implementation. It's better to delete such entities and to create new sensors using the new functionality (old sensors are not broken and can be used).
 

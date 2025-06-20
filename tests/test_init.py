@@ -20,6 +20,7 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.oref_alert.const import (
+    ADD_AREAS,
     ADD_SENSOR_SERVICE,
     ATTR_COUNTRY_ALERTS,
     CONF_ALERT_ACTIVE_DURATION,
@@ -30,7 +31,9 @@ from custom_components.oref_alert.const import (
     CONF_DURATION,
     CONF_SENSORS,
     DOMAIN,
+    EDIT_SENSOR_SERVICE,
     OREF_ALERT_UNIQUE_ID,
+    REMOVE_AREAS,
     REMOVE_SENSOR_SERVICE,
     SYNTHETIC_ALERT_SERVICE,
     TITLE,
@@ -116,6 +119,41 @@ async def test_add_remove_sensor_service(hass: HomeAssistant) -> None:
     await hass.async_block_till_done(wait_background_tasks=True)
     assert hass.states.get(entity_id) is None
     assert entity_reg.async_get(entity_id) is None
+
+
+async def test_edit_sensor_service(hass: HomeAssistant) -> None:
+    """Test edit_sensor custom services."""
+    config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    await hass.services.async_call(
+        DOMAIN,
+        ADD_SENSOR_SERVICE,
+        {CONF_NAME: "test", CONF_AREAS: ["פתח תקווה"]},
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    entity_id = f"{ENTITY_ID}_test"
+    state = hass.states.get(entity_id)
+    assert state is not None
+    assert state.attributes[CONF_AREAS] == ["פתח תקווה"]
+
+    await hass.services.async_call(
+        DOMAIN,
+        EDIT_SENSOR_SERVICE,
+        {
+            CONF_ENTITY_ID: entity_id,
+            ADD_AREAS: ["גבעת שמואל"],
+            REMOVE_AREAS: ["פתח תקווה"],
+        },
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    state = hass.states.get(entity_id)
+    assert state is not None
+    assert state.attributes[CONF_AREAS] == ["גבעת שמואל"]
 
 
 @pytest.mark.parametrize(

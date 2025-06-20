@@ -41,7 +41,7 @@ AREAS_CONFIG = selector.SelectSelectorConfig(
     custom_value=False,
 )
 CONFIG_SCHEMA = vol.Schema(
-    {vol.Required(CONF_AREAS, default=[]): selector.SelectSelector(AREAS_CONFIG)}  # type: ignore[reportArgumentType]
+    {vol.Required(CONF_AREAS, default=[]): selector.SelectSelector(AREAS_CONFIG)}
 )
 
 

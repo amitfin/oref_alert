@@ -57,6 +57,24 @@
                 }
             }
         },
+        "edit_sensor": {
+            "name": "Edit Sensor",
+            "description": "Edit sensor's areas",
+            "fields": {
+                "entity_id": {
+                    "name": "Entity",
+                    "description": "The entity to edit"
+                },
+                "add_areas": {
+                    "name": "Add Areas",
+                    "description": "The areas to add"
+                },
+                "remove_areas": {
+                    "name": "Remove Areas",
+                    "description": "The areas to remove"
+                }
+            }
+        },
         "synthetic_alert": {
             "name": "Create Synthetic Alert",
             "description": "Create a synthetic alert for testing purposes",

@@ -1,6 +1,6 @@
 remove_sensor:
   fields:
-    entity_id:
+    entity_id: &id001
       required: true
       selector:
         entity:
@@ -22,7 +22,7 @@ add_sensor:
       example:
       - פתח תקווה
       required: true
-      selector:
+      selector: &id002
         select:
           mode: dropdown
           multiple: true
@@ -1495,6 +1495,17 @@ add_sensor:
           - תקומה
           - תקוע
           - תרום
+edit_sensor:
+  fields:
+    entity_id: *id001
+    add_areas:
+      example: גבעת שמואל
+      required: false
+      selector: *id002
+    remove_areas:
+      example: גבעתיים
+      required: false
+      selector: *id002
 synthetic_alert:
   fields:
     area:
