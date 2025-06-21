@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import itertools
 from typing import TYPE_CHECKING, Final
 
@@ -227,7 +228,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         EDIT_SENSOR_ACTION,
         edit_sensor,
         EDIT_SENSOR_SCHEMA,
-        SupportsResponse.OPTIONAL,
+        **(
+            {"supports_response": SupportsResponse.OPTIONAL}
+            if inspect.signature(async_register_admin_service).parameters.get(
+                "supports_response"
+            )
+            else {}
+        ),
     )
 
     async def synthetic_alert(service_call: ServiceCall) -> None:
