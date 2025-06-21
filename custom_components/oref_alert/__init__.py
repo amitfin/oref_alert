@@ -230,9 +230,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         EDIT_SENSOR_SCHEMA,
         **(
             {"supports_response": SupportsResponse.OPTIONAL}
-            if inspect.signature(async_register_admin_service).parameters.get(
-                "supports_response"
-            )
+            if "supports_response"
+            in inspect.signature(async_register_admin_service).parameters
             else {}
         ),
     )
