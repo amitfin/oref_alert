@@ -25,10 +25,12 @@ DISTRICT_TO_AREAS_OUTPUT = "district_to_areas.py"
 AREA_TO_DISTRICT_OUTPUT = "area_to_district.py"
 AREA_TO_POLYGON_OUTPUT = "area_to_polygon.json"
 AREA_INFO_OUTPUT = "area_info.py"
+SEGMENT_TO_AREA_OUTPUT = "segment_to_area.py"
 SERVICES_YAML = "custom_components/oref_alert/services.yaml"
 TEST_AREAS_FIXTURE = "tests/fixtures/GetCitiesMix.json"
 CITIES_MIX_URL = "https://alerts-history.oref.org.il/Shared/Ajax/GetCitiesMix.aspx"
 DISTRICTS_URL = "https://alerts-history.oref.org.il/Shared/Ajax/GetDistricts.aspx"
+SEGMENTS_URL = "https://dist-android.meser-hadash.org.il/smart-dist/services/anonymous/segments/android?instance=1544803905&locale=iw_IL"
 TZEVAADOM_VERSIONS_URL = "https://api.tzevaadom.co.il/lists-versions"
 TZEVAADOM_CITIES_URL = "https://www.tzevaadom.co.il/static/cities.json?v="
 TZEVAADOM_POLYGONS_URL = "https://www.tzevaadom.co.il/static/polygons.json?v="
@@ -38,12 +40,16 @@ CITY_ALL_AREAS_SUFFIX_TYPO = " כל - האזורים"
 DISTRICT_PREFIX = "מחוז "
 
 MISSING_CITIES = {
-    "ברחבי הארץ": {"lat": 31.7781, "lon": 35.2164},
-    "כל הארץ": {"lat": 31.7781, "lon": 35.2164},
-    "אל-ח'וואלד מערב": {"lat": 32.771, "lon": 35.1363},
-    "אשדוד -יא,יב,טו,יז,מרינה,סיטי": {"lat": 31.7836, "lon": 34.6332},  # noqa: RUF001
-    "כמאנה": {"lat": 32.9085, "lon": 35.3358},
-    "נאות חובב": {"lat": 31.1336, "lon": 34.7899},
+    "ברחבי הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": None},
+    "כל הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": None},
+    "אל-ח'וואלד מערב": {"lat": 32.771, "lon": 35.1363, "segment": 5001282},
+    "אשדוד -יא,יב,טו,יז,מרינה,סיטי": {
+        "lat": 31.7836,
+        "lon": 34.6332,
+        "segment": 5000432,
+    },  # noqa: RUF001
+    "כמאנה": {"lat": 32.9085, "lon": 35.3358, "segment": None},
+    "נאות חובב": {"lat": 31.1336, "lon": 34.7899, "segment": None},
 }
 
 
@@ -76,6 +82,7 @@ class OrefMetadata:
         )
         self._areas_and_groups.sort()
         assert len(self._areas_and_groups) == len(set(self._areas_and_groups))
+        self._segments = self._get_segments_data()
         self._tzeva_cities, self._tzeva_polygons = self._get_tzevaadom_data()
         self._area_to_polygon = self._get_area_to_polygon()
         self._area_info = self._get_area_info()
@@ -180,6 +187,18 @@ class OrefMetadata:
             )
         )
 
+    def _get_segments_data(self) -> dict[int, str]:
+        """Get segments data as a sorted dict of segment to area."""
+        return dict(
+            sorted(
+                {
+                    data["id"]: data["name"]
+                    for data in self._fetch_url_json(SEGMENTS_URL)["segments"].values()
+                    if data["name"] in self._areas_no_group
+                }.items()
+            )
+        )
+
     def _get_tzevaadom_data(self) -> tuple[Any, Any]:
         """Get tzevaadom metadata content."""
         versions = self._fetch_url_json(TZEVAADOM_VERSIONS_URL)
@@ -221,11 +240,14 @@ class OrefMetadata:
         )
         assert not len(uncovered), f"Areas with no info: {uncovered}"
 
+        area_to_segment = {area: segment for segment, area in self._segments.items()}
+
         for area in self._areas_no_group:
             if area in self._tzeva_cities:
                 areas[area] = {
                     "lat": self._tzeva_cities[area]["lat"],
                     "lon": self._tzeva_cities[area]["lng"],
+                    "segment": area_to_segment[area],
                 }
             else:
                 areas[area] = MISSING_CITIES[area]
@@ -245,6 +267,7 @@ class OrefMetadata:
                 str(self._areas_no_group).replace("[", "{").replace("]", "}"),
             ),
             (AREA_INFO_OUTPUT, "AREA_INFO", self._area_info),
+            (SEGMENT_TO_AREA_OUTPUT, "SEGMENT_TO_AREA", self._segments),
         ):
             with (self._output_directory / file_name).open(
                 "w",
