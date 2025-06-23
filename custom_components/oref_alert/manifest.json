@@ -10,6 +10,7 @@
   "issue_tracker": "https://github.com/amitfin/oref_alert/issues",
   "requirements": [
     "aiofiles",
+    "paho-mqtt",
     "shapely==2.0.7"
   ],
   "version": "1.0.0"

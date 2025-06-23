@@ -1,4 +1,5 @@
 pytest-homeassistant-custom-component
 ruff==0.12.0
 shapely==2.0.7
+paho-mqtt
 aiofiles
