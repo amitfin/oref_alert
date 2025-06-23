@@ -1,4 +1,4 @@
 pytest-homeassistant-custom-component
-ruff==0.11.13
+ruff==0.12.0
 shapely==2.0.7
 aiofiles
