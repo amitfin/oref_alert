@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from itertools import chain
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.instance_id import async_get
@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 API_ENDPOINT: Final = "https://pushy.ioref.app"
 MQTT_ENDPOINT: Final = "mqtt-{ts}.ioref.io:443"
+REQUEST_RETRIES = 3
 PUSHY_CREDENTIALS_KEY: Final = "pushy_credentials"
 ANDROID_ID_KEY: Final = "androidId"
 REGISTRATION_PARAMETERS: Final = {
@@ -49,18 +50,31 @@ class PushyNotifications:
         self._credentials: dict = {}
         self._topics: list = []
 
+    async def _api_call(self, uri: str, content: Any, reply: bool = False) -> Any:  # noqa: FBT001, FBT002
+        """Make HTTP request to the API server."""
+        exc_info = Exception()
+        for _ in range(REQUEST_RETRIES):
+            try:
+                async with self._http_client.post(
+                    f"{API_ENDPOINT}/{uri}", json=content
+                ) as response:
+                    return (await response.json()) if reply else None
+            except Exception as ex:  # noqa: BLE001
+                exc_info = ex
+        raise exc_info
+
     async def _register(self) -> None:
         """Perform a new registration and save it in the config."""
         device_id = await get_device_id(self._hass)
         try:
-            async with self._http_client.post(
-                f"{API_ENDPOINT}/register",
-                json={
+            credentials = await self._api_call(
+                "register",
+                {
                     **REGISTRATION_PARAMETERS,
                     ANDROID_ID_KEY: f"{device_id}{ANDROID_ID_SUFFIX}",
                 },
-            ) as response:
-                credentials = await response.json()
+                reply=True,
+            )
         except:  # noqa: E722
             LOGGER.exception(f"'{API_ENDPOINT}/register' failed")
             return
@@ -79,9 +93,9 @@ class PushyNotifications:
         """Validate that the configuration is working properly."""
         device_id = await get_device_id(self._hass)
         try:
-            await self._http_client.post(
-                f"{API_ENDPOINT}/devices/auth",
-                json={
+            await self._api_call(
+                "devices/auth",
+                {
                     **REGISTRATION_PARAMETERS,
                     ANDROID_ID_KEY: f"{device_id}{ANDROID_ID_SUFFIX}",
                     **credentials,
@@ -119,12 +133,8 @@ class PushyNotifications:
             if area in AREA_INFO
         ]
         try:
-            await self._http_client.post(
-                f"{API_ENDPOINT}/subscribe",
-                json={
-                    **self._credentials,
-                    TOPICS_KEY: self._topics,
-                },
+            await self._api_call(
+                "subscribe", {**self._credentials, TOPICS_KEY: self._topics}
             )
         except:  # noqa: E722
             LOGGER.exception(f"'{API_ENDPOINT}/subscribe' failed")
@@ -135,12 +145,8 @@ class PushyNotifications:
         if not self._topics:
             return
         try:
-            await self._http_client.post(
-                f"{API_ENDPOINT}/unsubscribe",
-                json={
-                    **self._credentials,
-                    TOPICS_KEY: self._topics,
-                },
+            await self._api_call(
+                "unsubscribe", {**self._credentials, TOPICS_KEY: self._topics}
             )
         except:  # noqa: E722
             LOGGER.exception(f"'{API_ENDPOINT}/unsubscribe' failed")
