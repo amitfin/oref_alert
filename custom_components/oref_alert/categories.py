@@ -55,7 +55,7 @@ REAL_TIME_TO_HISTORY_CATEGORY = {
 }
 
 # Reverse engineered mapping from Pushy "threatId" to history categories.
-# Look for 'HazardousMaterials("1")' in the decompile code of and Android APK.
+# Look for 'HazardousMaterials("1")' in the decompile code of the Android APK.
 PUSHY_THREAD_ID_TO_HISTORY_CATEGORY = {
     0: 1,  # Missiles
     1: 12,  # HazardousMaterials

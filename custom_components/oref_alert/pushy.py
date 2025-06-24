@@ -79,6 +79,7 @@ class PushyNotifications:
             LOGGER.exception(f"'{API_ENDPOINT}/register' failed")
             return
         # Save the credentials data which causes the integration to reload.
+        LOGGER.info("Pushy registration is done.")
         if self._hass.config_entries.async_update_entry(
             self._config_entry,
             data={
@@ -116,6 +117,7 @@ class PushyNotifications:
                     self._config_entry.entry_id
                 )
             return False
+        LOGGER.info("Pushy credentials were validated.")
         return True
 
     async def _subscribe(self) -> None:
@@ -139,6 +141,7 @@ class PushyNotifications:
         except:  # noqa: E722
             LOGGER.exception(f"'{API_ENDPOINT}/subscribe' failed")
             self._topics = []
+        LOGGER.info("Pushy subscribe is done.")
 
     async def _unsubscribe(self) -> None:
         """Unsubscribe the relevant topics."""
