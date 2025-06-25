@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import ssl
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final
@@ -11,6 +12,7 @@ import homeassistant.util.dt as dt_util
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.instance_id import async_get
 from paho.mqtt.client import Client as MQTTClient
+from paho.mqtt.client import MQTTMessage
 from paho.mqtt.enums import CallbackAPIVersion
 
 from custom_components.oref_alert.metadata.area_info import AREA_INFO
@@ -39,6 +41,7 @@ REGISTRATION_PARAMETERS: Final = {
 }
 ANDROID_ID_SUFFIX: Final = "-Google-Android-SDK-built-for-x86_64"
 TOPICS_KEY: Final = "topics"
+TEST_SEGMENT: Final = "5003000"
 
 _device_id: str = ""
 
@@ -144,7 +147,7 @@ class PushyNotifications:
                 )
             )
             if area in AREA_INFO
-        ]
+        ] + [TEST_SEGMENT]
         if self._topics:
             try:
                 await self._api_call(
@@ -171,17 +174,29 @@ class PushyNotifications:
             client_id=self._credentials.get(TOKEN_KEY),
             clean_session=False,
         )
+        self._mqtt.user_data_set(self)
         self._mqtt.enable_logger()
         self._mqtt.username_pw_set(
             self._credentials.get(TOKEN_KEY), self._credentials.get(AUTH_KEY)
         )
         self._mqtt.tls_set(cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLS)
+        self._mqtt.on_message = lambda _client, _userdata, message: self.on_message(
+            message
+        )
         self._mqtt.connect_async(
             MQTT_HOST.replace("{timestamp}", str(int(dt_util.now().timestamp()))),
             MQTT_PORT,
             MQTT_KEEPALIVE,
         )
         self._mqtt.loop_start()
+
+    def on_message(self, message: MQTTMessage) -> None:
+        """MQTT message processing."""
+        try:
+            content = json.loads(message.payload.decode("utf-8"))
+            LOGGER.debug("MQTT message: %s", content)
+        except:  # noqa: E722
+            LOGGER.exception("Failed to process MQTT message.")
 
     async def start(self) -> None:
         """Register for notifications."""

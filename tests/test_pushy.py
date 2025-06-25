@@ -10,6 +10,7 @@ import pytest
 from aiohttp.client_exceptions import (
     ClientError,
 )
+from paho.mqtt.client import MQTTMessage
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
 )
@@ -29,6 +30,8 @@ from custom_components.oref_alert.metadata.segment_to_area import SEGMENT_TO_ARE
 from custom_components.oref_alert.pushy import (
     ANDROID_ID_SUFFIX,
     API_ENDPOINT,
+    TEST_SEGMENT,
+    PushyNotifications,
     get_device_id,
 )
 
@@ -136,6 +139,7 @@ async def test_subscribe_unsubscribe(
     segments = [
         str(AREA_INFO["קריית אונו"]["segment"]),
         str(AREA_INFO["פתח תקווה"]["segment"]),
+        TEST_SEGMENT,
     ]
     assert SEGMENT_TO_AREA[int(segments[0])] == "קריית אונו"
     assert SEGMENT_TO_AREA[int(segments[1])] == "פתח תקווה"
@@ -209,3 +213,42 @@ async def test_mqtt_parameters(
     mqtt_mock.disconnect.assert_not_called()
     await cleanup_test(hass, config)
     mqtt_mock.disconnect.assert_called()
+
+
+async def test_simple_message(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    mqtt_mock: MqttMockPahoClient,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test MQTT parameters."""
+    config = await setup_test(
+        hass,
+        aioclient_mock,
+        data={"pushy_credentials": {"token": "user", "auth": "password"}},
+    )
+    listener: PushyNotifications = mqtt_mock.user_data_set.call_args.args[0]
+    message: MQTTMessage = MQTTMessage()
+    message.payload = b'{"test": "test"}'
+    listener.on_message(message)
+    await cleanup_test(hass, config)
+    assert "MQTT message: {'test': 'test'}" in caplog.text
+
+
+async def test_message_no_throw(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    mqtt_mock: MqttMockPahoClient,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test that message processing never throws an exception."""
+    config = await setup_test(
+        hass,
+        aioclient_mock,
+        data={"pushy_credentials": {"token": "user", "auth": "password"}},
+    )
+    listener: PushyNotifications = mqtt_mock.user_data_set.call_args.args[0]
+    message: MQTTMessage = MQTTMessage()
+    listener.on_message(message)
+    await cleanup_test(hass, config)
+    assert "Failed to process MQTT message." in caplog.text
