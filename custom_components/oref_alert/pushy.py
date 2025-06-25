@@ -41,7 +41,14 @@ REGISTRATION_PARAMETERS: Final = {
 }
 ANDROID_ID_SUFFIX: Final = "-Google-Android-SDK-built-for-x86_64"
 TOPICS_KEY: Final = "topics"
-TEST_SEGMENT: Final = "5003000"
+TEST_SEGMENTS: Final = [
+    "5003000",
+    "5003001",
+    "5003002",
+    "5003003",
+    "5003004",
+    "5003006",
+]
 
 _device_id: str = ""
 
@@ -147,7 +154,7 @@ class PushyNotifications:
                 )
             )
             if area in AREA_INFO
-        ] + [TEST_SEGMENT]
+        ] + TEST_SEGMENTS
         if self._topics:
             try:
                 await self._api_call(

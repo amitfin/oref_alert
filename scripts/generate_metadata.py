@@ -15,6 +15,7 @@ import yaml
 sys.path.insert(0, str((Path(__file__).parent / "..").resolve()))
 
 from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
+from custom_components.oref_alert.pushy import TEST_SEGMENTS
 
 RELATIVE_OUTPUT_DIRECTORY = "custom_components/oref_alert/metadata/"
 AREAS_OUTPUT = "areas.py"
@@ -189,11 +190,16 @@ class OrefMetadata:
 
     def _get_segments_data(self) -> dict[int, str]:
         """Get segments data as a sorted dict of segment to area."""
+        segments = self._fetch_url_json(SEGMENTS_URL)["segments"]
+        unknown_test_segments = TEST_SEGMENTS - segments.keys()
+        assert not unknown_test_segments, (
+            f"Unknown test segments: {unknown_test_segments}"
+        )
         return dict(
             sorted(
                 {
                     data["id"]: data["name"]
-                    for data in self._fetch_url_json(SEGMENTS_URL)["segments"].values()
+                    for data in segments.values()
                     if data["name"] in self._areas_no_group
                 }.items()
             )

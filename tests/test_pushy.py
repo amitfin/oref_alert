@@ -30,7 +30,7 @@ from custom_components.oref_alert.metadata.segment_to_area import SEGMENT_TO_ARE
 from custom_components.oref_alert.pushy import (
     ANDROID_ID_SUFFIX,
     API_ENDPOINT,
-    TEST_SEGMENT,
+    TEST_SEGMENTS,
     PushyNotifications,
     get_device_id,
 )
@@ -139,7 +139,7 @@ async def test_subscribe_unsubscribe(
     segments = [
         str(AREA_INFO["קריית אונו"]["segment"]),
         str(AREA_INFO["פתח תקווה"]["segment"]),
-        TEST_SEGMENT,
+        *TEST_SEGMENTS,
     ]
     assert SEGMENT_TO_AREA[int(segments[0])] == "קריית אונו"
     assert SEGMENT_TO_AREA[int(segments[1])] == "פתח תקווה"
