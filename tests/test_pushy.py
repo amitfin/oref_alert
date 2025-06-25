@@ -11,6 +11,7 @@ from aiohttp.client_exceptions import (
     ClientError,
 )
 from paho.mqtt.client import MQTTMessage
+from paho.mqtt.reasoncodes import ReasonCode
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
 )
@@ -213,6 +214,30 @@ async def test_mqtt_parameters(
     mqtt_mock.disconnect.assert_not_called()
     await cleanup_test(hass, config)
     mqtt_mock.disconnect.assert_called()
+
+
+async def test_on_connect(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    mqtt_mock: MqttMockPahoClient,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test on_connect callback."""
+    config = await setup_test(
+        hass,
+        aioclient_mock,
+        data={"pushy_credentials": {"token": "user", "auth": "password"}},
+    )
+    listener: PushyNotifications = mqtt_mock.user_data_set.call_args.args[0]
+
+    mqtt_mock.subscribe.assert_not_called()
+    listener.on_connect(ReasonCode(2, identifier=0))
+    mqtt_mock.subscribe.assert_called_with("user", 1)
+    listener.on_connect(ReasonCode(2, identifier=136))
+    mqtt_mock.subscribe.assert_called_once()
+    assert "MQTT connection failed: Server unavailable." in caplog.text
+
+    await cleanup_test(hass, config)
 
 
 async def test_simple_message(

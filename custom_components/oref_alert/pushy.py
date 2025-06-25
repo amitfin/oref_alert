@@ -22,11 +22,13 @@ from .const import CONF_AREAS, CONF_SENSORS, LOGGER
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
+    from paho.mqtt.reasoncodes import ReasonCode
 
 API_ENDPOINT: Final = "https://pushy.ioref.app"
 MQTT_HOST: Final = "mqtt-{timestamp}.ioref.io"
 MQTT_PORT: Final = 443
 MQTT_KEEPALIVE: Final = 300
+MQTT_QOS: Final = 1
 REQUEST_RETRIES = 3
 PUSHY_CREDENTIALS_KEY: Final = "pushy_credentials"
 TOKEN_KEY: Final = "token"  # noqa: S105
@@ -190,12 +192,23 @@ class PushyNotifications:
         self._mqtt.on_message = lambda _client, _userdata, message: self.on_message(
             message
         )
+        self._mqtt.on_connect = lambda _c, _u, _f, reason_code, _p: self.on_connect(
+            reason_code
+        )
         self._mqtt.connect_async(
             MQTT_HOST.replace("{timestamp}", str(int(dt_util.now().timestamp()))),
             MQTT_PORT,
             MQTT_KEEPALIVE,
         )
         self._mqtt.loop_start()
+
+    def on_connect(self, reason_code: ReasonCode) -> None:
+        """Subscribe on successful connect."""
+        if not reason_code.is_failure and self._mqtt:
+            self._mqtt.subscribe(self._credentials.get(TOKEN_KEY, ""), MQTT_QOS)
+            LOGGER.debug("MQTT subscribe is done.")
+        else:
+            LOGGER.warning(f"MQTT connection failed: {reason_code.getName()}.")
 
     def on_message(self, message: MQTTMessage) -> None:
         """MQTT message processing."""

@@ -36,6 +36,7 @@
     "pytest",
     "PYTHONPATH",
     "pytz",
+    "reasoncodes",
     "Referer",
     "reqs",
     "selectattr",
