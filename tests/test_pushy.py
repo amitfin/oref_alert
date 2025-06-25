@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock, patch
 
+import pytest
 from aiohttp.client_exceptions import (
     ClientError,
 )
@@ -30,13 +33,28 @@ from custom_components.oref_alert.pushy import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from freezegun.api import FrozenDateTimeFactory
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
     from pytest_homeassistant_custom_component.test_util.aiohttp import (
         AiohttpClientMocker,
     )
+    from pytest_homeassistant_custom_component.typing import (
+        MqttMockPahoClient,
+    )
 
 DEFAULT_OPTIONS = {CONF_AREAS: ["קריית אונו"], CONF_ALERT_ACTIVE_DURATION: 10}
+
+
+@pytest.fixture(autouse=True)
+def mqtt_mock() -> Generator[MqttMockPahoClient]:
+    """Mock MQTT client."""
+    with patch("custom_components.oref_alert.pushy.MQTTClient") as mock_class:
+        mock_instance = MagicMock()
+        mock_class.return_value = mock_instance
+        yield mock_instance
 
 
 def mock_api_calls(aioclient_mock: AiohttpClientMocker) -> None:
@@ -170,3 +188,24 @@ async def test_unsubscribe_failure(
     aioclient_mock.post(f"{API_ENDPOINT}/unsubscribe", exc=ClientError)
     config = await setup_test(hass, aioclient_mock, data={"pushy_credentials": {}})
     await cleanup_test(hass, config)
+
+
+async def test_mqtt_parameters(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,  # noqa: ARG001
+    mqtt_mock: MqttMockPahoClient,
+) -> None:
+    """Test MQTT parameters."""
+    config = await setup_test(
+        hass,
+        aioclient_mock,
+        data={"pushy_credentials": {"token": "user", "auth": "password"}},
+    )
+    mqtt_mock.username_pw_set.assert_called_with("user", "password")
+    mqtt_mock.connect_async.assert_called_with(
+        f"mqtt-{int(time.time())}.ioref.io", 443, 300
+    )
+    mqtt_mock.disconnect.assert_not_called()
+    await cleanup_test(hass, config)
+    mqtt_mock.disconnect.assert_called()

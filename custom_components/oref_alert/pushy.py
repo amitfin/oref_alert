@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import hashlib
+import ssl
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final
 
+import homeassistant.util.dt as dt_util
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.instance_id import async_get
+from paho.mqtt.client import Client as MQTTClient
+from paho.mqtt.enums import CallbackAPIVersion
 
 from custom_components.oref_alert.metadata.area_info import AREA_INFO
 
@@ -18,9 +22,13 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 API_ENDPOINT: Final = "https://pushy.ioref.app"
-MQTT_ENDPOINT: Final = "mqtt-{ts}.ioref.io:443"
+MQTT_HOST: Final = "mqtt-{timestamp}.ioref.io"
+MQTT_PORT: Final = 443
+MQTT_KEEPALIVE: Final = 300
 REQUEST_RETRIES = 3
 PUSHY_CREDENTIALS_KEY: Final = "pushy_credentials"
+TOKEN_KEY: Final = "token"  # noqa: S105
+AUTH_KEY: Final = "auth"
 ANDROID_ID_KEY: Final = "androidId"
 REGISTRATION_PARAMETERS: Final = {
     ANDROID_ID_KEY: None,  # To be filled
@@ -32,11 +40,17 @@ REGISTRATION_PARAMETERS: Final = {
 ANDROID_ID_SUFFIX: Final = "-Google-Android-SDK-built-for-x86_64"
 TOPICS_KEY: Final = "topics"
 
+_device_id: str = ""
+
 
 async def get_device_id(hass: HomeAssistant) -> str:
     """Return a stable ID of 16 characters."""
+    global _device_id  # noqa: PLW0603
+    if _device_id:
+        return _device_id
     ha_id = await async_get(hass)
-    return hashlib.blake2b(ha_id.encode("utf-8"), digest_size=8).hexdigest()
+    _device_id = hashlib.blake2b(ha_id.encode("utf-8"), digest_size=8).hexdigest()
+    return _device_id
 
 
 class PushyNotifications:
@@ -49,6 +63,7 @@ class PushyNotifications:
         self._http_client = async_get_clientsession(hass)
         self._credentials: dict = {}
         self._topics: list = []
+        self._mqtt: MQTTClient | None = None
 
     async def _api_call(self, uri: str, content: Any, reply: bool = False) -> Any:  # noqa: FBT001, FBT002
         """Make HTTP request to the API server."""
@@ -80,14 +95,13 @@ class PushyNotifications:
             return
         # Save the credentials data which causes the integration to reload.
         LOGGER.info("Pushy registration is done.")
-        if self._hass.config_entries.async_update_entry(
+        self._hass.config_entries.async_update_entry(
             self._config_entry,
             data={
                 **(self._config_entry.data or {}),
                 PUSHY_CREDENTIALS_KEY: credentials,
             },
-        ):
-            self._hass.config_entries.async_schedule_reload(self._config_entry.entry_id)
+        )
         return
 
     async def _validate(self, credentials: dict) -> bool:
@@ -105,17 +119,14 @@ class PushyNotifications:
         except:  # noqa: E722
             # Delete the credentials data which causes the integration to reload.
             # Note: there is no loop here. The registration might fail and that's it.
-            if self._hass.config_entries.async_update_entry(
+            self._hass.config_entries.async_update_entry(
                 self._config_entry,
                 data={
                     key: value
                     for key, value in (self._config_entry.data or {}).items()
                     if key != PUSHY_CREDENTIALS_KEY
                 },
-            ):
-                self._hass.config_entries.async_schedule_reload(
-                    self._config_entry.entry_id
-                )
+            )
             return False
         LOGGER.info("Pushy credentials were validated.")
         return True
@@ -134,25 +145,43 @@ class PushyNotifications:
             )
             if area in AREA_INFO
         ]
-        try:
-            await self._api_call(
-                "subscribe", {**self._credentials, TOPICS_KEY: self._topics}
-            )
-        except:  # noqa: E722
-            LOGGER.exception(f"'{API_ENDPOINT}/subscribe' failed")
-            self._topics = []
-        LOGGER.info("Pushy subscribe is done.")
+        if self._topics:
+            try:
+                await self._api_call(
+                    "subscribe", {**self._credentials, TOPICS_KEY: self._topics}
+                )
+            except:  # noqa: E722
+                LOGGER.exception(f"'{API_ENDPOINT}/subscribe' failed")
+                self._topics = []
+            LOGGER.info("Pushy subscribe is done.")
 
     async def _unsubscribe(self) -> None:
         """Unsubscribe the relevant topics."""
-        if not self._topics:
-            return
         try:
             await self._api_call(
                 "unsubscribe", {**self._credentials, TOPICS_KEY: self._topics}
             )
         except:  # noqa: E722
             LOGGER.exception(f"'{API_ENDPOINT}/unsubscribe' failed")
+
+    def _listen(self) -> None:
+        """Listen for MQTT messages."""
+        self._mqtt = MQTTClient(
+            callback_api_version=CallbackAPIVersion.VERSION2,
+            client_id=self._credentials.get(TOKEN_KEY),
+            clean_session=False,
+        )
+        self._mqtt.enable_logger()
+        self._mqtt.username_pw_set(
+            self._credentials.get(TOKEN_KEY), self._credentials.get(AUTH_KEY)
+        )
+        self._mqtt.tls_set(cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLS)
+        self._mqtt.connect_async(
+            MQTT_HOST.replace("{timestamp}", str(int(dt_util.now().timestamp()))),
+            MQTT_PORT,
+            MQTT_KEEPALIVE,
+        )
+        self._mqtt.loop_start()
 
     async def start(self) -> None:
         """Register for notifications."""
@@ -165,7 +194,13 @@ class PushyNotifications:
             return
         self._credentials = credentials
         await self._subscribe()
+        self._listen()
 
     async def stop(self) -> None:
         """Unregister."""
+        if not self._topics:
+            return
         await self._unsubscribe()
+        if self._mqtt:
+            self._mqtt.disconnect()
+            self._mqtt.loop_stop()
