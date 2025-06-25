@@ -26,7 +26,7 @@ def mock_urls(
     )
     aioclient_mock.get(
         OREF_HISTORY_URL,
-        text=load_fixture(history_fixture) if history_fixture else "[]",
+        text=load_fixture(history_fixture) if history_fixture else "",
         **kwargs,
     )
     aioclient_mock.get(
