@@ -1,7 +1,7 @@
 """Pushy notification channel."""
 
 from __future__ import annotations
-from functools import partial
+
 import hashlib
 import ssl
 from itertools import chain
@@ -94,7 +94,7 @@ class PushyNotifications:
             LOGGER.exception(f"'{API_ENDPOINT}/register' failed")
             return
         # Save the credentials data which causes the integration to reload.
-        LOGGER.info("Pushy registration is done.")
+        LOGGER.debug("Pushy registration is done.")
         self._hass.config_entries.async_update_entry(
             self._config_entry,
             data={
@@ -128,7 +128,7 @@ class PushyNotifications:
                 },
             )
             return False
-        LOGGER.info("Pushy credentials were validated.")
+        LOGGER.debug("Pushy credentials were validated.")
         return True
 
     async def _subscribe(self) -> None:
@@ -153,7 +153,7 @@ class PushyNotifications:
             except:  # noqa: E722
                 LOGGER.exception(f"'{API_ENDPOINT}/subscribe' failed")
                 self._topics = []
-            LOGGER.info("Pushy subscribe is done.")
+            LOGGER.debug("Pushy subscribe is done.")
 
     async def _unsubscribe(self) -> None:
         """Unsubscribe the relevant topics."""
@@ -175,13 +175,7 @@ class PushyNotifications:
         self._mqtt.username_pw_set(
             self._credentials.get(TOKEN_KEY), self._credentials.get(AUTH_KEY)
         )
-        self._hass.async_add_executor_job(  # SSLContext.set_default_verify_paths()
-            partial(
-                self._mqtt.tls_set,
-                cert_reqs=ssl.CERT_REQUIRED,
-                tls_version=ssl.PROTOCOL_TLS,
-            )
-        )
+        self._mqtt.tls_set(cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLS)
         self._mqtt.connect_async(
             MQTT_HOST.replace("{timestamp}", str(int(dt_util.now().timestamp()))),
             MQTT_PORT,
@@ -200,7 +194,7 @@ class PushyNotifications:
             return
         self._credentials = credentials
         await self._subscribe()
-        self._listen()
+        await self._hass.async_add_executor_job(self._listen)
 
     async def stop(self) -> None:
         """Unregister."""
@@ -208,5 +202,5 @@ class PushyNotifications:
             return
         await self._unsubscribe()
         if self._mqtt:
-            self._mqtt.disconnect()
-            self._mqtt.loop_stop()
+            await self._hass.async_add_executor_job(self._mqtt.disconnect)
+            await self._hass.async_add_executor_job(self._mqtt.loop_stop)
