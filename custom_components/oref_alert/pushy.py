@@ -1,7 +1,7 @@
 """Pushy notification channel."""
 
 from __future__ import annotations
-
+from functools import partial
 import hashlib
 import ssl
 from itertools import chain
@@ -175,7 +175,13 @@ class PushyNotifications:
         self._mqtt.username_pw_set(
             self._credentials.get(TOKEN_KEY), self._credentials.get(AUTH_KEY)
         )
-        self._mqtt.tls_set(cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLS)
+        self._hass.async_add_executor_job(  # SSLContext.set_default_verify_paths()
+            partial(
+                self._mqtt.tls_set,
+                cert_reqs=ssl.CERT_REQUIRED,
+                tls_version=ssl.PROTOCOL_TLS,
+            )
+        )
         self._mqtt.connect_async(
             MQTT_HOST.replace("{timestamp}", str(int(dt_util.now().timestamp()))),
             MQTT_PORT,
