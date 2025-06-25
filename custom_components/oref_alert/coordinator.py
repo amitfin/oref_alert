@@ -116,8 +116,8 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         """Request the data from Oref servers.."""
         (current, current_modified), (history, history_modified) = await asyncio.gather(
             *[
-                self._async_fetch_url(url, strict)
-                for url, strict in ((OREF_ALERTS_URL, False), (OREF_HISTORY_URL, True))
+                self._async_fetch_url(url)
+                for url in ((OREF_ALERTS_URL), (OREF_HISTORY_URL))
             ]
         )
         if (
@@ -146,7 +146,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             alerts = self.data.items
         return OrefAlertCoordinatorData(alerts, self._active_duration)
 
-    async def _async_fetch_url(self, url: str, strict: bool) -> tuple[Any, bool]:  # noqa: FBT001
+    async def _async_fetch_url(self, url: str) -> tuple[Any, bool]:
         """Fetch data from Oref servers."""
         exc_info = Exception()
         cached_content, last_modified = self._http_cache.get(url, (None, None))
@@ -162,7 +162,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                         return cached_content, False
                     raw = await response.read()
                     text = raw.decode("utf-8-sig").strip()
-                    content = None if not strict and not text else json.loads(text)
+                    content = None if not text else json.loads(text)
                     self._http_cache[url] = (
                         content,
                         response.headers.get("Last-Modified"),
