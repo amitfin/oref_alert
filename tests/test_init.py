@@ -249,5 +249,8 @@ async def test_unknown_area(hass: HomeAssistant) -> None:
     for i in range(2):
         assert repairs[i].data["action"] == "create"
         assert repairs[i].data["domain"] == DOMAIN
-        assert repairs[i].data["issue_id"] == f"{DOMAIN}_unknown{i + 1}"
+    assert {repair.data["issue_id"] for repair in repairs} == {
+        f"{DOMAIN}_unknown1",
+        f"{DOMAIN}_unknown2",
+    }
     unregister()
