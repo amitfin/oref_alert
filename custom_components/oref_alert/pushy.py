@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import ssl
+from collections import deque
+from datetime import timedelta
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final
 
@@ -15,9 +18,11 @@ from paho.mqtt.client import Client as MQTTClient
 from paho.mqtt.client import MQTTMessage
 from paho.mqtt.enums import CallbackAPIVersion
 
+from custom_components.oref_alert.categories import pushy_thread_id_to_history_category
 from custom_components.oref_alert.metadata.area_info import AREA_INFO
+from custom_components.oref_alert.metadata.segment_to_area import SEGMENT_TO_AREA
 
-from .const import CONF_AREAS, CONF_SENSORS, LOGGER
+from .const import CONF_ALERT_ACTIVE_DURATION, CONF_AREAS, CONF_SENSORS, LOGGER
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -66,6 +71,31 @@ async def get_device_id(hass: HomeAssistant) -> str:
     return _device_id
 
 
+class TTLDeque:
+    """Add items to the beginning of the list and removes items when TTL expires."""
+
+    def __init__(self, ttl: int) -> None:
+        """Initialize the deque."""
+        self._ttl = timedelta(minutes=ttl)
+        self._deque = deque()
+
+    def add(self, item: dict) -> None:
+        """Add an item."""
+        self._deque.appendleft((dt_util.now(), item))
+        self._prune()
+
+    def _prune(self) -> None:
+        """Remove expired items."""
+        now = dt_util.now()
+        while self._deque and now - self._deque[-1][0] >= self._ttl:
+            self._deque.pop()
+
+    def items(self) -> list[dict]:
+        """Return the items."""
+        self._prune()
+        return [item for _, item in self._deque]
+
+
 class PushyNotifications:
     """Register for notifications coming from Pushy."""
 
@@ -76,6 +106,9 @@ class PushyNotifications:
         self._http_client = async_get_clientsession(hass)
         self._credentials: dict = {}
         self._mqtt: MQTTClient | None = None
+        self.alerts: TTLDeque = TTLDeque(
+            config_entry.options[CONF_ALERT_ACTIVE_DURATION]
+        )
 
     async def _api_call(self, uri: str, content: Any, check: bool = True) -> Any:  # noqa: FBT001, FBT002
         """Make HTTP request to the API server."""
@@ -165,7 +198,9 @@ class PushyNotifications:
                 )
             )
             if area in AREA_INFO
-        ] + TEST_SEGMENTS
+        ]
+        if LOGGER.isEnabledFor(logging.DEBUG):
+            topics.extend(TEST_SEGMENTS)
 
         if (
             previous_topics := (self._config_entry.data or {}).get(PUSHY_TOPICS_KEY)
@@ -248,6 +283,27 @@ class PushyNotifications:
         try:
             content = json.loads(message.payload.decode("utf-8"))
             LOGGER.debug("MQTT message: %s", content)
+            alert_date = dt_util.parse_datetime(
+                content["time"], raise_on_error=True
+            ).strftime("%Y-%m-%d %H:%M:%S")
+            if (
+                category := pushy_thread_id_to_history_category(
+                    int(content["threatId"])
+                )
+            ) is not None:
+                for area in [
+                    SEGMENT_TO_AREA[int(segment)]
+                    for segment in content["citiesIds"].split(",")
+                    if int(segment) in SEGMENT_TO_AREA
+                ]:
+                    self.alerts.add(
+                        {
+                            "alertDate": alert_date,
+                            "title": content["title"],
+                            "data": area,
+                            "category": category,
+                        }
+                    )
         except:  # noqa: E722
             LOGGER.exception("Failed to process MQTT message.")
 

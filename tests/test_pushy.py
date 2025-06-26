@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import json
+import logging
 import time
+from datetime import timedelta
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
@@ -25,6 +28,7 @@ from custom_components.oref_alert.const import (
     CONF_AREAS,
     CONF_SENSORS,
     DOMAIN,
+    LOGGER,
 )
 from custom_components.oref_alert.metadata.area_info import AREA_INFO
 from custom_components.oref_alert.metadata.segment_to_area import SEGMENT_TO_AREA
@@ -33,8 +37,11 @@ from custom_components.oref_alert.pushy import (
     API_ENDPOINT,
     TEST_SEGMENTS,
     PushyNotifications,
+    TTLDeque,
     get_device_id,
 )
+
+from .utils import load_json_fixture
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -102,6 +109,20 @@ async def test_device_id(hass: HomeAssistant) -> None:
     assert id1 == id2
 
 
+def test_deque(freezer: FrozenDateTimeFactory) -> None:
+    """Test deque class."""
+    deque = TTLDeque(2)
+    deque.add({1: 1})
+    assert deque.items() == [{1: 1}]
+    freezer.tick(timedelta(minutes=1))
+    deque.add({2: 2})
+    assert deque.items() == [{2: 2}, {1: 1}]
+    freezer.tick(timedelta(minutes=1))
+    assert deque.items() == [{2: 2}]
+    freezer.tick(timedelta(minutes=1))
+    assert not len(deque.items())
+
+
 async def test_registration_params(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
@@ -141,10 +162,23 @@ async def test_registration_invalid_content(
     assert "Pushy registration reply is invalid: {}" in caplog.text
 
 
+@pytest.mark.parametrize(
+    "debug",
+    [
+        False,
+        True,
+    ],
+    ids=("no debug", "debug"),
+)
 async def test_subscribe_unsubscribe(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    debug: bool,  # noqa: FBT001
 ) -> None:
     """Test subscribe/unsubscribe calls."""
+    if debug:
+        LOGGER.setLevel(logging.DEBUG)
+
     config = await setup_test(
         hass, aioclient_mock, options={CONF_SENSORS: {"Oref Alert Test": ["פתח תקווה"]}}
     )
@@ -153,8 +187,10 @@ async def test_subscribe_unsubscribe(
     segments = [
         str(AREA_INFO["קריית אונו"]["segment"]),
         str(AREA_INFO["פתח תקווה"]["segment"]),
-        *TEST_SEGMENTS,
     ]
+    if debug:
+        segments.extend(TEST_SEGMENTS)
+
     assert SEGMENT_TO_AREA[int(segments[0])] == "קריית אונו"
     assert SEGMENT_TO_AREA[int(segments[1])] == "פתח תקווה"
 
@@ -309,10 +345,12 @@ async def test_simple_message(
     )
     listener: PushyNotifications = mqtt_mock.user_data_set.call_args.args[0]
     message: MQTTMessage = MQTTMessage()
-    message.payload = b'{"test": "test"}'
+    payload = load_json_fixture("pushy_alert.json")
+    message.payload = json.dumps(payload).encode("utf-8")
     listener.on_message(message)
+    assert f"MQTT message: {payload}" in caplog.text
+    assert listener.alerts.items() == load_json_fixture("pushy_alerts_as_history.json")
     await cleanup_test(hass, config)
-    assert "MQTT message: {'test': 'test'}" in caplog.text
 
 
 async def test_message_no_throw(
