@@ -77,7 +77,7 @@ class PushyNotifications:
         self._topics: list = []
         self._mqtt: MQTTClient | None = None
 
-    async def _api_call(self, uri: str, content: Any, reply: bool = False) -> Any:  # noqa: FBT001, FBT002
+    async def _api_call(self, uri: str, content: Any, check: bool = True) -> Any:  # noqa: FBT001, FBT002
         """Make HTTP request to the API server."""
         exc_info = Exception()
         for _ in range(REQUEST_RETRIES):
@@ -85,7 +85,13 @@ class PushyNotifications:
                 async with self._http_client.post(
                     f"{API_ENDPOINT}/{uri}", json=content
                 ) as response:
-                    return (await response.json()) if reply else None
+                    content = await response.json()
+                    if check and not content.get("success"):
+                        message = (
+                            f"{API_ENDPOINT}/{uri} reply payload is invalid: {content}"
+                        )
+                        raise ValueError(message)  # noqa: TRY301
+                    return content
             except Exception as ex:  # noqa: BLE001
                 exc_info = ex
         raise exc_info
@@ -100,13 +106,16 @@ class PushyNotifications:
                     **REGISTRATION_PARAMETERS,
                     ANDROID_ID_KEY: f"{device_id}{ANDROID_ID_SUFFIX}",
                 },
-                reply=True,
+                check=False,
             )
         except:  # noqa: E722
             LOGGER.exception(f"'{API_ENDPOINT}/register' failed")
             return
+        if TOKEN_KEY not in credentials or AUTH_KEY not in credentials:
+            LOGGER.error("Pushy registration reply is invalid: %s", credentials)
+            return
+        LOGGER.debug("Pushy registration is done: %s", credentials)
         # Save the credentials data which causes the integration to reload.
-        LOGGER.debug("Pushy registration is done.")
         self._hass.config_entries.async_update_entry(
             self._config_entry,
             data={
@@ -140,7 +149,7 @@ class PushyNotifications:
                 },
             )
             return False
-        LOGGER.debug("Pushy credentials were validated.")
+        LOGGER.debug("Pushy credentials are validate.")
         return True
 
     async def _subscribe(self) -> None:

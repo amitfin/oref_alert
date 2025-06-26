@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     )
 
 DEFAULT_OPTIONS = {CONF_AREAS: ["קריית אונו"], CONF_ALERT_ACTIVE_DURATION: 10}
+DEFAULT_CREDENTIALS = {"token": "user", "auth": "password"}
 
 
 @pytest.fixture(autouse=True)
@@ -63,9 +64,10 @@ def mqtt_mock() -> Generator[MqttMockPahoClient]:
 
 def mock_api_calls(aioclient_mock: AiohttpClientMocker) -> None:
     """Mock relevant URLs of APIs."""
+    aioclient_mock.post(f"{API_ENDPOINT}/register", json=DEFAULT_CREDENTIALS)
     if aioclient_mock:
-        for uri in ("register", "devices/auth", "subscribe", "unsubscribe"):
-            aioclient_mock.post(f"{API_ENDPOINT}/{uri}")
+        for uri in ("auth", "subscribe", "unsubscribe"):
+            aioclient_mock.post(f"{API_ENDPOINT}/devices/{uri}", json={"success": True})
 
 
 async def setup_test(
@@ -121,17 +123,28 @@ async def test_registration_persistency(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test registration persistency."""
-    aioclient_mock.post(f"{API_ENDPOINT}/register", text='{"token": "a", "auth": "b"}')
     config = await setup_test(hass, aioclient_mock)
-    assert config.data["pushy_credentials"] == {"token": "a", "auth": "b"}
+    assert config.data["pushy_credentials"] == DEFAULT_CREDENTIALS
     await cleanup_test(hass, config)
+
+
+async def test_registration_invalid_content(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test registration invalid content."""
+    aioclient_mock.post(f"{API_ENDPOINT}/register", json={})
+    config = await setup_test(hass, aioclient_mock)
+    assert "pushy_credentials" not in config.data
+    await cleanup_test(hass, config)
+    assert "Pushy registration reply is invalid: {}" in caplog.text
 
 
 async def test_subscribe_unsubscribe(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test subscribe/unsubscribe calls."""
-    aioclient_mock.post(f"{API_ENDPOINT}/register", text="{}")
     config = await setup_test(
         hass, aioclient_mock, options={CONF_SENSORS: {"Oref Alert Test": ["פתח תקווה"]}}
     )
@@ -147,7 +160,7 @@ async def test_subscribe_unsubscribe(
 
     for uri in ("subscribe", "unsubscribe"):
         for method, url, data, _headers in aioclient_mock.mock_calls:
-            if method == "POST" and url == URL(f"{API_ENDPOINT}/{uri}"):
+            if method == "POST" and url == URL(f"{API_ENDPOINT}/devices/{uri}"):
                 assert data["topics"] == segments
                 break
         else:
@@ -155,42 +168,55 @@ async def test_subscribe_unsubscribe(
             raise AssertionError(msg)
 
 
+@pytest.mark.parametrize(
+    "exception",
+    [
+        True,
+        False,
+    ],
+    ids=("exception", "invalid"),
+)
 async def test_validation_failure(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    exception: bool,  # noqa: FBT001
 ) -> None:
     """Test validation failure."""
 
     async def validate(method: str, url: URL, data: dict) -> AiohttpClientMockResponse:
-        response = AiohttpClientMockResponse(method, url)
-        if data["auth"] != "good":
+        response = AiohttpClientMockResponse(
+            method, url, json={"success": exception or data["auth"] == "password"}
+        )
+        if exception and data["auth"] != "password":
             response.exc = ClientError
         return response
 
     aioclient_mock.post(f"{API_ENDPOINT}/devices/auth", side_effect=validate)
-    aioclient_mock.post(f"{API_ENDPOINT}/register", text='{"auth": "good"}')
     config = await setup_test(
-        hass, aioclient_mock, data={"pushy_credentials": {"auth": "bad"}}
+        hass,
+        aioclient_mock,
+        data={"pushy_credentials": {**DEFAULT_CREDENTIALS, "auth": "bad"}},
     )
     await cleanup_test(hass, config)
-    assert config.data["pushy_credentials"] == {"auth": "good"}
+    assert config.data["pushy_credentials"] == DEFAULT_CREDENTIALS
 
 
 async def test_subscribe_failure(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test subscribe failure."""
-    aioclient_mock.post(f"{API_ENDPOINT}/subscribe", exc=ClientError)
+    aioclient_mock.post(f"{API_ENDPOINT}/devices/subscribe", exc=ClientError)
     config = await setup_test(hass, aioclient_mock, data={"pushy_credentials": {}})
     await cleanup_test(hass, config)
     for method, url, _data, _headers in aioclient_mock.mock_calls:
-        assert method != "POST" or url != URL(f"{API_ENDPOINT}/unsubscribe")
+        assert method != "POST" or url != URL(f"{API_ENDPOINT}/devices/unsubscribe")
 
 
 async def test_unsubscribe_failure(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test unsubscribe failure."""
-    aioclient_mock.post(f"{API_ENDPOINT}/unsubscribe", exc=ClientError)
+    aioclient_mock.post(f"{API_ENDPOINT}/devices/unsubscribe", exc=ClientError)
     config = await setup_test(hass, aioclient_mock, data={"pushy_credentials": {}})
     await cleanup_test(hass, config)
 
