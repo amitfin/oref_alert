@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
@@ -13,10 +13,12 @@ import pytest
 from aiohttp.client_exceptions import (
     ClientError,
 )
+from homeassistant.const import STATE_OFF, STATE_ON, Platform
 from paho.mqtt.client import MQTTMessage
 from paho.mqtt.reasoncodes import ReasonCode
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
+    async_fire_time_changed,
 )
 from pytest_homeassistant_custom_component.test_util.aiohttp import (
     AiohttpClientMockResponse,
@@ -27,8 +29,10 @@ from custom_components.oref_alert.const import (
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_SENSORS,
+    DATA_COORDINATOR,
     DOMAIN,
     LOGGER,
+    OREF_ALERT_UNIQUE_ID,
 )
 from custom_components.oref_alert.metadata.area_info import AREA_INFO
 from custom_components.oref_alert.metadata.segment_to_area import SEGMENT_TO_AREA
@@ -58,6 +62,7 @@ if TYPE_CHECKING:
 
 DEFAULT_OPTIONS = {CONF_AREAS: ["קריית אונו"], CONF_ALERT_ACTIVE_DURATION: 10}
 DEFAULT_CREDENTIALS = {"token": "user", "auth": "password"}
+ENTITY_ID = f"{Platform.BINARY_SENSOR}.{OREF_ALERT_UNIQUE_ID}"
 
 
 @pytest.fixture(autouse=True)
@@ -112,10 +117,18 @@ async def test_device_id(hass: HomeAssistant) -> None:
 def test_deque(freezer: FrozenDateTimeFactory) -> None:
     """Test deque class."""
     deque = TTLDeque(2)
+    assert deque.changed() is None
     deque.add({1: 1})
     assert deque.items() == [{1: 1}]
+    now = datetime.now().timestamp()  # noqa: DTZ005
+    changed = deque.changed()
+    assert changed
+    assert changed.timestamp() == now
     freezer.tick(timedelta(minutes=1))
     deque.add({2: 2})
+    changed = deque.changed()
+    assert changed
+    assert changed.timestamp() == (now + 60)
     assert deque.items() == [{2: 2}, {1: 1}]
     freezer.tick(timedelta(minutes=1))
     assert deque.items() == [{2: 2}]
@@ -335,21 +348,34 @@ async def test_simple_message(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
     mqtt_mock: MqttMockPahoClient,
+    freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test MQTT parameters."""
+    freezer.move_to("2025-06-26T15:34:00+0300")
+    async_fire_time_changed(hass)
     config = await setup_test(
         hass,
         aioclient_mock,
         data={"pushy_credentials": DEFAULT_CREDENTIALS},
     )
+    state = hass.states.get(ENTITY_ID)
+    assert state is not None
+    assert state.state == STATE_OFF
     listener: PushyNotifications = mqtt_mock.user_data_set.call_args.args[0]
     message: MQTTMessage = MQTTMessage()
     payload = load_json_fixture("pushy_alert.json")
     message.payload = json.dumps(payload).encode("utf-8")
     listener.on_message(message)
+    await config.runtime_data[DATA_COORDINATOR].async_refresh()
     assert f"MQTT message: {payload}" in caplog.text
     assert listener.alerts.items() == load_json_fixture("pushy_alerts_as_history.json")
+    state = hass.states.get(ENTITY_ID)
+    assert state is not None
+    assert state.state == STATE_ON
+    freezer.tick(10)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
     await cleanup_test(hass, config)
 
 

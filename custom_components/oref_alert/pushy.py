@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
 import ssl
 from collections import deque
-from datetime import timedelta
+from datetime import datetime, timedelta
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final
 
@@ -22,7 +23,13 @@ from custom_components.oref_alert.categories import pushy_thread_id_to_history_c
 from custom_components.oref_alert.metadata.area_info import AREA_INFO
 from custom_components.oref_alert.metadata.segment_to_area import SEGMENT_TO_AREA
 
-from .const import CONF_ALERT_ACTIVE_DURATION, CONF_AREAS, CONF_SENSORS, LOGGER
+from .const import (
+    CONF_ALERT_ACTIVE_DURATION,
+    CONF_AREAS,
+    CONF_SENSORS,
+    DATA_COORDINATOR,
+    LOGGER,
+)
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -94,6 +101,11 @@ class TTLDeque:
         """Return the items."""
         self._prune()
         return [item for _, item in self._deque]
+
+    def changed(self) -> datetime | None:
+        """Return the timestamp of the 1st (most recent) item."""
+        self._prune()
+        return self._deque[0][0] if self._deque else None
 
 
 class PushyNotifications:
@@ -283,6 +295,7 @@ class PushyNotifications:
         try:
             content = json.loads(message.payload.decode("utf-8"))
             LOGGER.debug("MQTT message: %s", content)
+            new_alert = False
             alert_date = dt_util.parse_datetime(
                 content["time"], raise_on_error=True
             ).strftime("%Y-%m-%d %H:%M:%S")
@@ -304,6 +317,13 @@ class PushyNotifications:
                             "category": category,
                         }
                     )
+                    new_alert = True
+            if new_alert and (
+                coordinator := self._config_entry.runtime_data.get(DATA_COORDINATOR)
+            ):
+                asyncio.run_coroutine_threadsafe(
+                    coordinator.async_refresh(), self._hass.loop
+                )
         except:  # noqa: E722
             LOGGER.exception("Failed to process MQTT message.")
 

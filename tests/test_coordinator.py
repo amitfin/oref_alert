@@ -3,6 +3,7 @@
 from datetime import timedelta
 from http import HTTPStatus
 from typing import Any
+from unittest.mock import MagicMock
 
 import homeassistant.util.dt as dt_util
 import pytest
@@ -34,6 +35,7 @@ from custom_components.oref_alert.coordinator import (
     OrefAlertCoordinatorData,
     OrefAlertDataUpdateCoordinator,
 )
+from custom_components.oref_alert.pushy import TTLDeque
 
 from .utils import load_json_fixture, mock_urls
 
@@ -181,7 +183,7 @@ def test_coordinator_data(
 
 
 def create_coordinator(
-    hass: HomeAssistant, options: dict | None = None
+    hass: HomeAssistant, options: dict | None = None, pushy: MagicMock | None = None
 ) -> OrefAlertDataUpdateCoordinator:
     """Create a test coordinator."""
     config = MockConfigEntry(
@@ -193,7 +195,7 @@ def create_coordinator(
         },
     )
     config.mock_state(hass, ConfigEntryState.SETUP_IN_PROGRESS)
-    coordinator = OrefAlertDataUpdateCoordinator(hass, config)
+    coordinator = OrefAlertDataUpdateCoordinator(hass, config, pushy or MagicMock())
     coordinator.config_entry = config
     return coordinator
 
@@ -492,4 +494,65 @@ async def test_disable_all_alerts(
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(coordinator.data.alerts) == 0
+    await coordinator.async_shutdown()
+
+
+@pytest.mark.parametrize(
+    ("pushy_alerts", "expected"),
+    [
+        (
+            [
+                {
+                    "alertDate": "2023-10-07 06:30:00",
+                    "title": "ירי רקטות וטילים",
+                    "data": "קריית אונו",
+                    "category": 1,
+                }
+            ],
+            3,
+        ),
+        (
+            [
+                {
+                    "alertDate": "2023-10-07 06:30:00",
+                    "title": "ירי רקטות וטילים",
+                    "data": "בארי",
+                    "category": 1,
+                }
+            ],
+            2,
+        ),
+        (
+            [
+                {
+                    "alertDate": "2023-10-07 06:27:00",
+                    "title": "ירי רקטות וטילים",
+                    "data": "בארי",
+                    "category": 1,
+                }
+            ],
+            3,
+        ),
+    ],
+    ids=("new", "de-dup", "stop searching"),
+)
+async def test_pushy(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+    pushy_alerts: list[dict],
+    expected: int,
+) -> None:
+    """Test merging pushy alerts."""
+    freezer.move_to("2023-10-07 06:30:00+03:00")
+    mock_urls(aioclient_mock, None, "multi_alerts_history.json")
+    alerts = TTLDeque(10)
+    for new_alert in pushy_alerts:
+        alerts.add(new_alert)
+    pushy = MagicMock()
+    pushy.alerts = alerts
+    coordinator = create_coordinator(hass, {CONF_ALL_ALERTS_ATTRIBUTES: False}, pushy)
+    coordinator.async_add_listener(lambda: None)
+    await coordinator.async_config_entry_first_refresh()
+    assert len(coordinator.data.alerts) == expected
     await coordinator.async_shutdown()
