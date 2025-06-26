@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import time
-from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
@@ -41,7 +40,6 @@ from custom_components.oref_alert.pushy import (
     API_ENDPOINT,
     TEST_SEGMENTS,
     PushyNotifications,
-    TTLDeque,
     get_device_id,
 )
 
@@ -112,28 +110,6 @@ async def test_device_id(hass: HomeAssistant) -> None:
     assert len(id1) == 16
     id2 = await get_device_id(hass)
     assert id1 == id2
-
-
-def test_deque(freezer: FrozenDateTimeFactory) -> None:
-    """Test deque class."""
-    deque = TTLDeque(2)
-    assert deque.changed() is None
-    deque.add({1: 1})
-    assert deque.items() == [{1: 1}]
-    now = datetime.now().timestamp()  # noqa: DTZ005
-    changed = deque.changed()
-    assert changed
-    assert changed.timestamp() == now
-    freezer.tick(timedelta(minutes=1))
-    deque.add({2: 2})
-    changed = deque.changed()
-    assert changed
-    assert changed.timestamp() == (now + 60)
-    assert deque.items() == [{2: 2}, {1: 1}]
-    freezer.tick(timedelta(minutes=1))
-    assert deque.items() == [{2: 2}]
-    freezer.tick(timedelta(minutes=1))
-    assert not len(deque.items())
 
 
 async def test_registration_params(

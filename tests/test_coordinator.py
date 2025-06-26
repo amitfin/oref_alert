@@ -35,7 +35,7 @@ from custom_components.oref_alert.coordinator import (
     OrefAlertCoordinatorData,
     OrefAlertDataUpdateCoordinator,
 )
-from custom_components.oref_alert.pushy import TTLDeque
+from custom_components.oref_alert.ttl_deque import TTLDeque
 
 from .utils import load_json_fixture, mock_urls
 

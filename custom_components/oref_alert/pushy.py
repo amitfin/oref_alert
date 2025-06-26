@@ -7,8 +7,6 @@ import hashlib
 import json
 import logging
 import ssl
-from collections import deque
-from datetime import datetime, timedelta
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final
 
@@ -22,6 +20,7 @@ from paho.mqtt.enums import CallbackAPIVersion
 from custom_components.oref_alert.categories import pushy_thread_id_to_history_category
 from custom_components.oref_alert.metadata.area_info import AREA_INFO
 from custom_components.oref_alert.metadata.segment_to_area import SEGMENT_TO_AREA
+from custom_components.oref_alert.ttl_deque import TTLDeque
 
 from .const import (
     CONF_ALERT_ACTIVE_DURATION,
@@ -76,36 +75,6 @@ async def get_device_id(hass: HomeAssistant) -> str:
     ha_id = await async_get(hass)
     _device_id = hashlib.blake2b(ha_id.encode("utf-8"), digest_size=8).hexdigest()
     return _device_id
-
-
-class TTLDeque:
-    """Add items to the beginning of the list and removes items when TTL expires."""
-
-    def __init__(self, ttl: int) -> None:
-        """Initialize the deque."""
-        self._ttl = timedelta(minutes=ttl)
-        self._deque = deque()
-
-    def add(self, item: dict) -> None:
-        """Add an item."""
-        self._deque.appendleft((dt_util.now(), item))
-        self._prune()
-
-    def _prune(self) -> None:
-        """Remove expired items."""
-        now = dt_util.now()
-        while self._deque and now - self._deque[-1][0] >= self._ttl:
-            self._deque.pop()
-
-    def items(self) -> list[dict]:
-        """Return the items."""
-        self._prune()
-        return [item for _, item in self._deque]
-
-    def changed(self) -> datetime | None:
-        """Return the timestamp of the 1st (most recent) item."""
-        self._prune()
-        return self._deque[0][0] if self._deque else None
 
 
 class PushyNotifications:
