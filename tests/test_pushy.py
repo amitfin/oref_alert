@@ -161,11 +161,37 @@ async def test_subscribe_unsubscribe(
     for uri in ("subscribe", "unsubscribe"):
         for method, url, data, _headers in aioclient_mock.mock_calls:
             if method == "POST" and url == URL(f"{API_ENDPOINT}/devices/{uri}"):
-                assert data["topics"] == segments
+                assert data["topics"] == (segments if uri == "subscribe" else ["*"])
                 break
         else:
             msg = f"{uri} call was not found"
             raise AssertionError(msg)
+
+    assert config.data["pushy_topics"] == segments
+
+
+async def test_selective_unsubscribe(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """Test selective unsubscribe."""
+    config = await setup_test(hass, aioclient_mock, options={CONF_AREAS: ["פתח תקווה"]})
+    hass.config_entries.async_update_entry(
+        config,
+        options={**config.options, CONF_AREAS: []},
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    await cleanup_test(hass, config)
+
+    for method, url, data, _headers in aioclient_mock.mock_calls:
+        if (
+            method == "POST"
+            and url == URL(f"{API_ENDPOINT}/devices/unsubscribe")
+            and data.get("topics") == [str(AREA_INFO["פתח תקווה"]["segment"])]
+        ):
+            break
+    else:
+        msg = "Unsubscribe call was not found"
+        raise AssertionError(msg)
 
 
 @pytest.mark.parametrize(
@@ -206,10 +232,11 @@ async def test_subscribe_failure(
 ) -> None:
     """Test subscribe failure."""
     aioclient_mock.post(f"{API_ENDPOINT}/devices/subscribe", exc=ClientError)
-    config = await setup_test(hass, aioclient_mock, data={"pushy_credentials": {}})
+    config = await setup_test(
+        hass, aioclient_mock, data={"pushy_credentials": DEFAULT_CREDENTIALS}
+    )
+    assert "pushy_topics" not in config.data
     await cleanup_test(hass, config)
-    for method, url, _data, _headers in aioclient_mock.mock_calls:
-        assert method != "POST" or url != URL(f"{API_ENDPOINT}/devices/unsubscribe")
 
 
 async def test_unsubscribe_failure(
@@ -217,7 +244,9 @@ async def test_unsubscribe_failure(
 ) -> None:
     """Test unsubscribe failure."""
     aioclient_mock.post(f"{API_ENDPOINT}/devices/unsubscribe", exc=ClientError)
-    config = await setup_test(hass, aioclient_mock, data={"pushy_credentials": {}})
+    config = await setup_test(
+        hass, aioclient_mock, data={"pushy_credentials": DEFAULT_CREDENTIALS}
+    )
     await cleanup_test(hass, config)
 
 
@@ -231,7 +260,7 @@ async def test_mqtt_parameters(
     config = await setup_test(
         hass,
         aioclient_mock,
-        data={"pushy_credentials": {"token": "user", "auth": "password"}},
+        data={"pushy_credentials": DEFAULT_CREDENTIALS},
     )
     mqtt_mock.username_pw_set.assert_called_with("user", "password")
     mqtt_mock.connect_async.assert_called_with(
@@ -252,7 +281,7 @@ async def test_on_connect(
     config = await setup_test(
         hass,
         aioclient_mock,
-        data={"pushy_credentials": {"token": "user", "auth": "password"}},
+        data={"pushy_credentials": DEFAULT_CREDENTIALS},
     )
     listener: PushyNotifications = mqtt_mock.user_data_set.call_args.args[0]
 
@@ -276,7 +305,7 @@ async def test_simple_message(
     config = await setup_test(
         hass,
         aioclient_mock,
-        data={"pushy_credentials": {"token": "user", "auth": "password"}},
+        data={"pushy_credentials": DEFAULT_CREDENTIALS},
     )
     listener: PushyNotifications = mqtt_mock.user_data_set.call_args.args[0]
     message: MQTTMessage = MQTTMessage()
@@ -296,7 +325,7 @@ async def test_message_no_throw(
     config = await setup_test(
         hass,
         aioclient_mock,
-        data={"pushy_credentials": {"token": "user", "auth": "password"}},
+        data={"pushy_credentials": DEFAULT_CREDENTIALS},
     )
     listener: PushyNotifications = mqtt_mock.user_data_set.call_args.args[0]
     message: MQTTMessage = MQTTMessage()

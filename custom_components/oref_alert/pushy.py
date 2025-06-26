@@ -33,6 +33,7 @@ REQUEST_RETRIES = 3
 PUSHY_CREDENTIALS_KEY: Final = "pushy_credentials"
 TOKEN_KEY: Final = "token"  # noqa: S105
 AUTH_KEY: Final = "auth"
+PUSHY_TOPICS_KEY: Final = "pushy_topics"
 ANDROID_ID_KEY: Final = "androidId"
 REGISTRATION_PARAMETERS: Final = {
     ANDROID_ID_KEY: None,  # To be filled
@@ -74,7 +75,6 @@ class PushyNotifications:
         self._config_entry = config_entry
         self._http_client = async_get_clientsession(hass)
         self._credentials: dict = {}
-        self._topics: list = []
         self._mqtt: MQTTClient | None = None
 
     async def _api_call(self, uri: str, content: Any, check: bool = True) -> Any:  # noqa: FBT001, FBT002
@@ -152,9 +152,9 @@ class PushyNotifications:
         LOGGER.debug("Pushy credentials are validate.")
         return True
 
-    async def _subscribe(self) -> None:
+    async def _subscribe(self) -> bool:
         """Subscribe to the relevant topics."""
-        self._topics = [
+        topics = [
             str(AREA_INFO[area]["segment"])
             for area in (
                 self._config_entry.options[CONF_AREAS]
@@ -166,24 +166,48 @@ class PushyNotifications:
             )
             if area in AREA_INFO
         ] + TEST_SEGMENTS
-        if self._topics:
+
+        if (
+            previous_topics := (self._config_entry.data or {}).get(PUSHY_TOPICS_KEY)
+        ) is None:
+            await self._unsubscribe(["*"])
+            previous_topics = []
+
+        if removed := [topic for topic in previous_topics if topic not in topics]:
+            await self._unsubscribe(removed)
+
+        if added := [topic for topic in topics if topic not in previous_topics]:
             try:
                 await self._api_call(
-                    "devices/subscribe", {**self._credentials, TOPICS_KEY: self._topics}
+                    "devices/subscribe", {**self._credentials, TOPICS_KEY: added}
                 )
             except:  # noqa: E722
                 LOGGER.exception(f"'{API_ENDPOINT}/subscribe' failed")
-                self._topics = []
-            LOGGER.debug("Pushy subscribe is done.")
+                return True
+            LOGGER.debug("Pushy subscribe is done: %s", added)
 
-    async def _unsubscribe(self) -> None:
+        if added or removed:
+            self._hass.config_entries.async_update_entry(
+                self._config_entry,
+                data={
+                    **(self._config_entry.data or {}),
+                    PUSHY_TOPICS_KEY: topics,
+                },
+            )
+            return True
+
+        return False
+
+    async def _unsubscribe(self, topics: list[str]) -> None:
         """Unsubscribe the relevant topics."""
         try:
             await self._api_call(
-                "devices/unsubscribe", {**self._credentials, TOPICS_KEY: self._topics}
+                "devices/unsubscribe", {**self._credentials, TOPICS_KEY: topics}
             )
         except:  # noqa: E722
             LOGGER.exception(f"'{API_ENDPOINT}/unsubscribe' failed")
+            return
+        LOGGER.debug("Pushy unsubscribe is done: %s", topics)
 
     def _listen(self) -> None:
         """Listen for MQTT messages."""
@@ -233,18 +257,16 @@ class PushyNotifications:
             credentials := (self._config_entry.data or {}).get(PUSHY_CREDENTIALS_KEY)
         ) is None:
             await self._register()
-            return
+            return  # The config entry data was changed so the integration will reload
         if not (await self._validate(credentials)):
             return
         self._credentials = credentials
-        await self._subscribe()
+        if await self._subscribe():
+            return  # The config entry data was changed so the integration will reload
         await self._hass.async_add_executor_job(self._listen)
 
     async def stop(self) -> None:
         """Unregister."""
-        if not self._topics:
-            return
-        await self._unsubscribe()
         if self._mqtt:
             await self._hass.async_add_executor_job(self._mqtt.disconnect)
             await self._hass.async_add_executor_job(self._mqtt.loop_stop)
