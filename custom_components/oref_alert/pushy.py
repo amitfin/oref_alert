@@ -209,7 +209,7 @@ class PushyNotifications:
                     )
                 )
             )
-            if area in AREA_INFO
+            if area in AREA_INFO and AREA_INFO[area]["segment"]
         ]
         if LOGGER.isEnabledFor(logging.DEBUG):
             topics.extend(TEST_SEGMENTS)
