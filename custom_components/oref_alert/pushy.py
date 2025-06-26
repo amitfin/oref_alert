@@ -160,7 +160,7 @@ class PushyNotifications:
         if self._topics:
             try:
                 await self._api_call(
-                    "subscribe", {**self._credentials, TOPICS_KEY: self._topics}
+                    "devices/subscribe", {**self._credentials, TOPICS_KEY: self._topics}
                 )
             except:  # noqa: E722
                 LOGGER.exception(f"'{API_ENDPOINT}/subscribe' failed")
@@ -171,7 +171,7 @@ class PushyNotifications:
         """Unsubscribe the relevant topics."""
         try:
             await self._api_call(
-                "unsubscribe", {**self._credentials, TOPICS_KEY: self._topics}
+                "devices/unsubscribe", {**self._credentials, TOPICS_KEY: self._topics}
             )
         except:  # noqa: E722
             LOGGER.exception(f"'{API_ENDPOINT}/unsubscribe' failed")
