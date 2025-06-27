@@ -47,7 +47,8 @@
     "Tzeva",
     "unsub",
     "venv",
-    "vincenty"
+    "vincenty",
+    "Yeheskel"
   ],
   "ignoreRegExpList": [
     "[\u0590-\u05FF]+"
