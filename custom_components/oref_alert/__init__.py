@@ -15,6 +15,7 @@ from homeassistant.helpers.service import async_register_admin_service
 
 from custom_components.oref_alert.areas_checker import AreasChecker
 from custom_components.oref_alert.metadata.areas_and_groups import AREAS_AND_GROUPS
+from custom_components.oref_alert.pushy import PushyNotifications
 from custom_components.oref_alert.template import inject_template_extensions
 from custom_components.oref_alert.update_events import OrefAlertUpdateEventManager
 
@@ -57,6 +58,7 @@ from .metadata.areas import AREAS
 
 AREAS_CHECKER: Final = "areas_checker"
 UNLOAD_TEMPLATE_EXTENSIONS: Final = "unload_template_extensions"
+PUSHY: Final = "pushy"
 PLATFORMS = (Platform.BINARY_SENSOR, Platform.SENSOR, Platform.GEO_LOCATION)
 
 ADD_SENSOR_SCHEMA = vol.Schema(
@@ -137,10 +139,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                 },
             )
 
+    pushy = PushyNotifications(hass, entry)
+
     entry.runtime_data = {
-        DATA_COORDINATOR: OrefAlertDataUpdateCoordinator(hass, entry),
+        DATA_COORDINATOR: OrefAlertDataUpdateCoordinator(hass, entry, pushy),
         AREAS_CHECKER: AreasChecker(hass),
         UNLOAD_TEMPLATE_EXTENSIONS: await inject_template_extensions(hass),
+        PUSHY: pushy,
     }
 
     await entry.runtime_data[DATA_COORDINATOR].async_config_entry_first_refresh()
@@ -148,6 +153,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     OrefAlertUpdateEventManager(hass, entry)
+
+    await entry.runtime_data[PUSHY].start()
 
     async def add_sensor(service_call: ServiceCall) -> None:
         """Add an additional sensor (different areas)."""
@@ -261,6 +268,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not getattr(entry, "runtime_data", None):
         return True
     entry.runtime_data[AREAS_CHECKER].stop()
+    await entry.runtime_data[PUSHY].stop()
     entry.runtime_data[UNLOAD_TEMPLATE_EXTENSIONS]()
     entry.runtime_data = None
     for service in [

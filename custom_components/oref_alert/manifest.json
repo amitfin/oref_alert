@@ -8,8 +8,12 @@
   "documentation": "https://github.com/amitfin/oref_alert",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/amitfin/oref_alert/issues",
+  "loggers": [
+    "paho"
+  ],
   "requirements": [
     "aiofiles",
+    "paho-mqtt",
     "shapely==2.0.7"
   ],
   "version": "1.0.0"

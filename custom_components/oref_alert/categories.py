@@ -54,6 +54,22 @@ REAL_TIME_TO_HISTORY_CATEGORY = {
     13: 10,  # terroristInfiltration
 }
 
+# Reverse engineered mapping from Pushy "threatId" to history categories.
+# Look for 'HazardousMaterials("1")' in the decompile code of the Android APK.
+PUSHY_THREAD_ID_TO_HISTORY_CATEGORY = {
+    0: 1,  # Missiles
+    1: 12,  # HazardousMaterials
+    2: 10,  # TerroristInfiltration
+    3: 7,  # Earthquake
+    4: 11,  # Tsunami
+    5: 2,  # AircraftPenetration
+    6: 9,  # RadiologicalEvent
+    7: 14,  # Flash
+    8: 13,  # Update
+    9: 8,  # Earthquake2
+    11: 3,  # UnconventionalMissile
+}
+
 
 def category_metadata(category: int) -> tuple[str, str, bool]:
     """Return the metadata for the category."""
@@ -83,3 +99,8 @@ def category_is_update(category: int) -> bool:
 def real_time_to_history_category(category: int) -> int | None:
     """Return the history category for the real-time category."""
     return REAL_TIME_TO_HISTORY_CATEGORY.get(category)
+
+
+def pushy_thread_id_to_history_category(category: int) -> int | None:
+    """Return the history category for Pushy thread ID."""
+    return PUSHY_THREAD_ID_TO_HISTORY_CATEGORY.get(category)
