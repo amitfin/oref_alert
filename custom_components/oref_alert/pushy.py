@@ -284,6 +284,7 @@ class PushyNotifications:
                             "title": content["title"],
                             "data": area,
                             "category": category,
+                            "source": "mqtt",
                         }
                     )
                     new_alert = True
