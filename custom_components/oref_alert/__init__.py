@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import itertools
 from typing import TYPE_CHECKING, Final
@@ -17,6 +18,7 @@ from custom_components.oref_alert.areas_checker import AreasChecker
 from custom_components.oref_alert.metadata.areas_and_groups import AREAS_AND_GROUPS
 from custom_components.oref_alert.pushy import PushyNotifications
 from custom_components.oref_alert.template import inject_template_extensions
+from custom_components.oref_alert.tzevaadom import TzevaAdomNotifications
 from custom_components.oref_alert.update_events import OrefAlertUpdateEventManager
 
 if TYPE_CHECKING:
@@ -58,6 +60,7 @@ from .metadata.areas import AREAS
 AREAS_CHECKER: Final = "areas_checker"
 UNLOAD_TEMPLATE_EXTENSIONS: Final = "unload_template_extensions"
 PUSHY: Final = "pushy"
+TZEVAADOM: Final = "tzevaadom"
 PLATFORMS = (Platform.BINARY_SENSOR, Platform.SENSOR, Platform.GEO_LOCATION)
 
 ADD_SENSOR_SCHEMA = vol.Schema(
@@ -139,12 +142,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
             )
 
     pushy = PushyNotifications(hass, entry)
+    tzevaadom = TzevaAdomNotifications(hass, entry)
 
     entry.runtime_data = {
         DATA_COORDINATOR: OrefAlertDataUpdateCoordinator(hass, entry, pushy.alerts),
         AREAS_CHECKER: AreasChecker(hass),
         UNLOAD_TEMPLATE_EXTENSIONS: await inject_template_extensions(hass),
         PUSHY: pushy,
+        TZEVAADOM: tzevaadom,
     }
 
     await entry.runtime_data[DATA_COORDINATOR].async_config_entry_first_refresh()
@@ -153,7 +158,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
 
     OrefAlertUpdateEventManager(hass, entry)
 
-    await entry.runtime_data[PUSHY].start()
+    await asyncio.gather(
+        entry.runtime_data[PUSHY].start(), entry.runtime_data[TZEVAADOM].start()
+    )
 
     async def add_sensor(service_call: ServiceCall) -> None:
         """Add an additional sensor (different areas)."""
@@ -267,7 +274,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not getattr(entry, "runtime_data", None):
         return True
     entry.runtime_data[AREAS_CHECKER].stop()
-    await entry.runtime_data[PUSHY].stop()
+    await asyncio.gather(
+        entry.runtime_data[PUSHY].stop(), entry.runtime_data[TZEVAADOM].stop()
+    )
     entry.runtime_data[UNLOAD_TEMPLATE_EXTENSIONS]()
     entry.runtime_data = None
     for service in [
