@@ -18,8 +18,6 @@ from pytest_homeassistant_custom_component.common import (
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
 from custom_components.oref_alert.const import (
-    ATTR_CATEGORY,
-    ATTR_TITLE,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREA,
@@ -374,8 +372,8 @@ async def test_synthetic_alert(
         {
             CONF_AREA: areas,
             CONF_DURATION: 40,
-            ATTR_CATEGORY: 4,
-            ATTR_TITLE: "test",
+            "category": 4,
+            "title": "test",
         }
     )
     freezer.tick(timedelta(seconds=39))
@@ -405,8 +403,8 @@ async def test_is_synthetic_alert(
         {
             CONF_AREA: ["אליפז ומכרות תמנע"],
             CONF_DURATION: 10,
-            ATTR_CATEGORY: 2,
-            ATTR_TITLE: "test",
+            "category": 2,
+            "title": "test",
         }
     )
     await coordinator.async_config_entry_first_refresh()

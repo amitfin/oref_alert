@@ -26,15 +26,14 @@ from custom_components.oref_alert.categories import (
 
 from .const import (
     ATTR_AREA,
-    ATTR_CATEGORY,
     ATTR_EMOJI,
     ATTR_HOME_DISTANCE,
-    ATTR_TITLE,
     DATA_COORDINATOR,
     DOMAIN,
     IST,
     LOCATION_ID_SUFFIX,
     OREF_ALERT_UNIQUE_ID,
+    AlertField,
 )
 from .metadata.area_info import AREA_INFO
 
@@ -69,8 +68,8 @@ class OrefAlertLocationEvent(GeolocationEvent):
             ATTR_HOME_DISTANCE,
             CONF_FRIENDLY_NAME,
             CONF_UNIT_OF_MEASUREMENT,
-            ATTR_CATEGORY,
-            ATTR_TITLE,
+            AlertField.CATEGORY,
+            AlertField.TITLE,
         }
     )
 
@@ -116,7 +115,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
         if not attributes or attributes == self._alert_attributes:
             return False
         significant_update = False
-        for attribute in [ATTR_TITLE, ATTR_CATEGORY]:
+        for attribute in [AlertField.TITLE, AlertField.CATEGORY]:
             if attributes.get(attribute) != self._alert_attributes.get(attribute):
                 significant_update = True
         self._alert_attributes = attributes
@@ -148,17 +147,21 @@ class OrefAlertLocationEventManager:
         """Return alert's attributes."""
         attributes = {}
         for alert in self._coordinator.data.active_alerts:
-            if alert["data"] == area:
+            if alert[AlertField.AREA] == area:
                 attributes = {
                     key: value
                     for key, value in alert.items()
-                    if key not in {"data", "alertDate"}
+                    if key not in {AlertField.AREA, AlertField.DATE}
                 }
                 attributes[ATTR_DATE] = dt_util.parse_datetime(
-                    alert["alertDate"], raise_on_error=True
+                    alert[AlertField.DATE], raise_on_error=True
                 ).replace(tzinfo=IST)
-                attributes[ATTR_ICON] = category_to_icon(attributes[ATTR_CATEGORY])
-                attributes[ATTR_EMOJI] = category_to_emoji(attributes[ATTR_CATEGORY])
+                attributes[ATTR_ICON] = category_to_icon(
+                    attributes[AlertField.CATEGORY]
+                )
+                attributes[ATTR_EMOJI] = category_to_emoji(
+                    attributes[AlertField.CATEGORY]
+                )
                 break
         return attributes
 
@@ -166,7 +169,9 @@ class OrefAlertLocationEventManager:
     async def _cleanup_entities(self) -> None:
         """Remove entities."""
         await asyncio.sleep(10)  # Wait for a stable state.
-        active = {alert["data"] for alert in self._coordinator.data.active_alerts}
+        active = {
+            alert[AlertField.AREA] for alert in self._coordinator.data.active_alerts
+        }
         areas_to_delete = set(self._location_events.keys()) - active
         for area in areas_to_delete:
             if (entity := self._location_events.pop(area, None)) is not None:
@@ -183,8 +188,8 @@ class OrefAlertLocationEventManager:
                     ATTR_HOME_DISTANCE: event.distance,
                     ATTR_LATITUDE: event.latitude,
                     ATTR_LONGITUDE: event.longitude,
-                    ATTR_CATEGORY: attributes.get(ATTR_CATEGORY),
-                    ATTR_TITLE: attributes.get(ATTR_TITLE),
+                    AlertField.CATEGORY: attributes.get(AlertField.CATEGORY),
+                    AlertField.TITLE: attributes.get(AlertField.TITLE),
                     ATTR_ICON: attributes.get(ATTR_ICON),
                     ATTR_EMOJI: attributes.get(ATTR_EMOJI),
                 },
@@ -193,7 +198,9 @@ class OrefAlertLocationEventManager:
     @callback
     def _async_update(self) -> None:
         """Add and/or remove entities according to the new active alerts list."""
-        active = {alert["data"] for alert in self._coordinator.data.active_alerts}
+        active = {
+            alert[AlertField.AREA] for alert in self._coordinator.data.active_alerts
+        }
         exists = set(self._location_events.keys())
 
         updated = {

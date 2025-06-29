@@ -4,13 +4,13 @@
         "title": "ירי רקטות וטילים",
         "data": "קריית אונו",
         "category": 1,
-        "source": "mqtt"
+        "source": "mobile"
     },
     {
         "alertDate": "2025-06-26 15:33:42",
         "title": "ירי רקטות וטילים",
         "data": "פתח תקווה",
         "category": 1,
-        "source": "mqtt"
+        "source": "mobile"
     }
 ]

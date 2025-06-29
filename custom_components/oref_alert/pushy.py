@@ -28,6 +28,8 @@ from .const import (
     CONF_SENSORS,
     DATA_COORDINATOR,
     LOGGER,
+    AlertField,
+    AlertSource,
 )
 
 if TYPE_CHECKING:
@@ -280,11 +282,11 @@ class PushyNotifications:
                 ]:
                     self.alerts.add(
                         {
-                            "alertDate": alert_date,
-                            "title": content["title"],
-                            "data": area,
-                            "category": category,
-                            "source": "mqtt",
+                            AlertField.DATE: alert_date,
+                            AlertField.TITLE: content[AlertField.TITLE],
+                            AlertField.AREA: area,
+                            AlertField.CATEGORY: category,
+                            AlertField.SOURCE: AlertSource.MOBILE,
                         }
                     )
                     new_alert = True

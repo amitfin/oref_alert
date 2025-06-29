@@ -35,8 +35,6 @@ from .config_flow import AREAS_CONFIG
 from .const import (
     ADD_AREAS,
     ADD_SENSOR_ACTION,
-    ATTR_CATEGORY,
-    ATTR_TITLE,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_ALERT_MAX_AGE_DEPRECATED,
     CONF_AREA,
@@ -52,6 +50,7 @@ from .const import (
     SYNTHETIC_ALERT_ACTION,
     TIME_TO_SHELTER_ID_SUFFIX,
     TITLE,
+    AlertField,
 )
 from .coordinator import OrefAlertDataUpdateCoordinator
 from .metadata.areas import AREAS
@@ -103,8 +102,8 @@ SYNTHETIC_ALERT_SCHEMA = vol.Schema(
             cv.ensure_list, [vol.All(cv.string, vol.In(AREAS))]
         ),
         vol.Required(CONF_DURATION, default=10): cv.positive_int,
-        vol.Required(ATTR_CATEGORY, default=1): cv.positive_int,
-        vol.Optional(ATTR_TITLE): cv.string,
+        vol.Required(AlertField.CATEGORY.value, default=1): cv.positive_int,
+        vol.Optional(AlertField.TITLE.value): cv.string,
     },
     extra=vol.ALLOW_EXTRA,
 )

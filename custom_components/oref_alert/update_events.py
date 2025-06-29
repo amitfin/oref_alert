@@ -21,13 +21,12 @@ from custom_components.oref_alert.metadata.areas import AREAS
 
 from .const import (
     ATTR_AREA,
-    ATTR_CATEGORY,
     ATTR_EMOJI,
     ATTR_HOME_DISTANCE,
-    ATTR_TITLE,
     CONF_ALERT_ACTIVE_DURATION,
     DATA_COORDINATOR,
     DOMAIN,
+    AlertField,
 )
 
 if TYPE_CHECKING:
@@ -64,7 +63,7 @@ class OrefAlertUpdateEventManager:
         for update in self._coordinator.data.updates:
             if self._is_previous_update(update):
                 continue
-            if (area := update["data"]) not in AREAS:
+            if (area := update[AlertField.AREA]) not in AREAS:
                 continue
             area_info = AREA_INFO[area]
             self._hass.bus.async_fire(
@@ -81,8 +80,8 @@ class OrefAlertUpdateEventManager:
                     ),
                     ATTR_LATITUDE: area_info["lat"],
                     ATTR_LONGITUDE: area_info["lon"],
-                    ATTR_CATEGORY: update.get("category"),
-                    ATTR_TITLE: update.get("title"),
+                    AlertField.CATEGORY: update.get(AlertField.CATEGORY),
+                    AlertField.TITLE: update.get(AlertField.TITLE),
                     ATTR_ICON: category_to_icon(update.get("category", 0)),
                     ATTR_EMOJI: category_to_emoji(update.get("category", 0)),
                 },

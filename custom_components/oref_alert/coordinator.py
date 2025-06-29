@@ -21,8 +21,6 @@ from custom_components.oref_alert.categories import (
 from custom_components.oref_alert.ttl_deque import TTLDeque
 
 from .const import (
-    ATTR_CATEGORY,
-    ATTR_TITLE,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREA,
@@ -33,6 +31,7 @@ from .const import (
     DOMAIN,
     IST,
     LOGGER,
+    AlertField,
 )
 from .metadata.areas import AREAS
 
@@ -77,13 +76,13 @@ class OrefAlertCoordinatorData:
 def _sort_alerts(item1: dict[str, Any], item2: dict[str, Any]) -> int:
     """Sort by descending-order "date" and then ascending-order "name"."""
     result = 0
-    if item1["alertDate"] < item2["alertDate"]:
+    if item1[AlertField.DATE] < item2[AlertField.DATE]:
         result = 1
-    elif item1["alertDate"] > item2["alertDate"]:
+    elif item1[AlertField.DATE] > item2[AlertField.DATE]:
         result = -1
-    elif item1["data"] > item2["data"]:
+    elif item1[AlertField.AREA] > item2[AlertField.AREA]:
         result = 1
-    elif item1["data"] < item2["data"]:
+    elif item1[AlertField.AREA] < item2[AlertField.AREA]:
         result = -1
     return result
 
@@ -147,8 +146,10 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             alerts.extend(self._pushy_alerts(alerts))
             alerts.extend(self._get_synthetic_alerts())
             alerts.sort(key=cmp_to_key(_sort_alerts))
-            for unrecognized_area in {alert["data"] for alert in alerts}.difference(
-                {alert["data"] for alert in getattr(self.data, "items", [])}
+            for unrecognized_area in {
+                alert[AlertField.AREA] for alert in alerts
+            }.difference(
+                {alert[AlertField.AREA] for alert in getattr(self.data, "items", [])}
             ).difference(AREAS):
                 LOGGER.error("Alert has an unrecognized area: %s", unrecognized_area)
         else:
@@ -207,25 +208,25 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             else []
         )
         alerts = []
-        for alert_area in current["data"]:
+        for alert_area in current[AlertField.AREA]:
             area = self._fix_area_spelling(alert_area)
             for history_recent_alert in history_recent_alerts:
-                if history_recent_alert["data"] == area:
+                if history_recent_alert[AlertField.AREA] == area:
                     # The alert is already in the history list. No need to add it twice.
                     break
             else:
                 for previous_recent_alert in previous_recent_alerts:
-                    if previous_recent_alert["data"] == area:
+                    if previous_recent_alert[AlertField.AREA] == area:
                         # The alert was already added, so take the original timestamp.
                         alerts.append(previous_recent_alert)
                         break
                 else:
                     alerts.append(
                         {
-                            "alertDate": now,
-                            ATTR_TITLE: current[ATTR_TITLE],
-                            "data": area,
-                            ATTR_CATEGORY: category,
+                            AlertField.DATE: now,
+                            AlertField.TITLE: current[AlertField.TITLE],
+                            AlertField.AREA: area,
+                            AlertField.CATEGORY: category,
                         }
                     )
         return alerts
@@ -246,7 +247,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             to_add = True
             for exist_alert in exist_alerts:
                 if (
-                    pushy_alert["data"] == exist_alert["data"]
+                    pushy_alert[AlertField.AREA] == exist_alert[AlertField.AREA]
                     and pushy_alert["category"] == exist_alert["category"]
                 ):
                     # We only de-dup alerts with the same area and category.
@@ -267,7 +268,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
     def _alert_timestamp(alert: dict) -> float:
         """Return alert's timestamp."""
         return (
-            dt_util.parse_datetime(alert["alertDate"], raise_on_error=True)
+            dt_util.parse_datetime(alert[AlertField.DATE], raise_on_error=True)
             .replace(tzinfo=IST)
             .timestamp()
         )
@@ -291,12 +292,12 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 (
                     now.timestamp() + details[CONF_DURATION],
                     {
-                        "alertDate": now.strftime("%Y-%m-%d %H:%M:%S"),
-                        ATTR_TITLE: details.get(
-                            ATTR_TITLE, "התרעה סינטטית לצורכי בדיקות"
+                        AlertField.DATE: now.strftime("%Y-%m-%d %H:%M:%S"),
+                        AlertField.TITLE: details.get(
+                            AlertField.TITLE, "התרעה סינטטית לצורכי בדיקות"
                         ),
-                        "data": area,
-                        ATTR_CATEGORY: details[ATTR_CATEGORY],
+                        AlertField.AREA: area,
+                        AlertField.CATEGORY: details[AlertField.CATEGORY],
                     },
                 )
             )
@@ -318,7 +319,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
     def _fix_areas_spelling(self, alerts: list[Any]) -> list[Any]:
         """Fix spelling errors in area names."""
         for alert in alerts:
-            alert["data"] = self._fix_area_spelling(alert["data"])
+            alert[AlertField.AREA] = self._fix_area_spelling(alert[AlertField.AREA])
         return alerts
 
     def _fix_area_spelling(self, area: str) -> str:

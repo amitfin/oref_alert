@@ -31,6 +31,7 @@ from .const import (
     TIME_TO_SHELTER_ID_SUFFIX,
     TIME_TO_SHELTER_NAME_SUFFIX,
     TITLE,
+    AlertField,
 )
 from .coordinator import OrefAlertCoordinatorData, OrefAlertDataUpdateCoordinator
 from .metadata.area_to_migun_time import AREA_TO_MIGUN_TIME
@@ -114,11 +115,16 @@ class OrefAlertTimerSensor(
             self._alert = None
             self._alert_timestamp = None
         for alert in self._data.active_alerts:
-            if alert["data"] == self._area or alert["data"] in ALL_AREAS_ALIASES:
+            if (
+                alert[AlertField.AREA] == self._area
+                or alert[AlertField.AREA] in ALL_AREAS_ALIASES
+            ):
                 if not self.coordinator.is_synthetic_alert(alert):
                     self._alert = alert
                     self._alert_timestamp = (
-                        dt_util.parse_datetime(alert["alertDate"], raise_on_error=True)
+                        dt_util.parse_datetime(
+                            alert[AlertField.DATE], raise_on_error=True
+                        )
                         .replace(tzinfo=IST)
                         .timestamp()
                     )

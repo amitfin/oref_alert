@@ -37,6 +37,7 @@ from .const import (
     IST,
     OREF_ALERT_UNIQUE_ID,
     TITLE,
+    AlertField,
 )
 from .coordinator import OrefAlertCoordinatorData, OrefAlertDataUpdateCoordinator
 
@@ -131,7 +132,10 @@ class AlertAreaSensorBase(AlertSensorBase):
 
     def is_selected_area(self, alert: dict[str, str]) -> bool:
         """Check is the alert is among the selected areas."""
-        return alert["data"] in self._areas or alert["data"] in ALL_AREAS_ALIASES
+        return (
+            alert[AlertField.AREA] in self._areas
+            or alert[AlertField.AREA] in ALL_AREAS_ALIASES
+        )
 
 
 class AlertSensor(AlertAreaSensorBase):
@@ -173,7 +177,9 @@ class AlertSensor(AlertAreaSensorBase):
             if self.is_selected_area(alert):
                 if not self.coordinator.is_synthetic_alert(alert):
                     self._is_on_timestamp = (
-                        dt_util.parse_datetime(alert["alertDate"], raise_on_error=True)
+                        dt_util.parse_datetime(
+                            alert[AlertField.DATE], raise_on_error=True
+                        )
                         .replace(tzinfo=IST)
                         .timestamp()
                     )
