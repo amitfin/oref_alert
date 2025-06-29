@@ -32,6 +32,7 @@ from .const import (
     IST,
     LOGGER,
     AlertField,
+    AlertSource,
 )
 from .metadata.areas import AREAS
 
@@ -298,6 +299,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                         ),
                         AlertField.AREA: area,
                         AlertField.CATEGORY: details[AlertField.CATEGORY],
+                        AlertField.SOURCE: AlertSource.SYNTHETIC,
                     },
                 )
             )
@@ -314,7 +316,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
 
     def is_synthetic_alert(self, alert: dict[str, Any]) -> bool:
         """Check if the alert is a synthetic alert."""
-        return any(alert == entry[1] for entry in self._synthetic_alerts)
+        return alert.get(AlertField.SOURCE) == AlertSource.SYNTHETIC
 
     def _fix_areas_spelling(self, alerts: list[Any]) -> list[Any]:
         """Fix spelling errors in area names."""
