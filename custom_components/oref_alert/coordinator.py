@@ -18,7 +18,7 @@ from custom_components.oref_alert.categories import (
     category_is_update,
     real_time_to_history_category,
 )
-from custom_components.oref_alert.pushy import PushyNotifications
+from custom_components.oref_alert.ttl_deque import TTLDeque
 
 from .const import (
     ATTR_CATEGORY,
@@ -92,7 +92,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
     """Class to manage fetching Oref Alert data."""
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, pushy: PushyNotifications
+        self, hass: HomeAssistant, config_entry: ConfigEntry, pushy: TTLDeque
     ) -> None:
         """Initialize global data updater."""
         super().__init__(
@@ -119,7 +119,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
 
     async def _async_update_data(self) -> OrefAlertCoordinatorData:
         """Request the data from Oref servers.."""
-        pushy_change = self._pushy.alerts.changed()
+        pushy_change = self._pushy.changed()
         (current, current_modified), (history, history_modified) = await asyncio.gather(
             *[
                 self._async_fetch_url(url)
@@ -232,7 +232,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
 
     def _pushy_alerts(self, alerts: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Return Pushy alerts after de-dup."""
-        self._pushy_change = self._pushy.alerts.changed()
+        self._pushy_change = self._pushy.changed()
         if self._pushy_change is None:
             return []
 
@@ -241,7 +241,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
 
         dedup_window = REAL_TIME_ALERT_LOGIC_WINDOW * 60
         new_alerts = []
-        for pushy_alert in self._pushy.alerts.items():
+        for pushy_alert in self._pushy.items():
             pushy_timestamp = self._alert_timestamp(pushy_alert)
             to_add = True
             for exist_alert in exist_alerts:

@@ -142,7 +142,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     pushy = PushyNotifications(hass, entry)
 
     entry.runtime_data = {
-        DATA_COORDINATOR: OrefAlertDataUpdateCoordinator(hass, entry, pushy),
+        DATA_COORDINATOR: OrefAlertDataUpdateCoordinator(hass, entry, pushy.alerts),
         AREAS_CHECKER: AreasChecker(hass),
         UNLOAD_TEMPLATE_EXTENSIONS: await inject_template_extensions(hass),
         PUSHY: pushy,

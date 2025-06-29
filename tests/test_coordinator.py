@@ -183,7 +183,7 @@ def test_coordinator_data(
 
 
 def create_coordinator(
-    hass: HomeAssistant, options: dict | None = None, pushy: MagicMock | None = None
+    hass: HomeAssistant, options: dict | None = None, pushy: TTLDeque | None = None
 ) -> OrefAlertDataUpdateCoordinator:
     """Create a test coordinator."""
     config = MockConfigEntry(
@@ -546,11 +546,9 @@ async def test_pushy(
     """Test merging pushy alerts."""
     freezer.move_to("2023-10-07 06:30:00+03:00")
     mock_urls(aioclient_mock, None, "multi_alerts_history.json")
-    alerts = TTLDeque(10)
+    pushy = TTLDeque(10)
     for new_alert in pushy_alerts:
-        alerts.add(new_alert)
-    pushy = MagicMock()
-    pushy.alerts = alerts
+        pushy.add(new_alert)
     coordinator = create_coordinator(hass, {CONF_ALL_ALERTS_ATTRIBUTES: False}, pushy)
     coordinator.async_add_listener(lambda: None)
     await coordinator.async_config_entry_first_refresh()
