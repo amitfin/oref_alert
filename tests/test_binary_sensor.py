@@ -32,7 +32,6 @@ from custom_components.oref_alert.const import (
     DOMAIN,
     OREF_ALERT_UNIQUE_ID,
     SYNTHETIC_ALERT_ACTION,
-    AlertSource,
 )
 
 from .utils import load_json_fixture, mock_urls
