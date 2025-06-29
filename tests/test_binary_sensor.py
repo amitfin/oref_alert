@@ -32,6 +32,7 @@ from custom_components.oref_alert.const import (
     DOMAIN,
     OREF_ALERT_UNIQUE_ID,
     SYNTHETIC_ALERT_ACTION,
+    AlertSource,
 )
 
 from .utils import load_json_fixture, mock_urls
@@ -132,7 +133,7 @@ async def test_state_attributes(
     config_id = await async_setup(hass)
     state = hass.states.get(ENTITY_ID)
     assert state is not None
-    active_area_alert = load_json_fixture("single_alert_history.json")
+    active_area_alert = load_json_fixture("single_alert_history.json", "history")
     assert state.attributes[CONF_ALERT_ACTIVE_DURATION] == 10
     assert state.attributes[ATTR_SELECTED_AREAS_ACTIVE_ALERTS] == active_area_alert
     assert state.attributes[ATTR_SELECTED_AREAS_ALERTS] == active_area_alert
@@ -340,7 +341,9 @@ async def test_all_areas_sensor(
     state = hass.states.get(f"{ENTITY_ID}_{ALL_AREAS_ID_SUFFIX}")
     assert state is not None
     assert state.state == STATE_ON
-    expected_alerts = load_json_fixture("single_alert_random_area_history.json")
+    expected_alerts = load_json_fixture(
+        "single_alert_random_area_history.json", "history"
+    )
     assert state.attributes[ATTR_COUNTRY_ACTIVE_ALERTS] == expected_alerts
     assert state.attributes[ATTR_COUNTRY_ALERTS] == expected_alerts
     await async_shutdown(hass, config_id)
@@ -365,7 +368,9 @@ async def test_updates_attribute(  # noqa: PLR0913
     """Test updates attribute."""
     freezer.move_to("2025-04-26 03:30:00+03:00")
     mock_urls(aioclient_mock, real_time_file, history_file)
-    alerts = load_json_fixture("single_update_history.json")
+    alerts = load_json_fixture(
+        "single_update_history.json", "history" if history_file else "website"
+    )
     if real_time_file:
         alerts[0]["category"] = 13
 
@@ -432,7 +437,9 @@ async def test_all_areas_alert(  # noqa: PLR0913
     """Test all areas alert."""
     freezer.move_to("2025-06-13 03:00:00+03:00")
     mock_urls(aioclient_mock, real_time_file, history_file)
-    alerts = load_json_fixture("single_all_areas_alert_history.json")
+    alerts = load_json_fixture(
+        "single_all_areas_alert_history.json", "history" if history_file else "website"
+    )
     alerts[0]["data"] = alias
 
     config_id = await async_setup(hass, {CONF_AREAS: ["פתח תקווה"]})

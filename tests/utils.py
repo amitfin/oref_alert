@@ -41,9 +41,13 @@ def fixture_path(file_name: str) -> Path:
     return Path(__file__).resolve().parent / "fixtures" / file_name
 
 
-def load_json_fixture(file_name: str) -> Any:
+def load_json_fixture(file_name: str, source: str | None = None) -> Any:
     """Return a json object from a local fixture file."""
     with fixture_path(file_name).open(
         encoding="utf-8",
     ) as file:
-        return json.load(file)
+        content = json.load(file)
+    if source:
+        for alert in content:
+            alert["source"] = source
+    return content

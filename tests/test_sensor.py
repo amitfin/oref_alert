@@ -86,7 +86,7 @@ async def test_time_to_shelter_state(
     assert state.state == str(time_to_shelter)
     assert (
         state.attributes[ATTR_ALERT]
-        == load_json_fixture("single_alert_history.json")[0]
+        == load_json_fixture("single_alert_history.json", "history")[0]
     )
     assert state.attributes[ATTR_DISPLAY] == f"00:{time_to_shelter:02}"
 
@@ -173,7 +173,7 @@ async def test_alert_end_time_state(
     assert state is not None
     assert (
         state.attributes[ATTR_ALERT]
-        == load_json_fixture("single_alert_history.json")[0]
+        == load_json_fixture("single_alert_history.json", "history")[0]
     )
     alert_end_time = 600
     for _ in range(11):
@@ -280,7 +280,7 @@ async def test_all_areas_alert(
     """Test alert with all areas alias."""
     freezer.move_to("2025-06-13 03:00:00+03:00")
     mock_urls(aioclient_mock, None, "single_all_areas_alert_history.json")
-    alert = load_json_fixture("single_all_areas_alert_history.json")[0]
+    alert = load_json_fixture("single_all_areas_alert_history.json", "history")[0]
 
     config_id = await async_setup(hass)
 

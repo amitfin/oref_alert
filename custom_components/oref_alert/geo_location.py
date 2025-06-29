@@ -151,7 +151,7 @@ class OrefAlertLocationEventManager:
                 attributes = {
                     key: value
                     for key, value in alert.items()
-                    if key not in {AlertField.AREA, AlertField.DATE}
+                    if key not in {AlertField.AREA, AlertField.DATE, AlertField.SOURCE}
                 }
                 attributes[ATTR_DATE] = dt_util.parse_datetime(
                     alert[AlertField.DATE], raise_on_error=True
