@@ -83,7 +83,7 @@ class PushyNotifications:
     """Register for notifications coming from Pushy."""
 
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
-        """Initialize areas checker."""
+        """Initialize PushyNotifications."""
         self._hass = hass
         self._config_entry = config_entry
         self._http_client = async_get_clientsession(hass)
