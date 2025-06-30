@@ -10,6 +10,7 @@ from custom_components.oref_alert.categories import (
     category_to_icon,
     pushy_thread_id_to_history_category,
     real_time_to_history_category,
+    tzevaadom_threat_id_to_history_category,
 )
 
 
@@ -69,3 +70,9 @@ def test_pushy_thread_id_to_history_category() -> None:
     """Test pushy_thread_id_to_history_category."""
     for category, expected in enumerate([1, 12, 10, 7, 11, 2, 9, 14, 13, 8, None, 3]):
         assert pushy_thread_id_to_history_category(category) == expected
+
+
+def test_tzevaadom_threat_id_to_history_category() -> None:
+    """Test pushy_thread_id_to_history_category."""
+    for category, expected in enumerate([1, 12, 10, 7, 11, 2, 9, 3, 4, None]):
+        assert tzevaadom_threat_id_to_history_category(category) == expected

@@ -145,7 +145,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     tzevaadom = TzevaAdomNotifications(hass, entry)
 
     entry.runtime_data = {
-        DATA_COORDINATOR: OrefAlertDataUpdateCoordinator(hass, entry, pushy.alerts),
+        DATA_COORDINATOR: OrefAlertDataUpdateCoordinator(
+            hass, entry, [pushy.alerts, tzevaadom.alerts]
+        ),
         AREAS_CHECKER: AreasChecker(hass),
         UNLOAD_TEMPLATE_EXTENSIONS: await inject_template_extensions(hass),
         PUSHY: pushy,

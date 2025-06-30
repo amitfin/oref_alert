@@ -92,7 +92,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
     """Class to manage fetching Oref Alert data."""
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, pushy: TTLDeque
+        self, hass: HomeAssistant, config_entry: ConfigEntry, channels: list[TTLDeque]
     ) -> None:
         """Initialize global data updater."""
         super().__init__(
@@ -113,13 +113,13 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         )
         self._http_client = async_get_clientsession(hass)
         self._http_cache = {}
-        self._pushy = pushy
-        self._pushy_change: datetime | None = None
+        self._channels: list[TTLDeque] = channels
+        self._channels_change: list[datetime | None] = []
         self._synthetic_alerts: list[tuple[float, dict[str, Any]]] = []
 
     async def _async_update_data(self) -> OrefAlertCoordinatorData:
         """Request the data from Oref servers.."""
-        pushy_change = self._pushy.changed()
+        channels_change = [alerts.changed() for alerts in self._channels]
         (current, current_modified), (history, history_modified) = await asyncio.gather(
             *[
                 self._async_fetch_url(url)
@@ -130,7 +130,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             current_modified
             or history_modified
             or not self.data
-            or (pushy_change and pushy_change != self._pushy_change)
+            or (any(channels_change) and channels_change != self._channels_change)
             or self._synthetic_alerts
         ):
             history = history or []
@@ -144,7 +144,8 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             )
             alerts.extend(history)
             alerts.sort(key=cmp_to_key(_sort_alerts))
-            alerts.extend(self._pushy_alerts(alerts))
+            self._add_channels(alerts)
+            self._channels_change = channels_change
             alerts.extend(self._get_synthetic_alerts())
             alerts.sort(key=cmp_to_key(_sort_alerts))
             for unrecognized_area in {
@@ -233,38 +234,47 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                     )
         return alerts
 
-    def _pushy_alerts(self, alerts: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Return Pushy alerts after de-dup."""
-        self._pushy_change = self._pushy.changed()
-        if self._pushy_change is None:
-            return []
-
-        # Pushy alerts only exist for the active duration, so this is the de-dup window
-        exist_alerts = self.recent_alerts(alerts, self._active_duration)
-
+    def _add_channels(self, alerts: list[dict[str, Any]]) -> None:
+        """Add alerts from the different channels after de-dup."""
         dedup_window = REAL_TIME_ALERT_LOGIC_WINDOW * 60
         new_alerts = []
-        for pushy_alert in self._pushy.items():
-            pushy_timestamp = self._alert_timestamp(pushy_alert)
-            to_add = True
-            for exist_alert in exist_alerts:
-                if (
-                    pushy_alert[AlertField.AREA] == exist_alert[AlertField.AREA]
-                    and pushy_alert["category"] == exist_alert["category"]
-                ):
-                    # We only de-dup alerts with the same area and category.
-                    exist_timestamp = self._alert_timestamp(exist_alert)
-                    if abs(pushy_timestamp - exist_timestamp) < dedup_window:
-                        # There is a similar alert within the window.
-                        to_add = False
-                        break
-                    if exist_timestamp - pushy_timestamp > dedup_window:
-                        # The timestamps (and the delta) are increasing. We can stop.
-                        break
-            if to_add:
-                new_alerts.append(pushy_alert)
+        for channel in self._channels:
+            if channel.changed() is None:
+                continue
 
-        return new_alerts
+            if new_alerts:  # From the previous iteration of this loop.
+                alerts.sort(key=cmp_to_key(_sort_alerts))
+
+            # Channel data only exists for active duration, so this is the de-dup window
+            exist_alerts = (
+                self.recent_alerts(alerts, self._active_duration)
+                if self._all_alerts
+                else alerts  # It already includes only active alerts.
+            )
+
+            new_alerts = []
+            for alert in channel.items():
+                alert_timestamp = self._alert_timestamp(alert)
+                to_add = True
+                for exist_alert in exist_alerts:
+                    if (
+                        alert[AlertField.AREA] == exist_alert[AlertField.AREA]
+                        and alert[AlertField.CATEGORY]
+                        == exist_alert[AlertField.CATEGORY]
+                    ):
+                        # We only de-dup alerts with the same area and category.
+                        exist_timestamp = self._alert_timestamp(exist_alert)
+                        if abs(alert_timestamp - exist_timestamp) < dedup_window:
+                            # There is a similar alert within the window.
+                            to_add = False
+                            break
+                        if alert_timestamp - exist_timestamp > dedup_window:
+                            # exist_timestamp is decreasing so the delta is increasing
+                            break
+                if to_add:
+                    new_alerts.append(alert)
+            if new_alerts:
+                alerts.extend(new_alerts)
 
     @staticmethod
     def _alert_timestamp(alert: dict) -> float:
