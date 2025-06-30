@@ -8,7 +8,7 @@ import secrets
 from typing import TYPE_CHECKING, Final
 
 import aiohttp
-from aiohttp import ClientWebSocketResponse, ClientWSTimeout
+from aiohttp import ClientWebSocketResponse, ClientWSTimeout, WSMsgType
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from custom_components.oref_alert.ttl_deque import TTLDeque
@@ -26,6 +26,11 @@ WS_URL: Final = "wss://ws.tzevaadom.co.il/socket?platform=WEB"
 ORIGIN_HEADER: Final = "https://www.tzevaadom.co.il"
 WS_IDLE_TIMEOUT: Final = 10 * 60
 WS_CLOSE_TIMEOUT: Final = 3.0
+WS_SYSTEM_MESSAGES: Final = [
+    aiohttp.WSMsgType.BINARY,
+    aiohttp.WSMsgType.PING,
+    aiohttp.WSMsgType.PONG,
+]
 
 
 class TzevaAdomNotifications:
@@ -76,12 +81,15 @@ class TzevaAdomNotifications:
                         message = await ws.receive()
                         if message.type == aiohttp.WSMsgType.TEXT:
                             await self.on_message(message.json())
-                        elif message.type == aiohttp.WSMsgType.BINARY:
-                            LOGGER.debug("WSS binary message, ignoring.")
+                        elif message.type in WS_SYSTEM_MESSAGES:
+                            LOGGER.debug(
+                                "WS system message (%s), ignoring.",
+                                WSMsgType(message.type).name,
+                            )
                         else:
                             if message.type != aiohttp.WSMsgType.CLOSING:
                                 LOGGER.debug(
-                                    "Unexpected WSS message: type: %d payload: %s",
+                                    "Unexpected WS message: type: %d payload: %s",
                                     message.type,
                                     message.data,
                                 )
@@ -89,7 +97,7 @@ class TzevaAdomNotifications:
                             break
 
             except:  # noqa: E722
-                LOGGER.exception("Error in WSS listener")
+                LOGGER.exception("Error in WS listener")
                 await self._delay()
 
     async def _delay(self) -> None:
@@ -101,4 +109,4 @@ class TzevaAdomNotifications:
 
     async def on_message(self, message: dict) -> None:
         """Handle incoming WebSocket messages."""
-        LOGGER.debug("WSS message: %s", message)
+        LOGGER.debug("WS message: %s", message)
