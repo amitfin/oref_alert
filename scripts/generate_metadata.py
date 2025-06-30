@@ -14,6 +14,7 @@ import yaml
 
 sys.path.insert(0, str((Path(__file__).parent / "..").resolve()))
 
+from custom_components.oref_alert.areas_checker import AREAS_TO_IGNORE
 from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
 from custom_components.oref_alert.pushy import TEST_SEGMENTS
 
@@ -44,8 +45,6 @@ ALL_AREAS = {
     "כל הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": None},
 }
 assert set(ALL_AREAS.keys()) == ALL_AREAS_ALIASES
-
-AREAS_TO_IGNORE = {"אל-ח'וואלד מערב", "כמאנה", "נאות חובב"}
 
 SPELLING_FIX = {"חדרה כל - האזורים": "חדרה - כל האזורים"}
 
@@ -343,7 +342,10 @@ class OrefMetadata:
                 [
                     {"label_he": label_he}
                     for label_he in sorted(
-                        {area["label_he"] for area in self._cities_mix}
+                        [
+                            area["label_he"]
+                            for area in self._fetch_url_json(CITIES_MIX_URL)
+                        ]
                     )
                 ],
                 fixture,
