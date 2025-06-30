@@ -52,6 +52,7 @@ SPELLING_FIX = {"חדרה כל - האזורים": "חדרה - כל האזורי�
 TZEVAADOM_SPELLING_FIX = {
     "אשדוד -יא,יב,טו,יז,מרינה,סיט": "אשדוד -יא,יב,טו,יז,מרינה,סיטי"  # noqa: RUF001
 }
+TZEVAADOM_ALL_AREAS = {10000000: next(iter(ALL_AREAS))}
 
 
 class OrefMetadata:
@@ -268,6 +269,7 @@ class OrefMetadata:
         for area, data in self._tzeva_cities.items():
             assert area in self._areas_no_group
             areas[data["id"]] = area
+        areas.update(TZEVAADOM_ALL_AREAS)
         return dict(sorted(areas.items()))
 
     def generate(self) -> None:
