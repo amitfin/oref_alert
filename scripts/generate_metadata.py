@@ -27,6 +27,7 @@ AREA_TO_DISTRICT_OUTPUT = "area_to_district.py"
 AREA_TO_POLYGON_OUTPUT = "area_to_polygon.json"
 AREA_INFO_OUTPUT = "area_info.py"
 SEGMENT_TO_AREA_OUTPUT = "segment_to_area.py"
+TZEVAADOM_ID_TO_AREA_OUTPUT = "tzevaadom_id_to_area.py"
 SERVICES_YAML = "custom_components/oref_alert/services.yaml"
 TEST_AREAS_FIXTURE = "tests/fixtures/GetCitiesMix.json"
 CITIES_MIX_URL = "https://alerts-history.oref.org.il/Shared/Ajax/GetCitiesMix.aspx"
@@ -88,6 +89,7 @@ class OrefMetadata:
         self._tzeva_cities, self._tzeva_polygons = self._get_tzevaadom_data()
         self._area_to_polygon = self._get_area_to_polygon()
         self._area_info = self._get_area_info()
+        self._tzevaadom_id_to_area = self._get_tzevaadom_id_to_area()
 
     def _read_args(self) -> None:
         """Read program arguments."""
@@ -260,6 +262,14 @@ class OrefMetadata:
                 areas[area] = ALL_AREAS[area]
         return areas
 
+    def _get_tzevaadom_id_to_area(self) -> dict[int, str]:
+        """Get tzevaadom area id to its name."""
+        areas = {}
+        for area, data in self._tzeva_cities.items():
+            assert area in self._areas_no_group
+            areas[data["id"]] = area
+        return dict(sorted(areas.items()))
+
     def generate(self) -> None:
         """Generate the output files."""
         for file_name, variable_name, variable_data in (
@@ -275,6 +285,11 @@ class OrefMetadata:
             ),
             (AREA_INFO_OUTPUT, "AREA_INFO", self._area_info),
             (SEGMENT_TO_AREA_OUTPUT, "SEGMENT_TO_AREA", self._segments),
+            (
+                TZEVAADOM_ID_TO_AREA_OUTPUT,
+                "TZEVAADOM_ID_TO_AREA",
+                self._tzevaadom_id_to_area,
+            ),
         ):
             with (self._output_directory / file_name).open(
                 "w",
