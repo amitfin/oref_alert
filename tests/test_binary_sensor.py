@@ -132,7 +132,9 @@ async def test_state_attributes(
     config_id = await async_setup(hass)
     state = hass.states.get(ENTITY_ID)
     assert state is not None
-    active_area_alert = load_json_fixture("single_alert_history.json", "history")
+    active_area_alert = load_json_fixture(
+        "single_alert_history.json", "website-history"
+    )
     assert state.attributes[CONF_ALERT_ACTIVE_DURATION] == 10
     assert state.attributes[ATTR_SELECTED_AREAS_ACTIVE_ALERTS] == active_area_alert
     assert state.attributes[ATTR_SELECTED_AREAS_ALERTS] == active_area_alert
@@ -341,7 +343,7 @@ async def test_all_areas_sensor(
     assert state is not None
     assert state.state == STATE_ON
     expected_alerts = load_json_fixture(
-        "single_alert_random_area_history.json", "history"
+        "single_alert_random_area_history.json", "website-history"
     )
     assert state.attributes[ATTR_COUNTRY_ACTIVE_ALERTS] == expected_alerts
     assert state.attributes[ATTR_COUNTRY_ALERTS] == expected_alerts
@@ -354,7 +356,7 @@ async def test_all_areas_sensor(
         (None, "single_update_history.json", True),
         ("single_update_real_time.json", None, False),
     ],
-    ids=["history", "real_time"],
+    ids=["website-history", "real_time"],
 )
 async def test_updates_attribute(  # noqa: PLR0913
     hass: HomeAssistant,
@@ -368,7 +370,7 @@ async def test_updates_attribute(  # noqa: PLR0913
     freezer.move_to("2025-04-26 03:30:00+03:00")
     mock_urls(aioclient_mock, real_time_file, history_file)
     alerts = load_json_fixture(
-        "single_update_history.json", "history" if history_file else "website"
+        "single_update_history.json", "website-history" if history_file else "website"
     )
     if real_time_file:
         alerts[0]["category"] = 13
@@ -423,7 +425,7 @@ async def test_updates_attribute(  # noqa: PLR0913
         (None, "single_all_areas_alert_history.json", "כל הארץ"),
         ("single_all_areas_alert_real_time.json", None, "ברחבי הארץ"),
     ],
-    ids=["history", "real_time"],
+    ids=["website-history", "real_time"],
 )
 async def test_all_areas_alert(  # noqa: PLR0913
     hass: HomeAssistant,
@@ -437,7 +439,8 @@ async def test_all_areas_alert(  # noqa: PLR0913
     freezer.move_to("2025-06-13 03:00:00+03:00")
     mock_urls(aioclient_mock, real_time_file, history_file)
     alerts = load_json_fixture(
-        "single_all_areas_alert_history.json", "history" if history_file else "website"
+        "single_all_areas_alert_history.json",
+        "website-history" if history_file else "website",
     )
     alerts[0]["data"] = alias
 

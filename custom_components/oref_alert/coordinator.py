@@ -228,7 +228,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                             AlertField.TITLE: current[AlertField.TITLE],
                             AlertField.AREA: area,
                             AlertField.CATEGORY: category,
-                            AlertField.SOURCE: AlertSource.WEBSITE,
+                            AlertField.CHANNEL: AlertSource.WEBSITE,
                         }
                     )
         return alerts
@@ -300,7 +300,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                         ),
                         AlertField.AREA: area,
                         AlertField.CATEGORY: details[AlertField.CATEGORY],
-                        AlertField.SOURCE: AlertSource.SYNTHETIC,
+                        AlertField.CHANNEL: AlertSource.SYNTHETIC,
                     },
                 )
             )
@@ -317,12 +317,12 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
 
     def is_synthetic_alert(self, alert: dict[str, Any]) -> bool:
         """Check if the alert is a synthetic alert."""
-        return alert.get(AlertField.SOURCE) == AlertSource.SYNTHETIC
+        return alert.get(AlertField.CHANNEL) == AlertSource.SYNTHETIC
 
     def _process_history_alerts(self, alerts: list[Any]) -> list[dict[str, Any]]:
-        """Add source and fix spelling errors in area names."""
+        """Add channel field and fix spelling errors in area names."""
         for alert in alerts:
-            alert[AlertField.SOURCE] = AlertSource.HISTORY
+            alert[AlertField.CHANNEL] = AlertSource.HISTORY
             alert[AlertField.AREA] = self._fix_area_spelling(alert[AlertField.AREA])
         return alerts
 

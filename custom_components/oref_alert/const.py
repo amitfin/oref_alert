@@ -70,15 +70,15 @@ class AlertField(str, enum.Enum):
 
     AREA = "data"
     CATEGORY = "category"
+    CHANNEL = "channel"
     DATE = "alertDate"
-    SOURCE = "source"
     TITLE = "title"
 
 
 class AlertSource(str, enum.Enum):
     """Enum for alert sources."""
 
-    HISTORY = "history"
+    HISTORY = "website-history"
     MOBILE = "mobile"
     SYNTHETIC = "synthetic"
     WEBSITE = "website"

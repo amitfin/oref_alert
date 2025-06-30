@@ -286,7 +286,7 @@ class PushyNotifications:
                             AlertField.TITLE: content[AlertField.TITLE],
                             AlertField.AREA: area,
                             AlertField.CATEGORY: category,
-                            AlertField.SOURCE: AlertSource.MOBILE,
+                            AlertField.CHANNEL: AlertSource.MOBILE,
                         }
                     )
                     new_alert = True

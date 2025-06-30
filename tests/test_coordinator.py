@@ -291,7 +291,7 @@ async def test_active_alerts(
     coordinator = create_coordinator(hass, {CONF_ALERT_ACTIVE_DURATION: 1})
     await coordinator.async_config_entry_first_refresh()
     inactive_alert, active_alert = load_json_fixture(
-        "multi_alerts_history.json", "history"
+        "multi_alerts_history.json", "website-history"
     )
     assert coordinator.data.alerts == [active_alert, inactive_alert]
     assert coordinator.data.active_alerts == [active_alert]
@@ -459,7 +459,9 @@ async def test_non_alert_category(
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
-    expected_alerts = load_json_fixture("alert_categories_expected.json", "history")
+    expected_alerts = load_json_fixture(
+        "alert_categories_expected.json", "website-history"
+    )
     assert coordinator.data.alerts == expected_alerts
     assert coordinator.data.active_alerts == expected_alerts
     await coordinator.async_shutdown()

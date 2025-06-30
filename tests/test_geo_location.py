@@ -100,7 +100,8 @@ async def test_entity(
     assert state.attributes["title"] == "ירי רקטות וטילים"
     assert state.attributes[ATTR_ICON] == "mdi:rocket-launch"
     assert state.attributes[ATTR_EMOJI] == "🚀"
-    assert len(state.attributes) == 11
+    assert state.attributes["channel"] == "website-history"
+    assert len(state.attributes) == 12
     await async_shutdown(hass, config_id)
 
 
