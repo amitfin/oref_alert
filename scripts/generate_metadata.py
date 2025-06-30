@@ -36,17 +36,17 @@ TZEVAADOM_VERSIONS_URL = "https://api.tzevaadom.co.il/lists-versions"
 TZEVAADOM_CITIES_URL = "https://www.tzevaadom.co.il/static/cities.json?v="
 TZEVAADOM_POLYGONS_URL = "https://www.tzevaadom.co.il/static/polygons.json?v="
 CITY_ALL_AREAS_SUFFIX = " - כל האזורים"
-# "Hadera all areas" is listed with this typo:
-CITY_ALL_AREAS_SUFFIX_TYPO = " כל - האזורים"
 DISTRICT_PREFIX = "מחוז "
 
-MISSING_CITIES = {
+ALL_AREAS = {
     "ברחבי הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": None},
     "כל הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": None},
-    "אל-ח'וואלד מערב": {"lat": 32.771, "lon": 35.1363, "segment": 5001282},
-    "כמאנה": {"lat": 32.9085, "lon": 35.3358, "segment": None},
-    "נאות חובב": {"lat": 31.1336, "lon": 34.7899, "segment": None},
 }
+assert set(ALL_AREAS.keys()) == ALL_AREAS_ALIASES
+
+AREAS_TO_IGNORE = {"אל-ח'וואלד מערב", "כמאנה", "נאות חובב"}
+
+SPELLING_FIX = {"חדרה כל - האזורים": "חדרה - כל האזורים"}
 
 TZEVAADOM_SPELLING_FIX = {
     "אשדוד -יא,יב,טו,יז,מרינה,סיט": "אשדוד -יא,יב,טו,יז,מרינה,סיטי"
@@ -62,7 +62,9 @@ class OrefMetadata:
         self._read_args()
         self._root_directory = Path(__file__).parent.parent
         self._output_directory = self._root_directory / RELATIVE_OUTPUT_DIRECTORY
-        self._cities_mix: list[Any] = self._fetch_url_json(CITIES_MIX_URL)
+        self._cities_mix: list[Any] = self._fix_areas(
+            self._fetch_url_json(CITIES_MIX_URL)
+        )
         self._backend_areas: list[str] = self._get_areas()
         self._areas_no_group = list(
             filter(
@@ -101,16 +103,19 @@ class OrefMetadata:
             timeout=15,
         ).json()
 
+    def _fix_areas(self, data: Any) -> Any:
+        """Fix spelling error and remove irrelevant items."""
+        remove_areas = AREAS_TO_IGNORE.union(set(SPELLING_FIX.keys()))
+        return [area for area in data if area["label_he"] not in remove_areas] + [
+            {**area, "label_he": new}
+            for area in data
+            for old, new in SPELLING_FIX.items()
+            if area["label_he"] == old
+        ]
+
     def _get_areas(self) -> list[str]:
         """Return the list of areas."""
-        areas = list(
-            {
-                area["label_he"].replace(
-                    CITY_ALL_AREAS_SUFFIX_TYPO, CITY_ALL_AREAS_SUFFIX
-                )
-                for area in self._cities_mix
-            }
-        )
+        areas = list({area["label_he"] for area in self._cities_mix})
         areas.sort()
         return areas
 
@@ -142,10 +147,7 @@ class OrefMetadata:
     def _area_to_migun_time_map(self) -> dict[str, int]:
         """Build a mpa between a city and the migun time."""
         migun_time = {
-            area["label_he"].replace(
-                CITY_ALL_AREAS_SUFFIX_TYPO, CITY_ALL_AREAS_SUFFIX
-            ): int(area["migun_time"])
-            for area in self._cities_mix
+            area["label_he"]: int(area["migun_time"]) for area in self._cities_mix
         }
         return {area: migun_time[area] for area in sorted(migun_time.keys())}
 
@@ -220,7 +222,13 @@ class OrefMetadata:
         """Fix spelling error of tzevaadom."""
         for old, new in TZEVAADOM_SPELLING_FIX.items():
             data[new] = data.pop(old)
-        assert not (set(data.keys()) - set(self._areas_no_group))
+
+        # The lists should be identical with the exception of "all areas" aliases.
+        assert set(data.keys()).union(set(ALL_AREAS.keys())) == set(
+            self._areas_no_group
+        )
+        assert not set(data.keys()).intersection(set(ALL_AREAS.keys()))
+
         return data
 
     def _get_area_to_polygon(self) -> dict[str, list[list[float]]]:
@@ -239,21 +247,6 @@ class OrefMetadata:
         """Get area additional information from tzevaadom."""
         areas = {}
 
-        overlap = set(MISSING_CITIES.keys()).intersection(
-            set(self._tzeva_cities.keys())
-        )
-        assert not len(overlap), f"Missing cities include Tzeva Adom areas: {overlap}"
-
-        unknown = set(MISSING_CITIES.keys()) - set(self._areas_no_group)
-        assert not len(unknown), f"Missing cities include unknown areas: {unknown}"
-
-        uncovered = (
-            set(self._areas_no_group)
-            - set(self._tzeva_cities.keys())
-            - set(MISSING_CITIES.keys())
-        )
-        assert not len(uncovered), f"Areas with no info: {uncovered}"
-
         area_to_segment = {area: segment for segment, area in self._segments.items()}
 
         for area in self._areas_no_group:
@@ -264,7 +257,7 @@ class OrefMetadata:
                     "segment": area_to_segment[area],
                 }
             else:
-                areas[area] = MISSING_CITIES[area]
+                areas[area] = ALL_AREAS[area]
         return areas
 
     def generate(self) -> None:
