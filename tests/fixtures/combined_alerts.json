@@ -4,27 +4,27 @@
         "title": "ירי רקטות וטילים",
         "data": "בארי",
         "category": 1,
-        "source": "history"
+        "channel": "website-history"
     },
     {
         "alertDate": "2023-10-07 06:30:00",
         "title": "ירי רקטות וטילים",
         "data": "נירים",
         "category": 10,
-        "source": "website"
+        "channel": "website"
     },
     {
         "alertDate": "2023-10-07 06:30:00",
         "title": "ירי רקטות וטילים",
         "data": "סעד",
         "category": 10,
-        "source": "website"
+        "channel": "website"
     },
     {
         "alertDate": "2023-10-07 06:28:00",
         "title": "ירי רקטות וטילים",
         "data": "נחל עוז",
         "category": 1,
-        "source": "history"
+        "channel": "website-history"
     }
 ]
