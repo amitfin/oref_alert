@@ -44,13 +44,12 @@ MISSING_CITIES = {
     "ברחבי הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": None},
     "כל הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": None},
     "אל-ח'וואלד מערב": {"lat": 32.771, "lon": 35.1363, "segment": 5001282},
-    "אשדוד -יא,יב,טו,יז,מרינה,סיטי": {  # noqa: RUF001
-        "lat": 31.7836,
-        "lon": 34.6332,
-        "segment": 5000432,
-    },
     "כמאנה": {"lat": 32.9085, "lon": 35.3358, "segment": None},
     "נאות חובב": {"lat": 31.1336, "lon": 34.7899, "segment": None},
+}
+
+TZEVAADOM_SPELLING_FIX = {
+    "אשדוד -יא,יב,טו,יז,מרינה,סיט": "אשדוד -יא,יב,טו,יז,מרינה,סיטי"
 }
 
 
@@ -209,11 +208,20 @@ class OrefMetadata:
         """Get tzevaadom metadata content."""
         versions = self._fetch_url_json(TZEVAADOM_VERSIONS_URL)
         return (
-            self._fetch_url_json(f"{TZEVAADOM_CITIES_URL}{versions['cities']}")[
-                "cities"
-            ],
+            self._tzevaadom_spelling_fix(
+                self._fetch_url_json(f"{TZEVAADOM_CITIES_URL}{versions['cities']}")[
+                    "cities"
+                ]
+            ),
             self._fetch_url_json(f"{TZEVAADOM_POLYGONS_URL}{versions['polygons']}"),
         )
+
+    def _tzevaadom_spelling_fix(self, data: Any) -> Any:
+        """Fix spelling error of tzevaadom."""
+        for old, new in TZEVAADOM_SPELLING_FIX.items():
+            data[new] = data.pop(old)
+        assert not (set(data.keys()) - set(self._areas_no_group))
+        return data
 
     def _get_area_to_polygon(self) -> dict[str, list[list[float]]]:
         """Get area polygons from tzevaadom."""
