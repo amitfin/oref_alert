@@ -77,6 +77,20 @@ All sensors have the following extra attributes:
 7. `Country updates`: all updates in Israel.
 8. `Country alerts`: all alerts in Israel. Exists only when the [configuration](https://my.home-assistant.io/redirect/integration/?domain=oref_alert) "Add 'All Alerts' attributes" is turned on.
 
+## Alert's Attributes
+
+Alerts and updates inside attributes have the following fields:
+1. `alertDate`: e.g. `2025-06-30 15:00:00` (Israel timezone).
+2. `title`: e.g. `ירי רקטות וטילים`. Always in Hebrew.
+3. `data`: a single area name, e.g. `תל אביב - מרכז העיר`.
+4. `category`: an integer of the category as listed [here](https://www.oref.org.il/alerts/alertCategories.json). Categories 13 and 14 are used for updates.
+5. `channel`: the receiving channel. Below is the ordered list of options. When the same alert is coming on multiple channels, only the higher channel will be used. The fields of the alerts are normalized and have the same format regardless of the channel.
+    1. `website-history`: the history file of the official website (polling).
+    2. `website`: the real-time file of the official website (polling).
+    3. `mobile`: the mobile notification channel of the official app.
+    4. `tzevaadom`: the notification channel of [tzevaadom.co.il](https://www.tzevaadom.co.il/).
+    5. `synthetic`: synthetic alert for testing purposes generated via the [synthetic-alert action](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.synthetic_alert).
+
 ## Time To Shelter Sensors
 
 The integration creates an additional set of sensors which monitor the time to shelter for a specific area. The ID of the entity is similar to the corresponding binary sensor, with the suffix of `_time_to_shelter`. For example, `sensor.oref_alert_time_to_shelter`. When there is a new alert in the area, the `state` of the sensor is set according to the instructions of Pikud Haoref for the selected area (e.g. 90 seconds in the middle of Israel). The `state` of the sensor decrements as time passes, and it becomes `unknown` once it reaches -60 seconds (one minute past due). The sensor has the following extra attributes:

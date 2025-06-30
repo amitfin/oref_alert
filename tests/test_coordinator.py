@@ -3,7 +3,6 @@
 from datetime import timedelta
 from http import HTTPStatus
 from typing import Any
-from unittest.mock import MagicMock
 
 import homeassistant.util.dt as dt_util
 import pytest
@@ -181,7 +180,9 @@ def test_coordinator_data(
 
 
 def create_coordinator(
-    hass: HomeAssistant, options: dict | None = None, pushy: TTLDeque | None = None
+    hass: HomeAssistant,
+    options: dict | None = None,
+    channels: list[TTLDeque] | None = None,
 ) -> OrefAlertDataUpdateCoordinator:
     """Create a test coordinator."""
     config = MockConfigEntry(
@@ -193,7 +194,7 @@ def create_coordinator(
         },
     )
     config.mock_state(hass, ConfigEntryState.SETUP_IN_PROGRESS)
-    coordinator = OrefAlertDataUpdateCoordinator(hass, config, pushy or MagicMock())
+    coordinator = OrefAlertDataUpdateCoordinator(hass, config, channels or [])
     coordinator.config_entry = config
     return coordinator
 
@@ -500,7 +501,7 @@ async def test_disable_all_alerts(
 
 
 @pytest.mark.parametrize(
-    ("pushy_alerts", "expected"),
+    ("alerts", "expected"),
     [
         (
             [
@@ -527,9 +528,9 @@ async def test_disable_all_alerts(
         (
             [
                 {
-                    "alertDate": "2023-10-07 06:27:00",
+                    "alertDate": "2023-10-07 06:31:00",
                     "title": "ירי רקטות וטילים",
-                    "data": "בארי",
+                    "data": "נחל עוז",
                     "category": 1,
                 }
             ],
@@ -538,20 +539,20 @@ async def test_disable_all_alerts(
     ],
     ids=("new", "de-dup", "stop searching"),
 )
-async def test_pushy(
+async def test_channels(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
     freezer: FrozenDateTimeFactory,
-    pushy_alerts: list[dict],
+    alerts: list[dict],
     expected: int,
 ) -> None:
-    """Test merging pushy alerts."""
-    freezer.move_to("2023-10-07 06:30:00+03:00")
+    """Test merging channel alerts."""
+    freezer.move_to("2023-10-07 06:31:00+03:00")
     mock_urls(aioclient_mock, None, "multi_alerts_history.json")
-    pushy = TTLDeque(10)
-    for new_alert in pushy_alerts:
-        pushy.add(new_alert)
-    coordinator = create_coordinator(hass, {CONF_ALL_ALERTS_ATTRIBUTES: False}, pushy)
+    channel = TTLDeque(10)
+    for alert in alerts:
+        channel.add(alert)
+    coordinator = create_coordinator(hass, channels=[channel, channel])
     coordinator.async_add_listener(lambda: None)
     await coordinator.async_config_entry_first_refresh()
     assert len(coordinator.data.alerts) == expected

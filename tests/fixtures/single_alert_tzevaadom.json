@@ -1,0 +1,12 @@
+{
+  "type": "ALERT",
+  "data": {
+    "notificationId": "3ba89af4-533f-45e5-a6f0-66f1409a3c68",
+    "time": 1751284800,
+    "threat": 5,
+    "isDrill": false,
+    "cities": [
+      "גבעת שמואל"
+    ]
+  }
+}

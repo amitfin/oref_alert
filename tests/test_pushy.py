@@ -327,7 +327,7 @@ async def test_simple_message(
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Test MQTT parameters."""
+    """Test single message."""
     freezer.move_to("2025-06-26T15:34:00+0300")
     async_fire_time_changed(hass)
     config = await setup_test(

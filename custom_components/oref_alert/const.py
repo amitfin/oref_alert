@@ -80,5 +80,6 @@ class AlertSource(str, enum.Enum):
 
     HISTORY = "website-history"
     MOBILE = "mobile"
+    TZEVAADOM = "tzevaadom"
     SYNTHETIC = "synthetic"
     WEBSITE = "website"

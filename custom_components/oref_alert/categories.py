@@ -70,6 +70,19 @@ PUSHY_THREAD_ID_TO_HISTORY_CATEGORY = {
     11: 3,  # UnconventionalMissile
 }
 
+# Based on information provided by Tzeva Adom team.
+TZEVAADOM_THREAT_ID_TO_HISTORY_CATEGORY = {
+    0: 1,  # ירי טילים
+    1: 12,  # אירוע חומרים מסוכנים
+    2: 10,  # חשש לחדירת מחבלים
+    3: 7,  # רעידת אדמה
+    4: 11,  # חשש לצונאמי
+    5: 2,  # חדירת כלי טיס עוין  # noqa: RUF003
+    6: 9,  # חשש לאירוע רדיולוגי
+    7: 3,  # ירי בלתי קונבנציונלי (כימי)
+    8: 4,  # התרעה כללית גנרית
+}
+
 
 def category_metadata(category: int) -> tuple[str, str, bool]:
     """Return the metadata for the category."""
@@ -104,3 +117,8 @@ def real_time_to_history_category(category: int) -> int | None:
 def pushy_thread_id_to_history_category(category: int) -> int | None:
     """Return the history category for Pushy thread ID."""
     return PUSHY_THREAD_ID_TO_HISTORY_CATEGORY.get(category)
+
+
+def tzevaadom_threat_id_to_history_category(category: int) -> int | None:
+    """Return the history category for Tzeva Adom threat ID."""
+    return TZEVAADOM_THREAT_ID_TO_HISTORY_CATEGORY.get(category)
