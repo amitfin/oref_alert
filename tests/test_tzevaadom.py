@@ -17,6 +17,7 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.oref_alert.const import (
+    ATTR_SELECTED_AREAS_UPDATES,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     DOMAIN,
@@ -80,57 +81,79 @@ async def test_lifecycle(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.parametrize(
-    ("overrides", "expected_state"),
+    ("alert", "overrides", "expected_state", "expected_updates"),
     [
-        ({}, STATE_ON),
-        ({"isDrill": True}, STATE_OFF),
-        ({"cities": ["dummy"]}, STATE_OFF),
+        (True, {}, STATE_ON, []),
+        (True, {"isDrill": True}, STATE_OFF, []),
+        (True, {"cities": ["dummy"]}, STATE_OFF, []),
+        (
+            False,
+            {},
+            STATE_OFF,
+            [
+                {
+                    "alertDate": "2025-06-30 15:00:00",
+                    "title": "מבזק פיקוד העורף - התרעה מקדימה",
+                    "data": "גבעת שמואל",
+                    "category": 14,
+                    "channel": "tzevaadom",
+                }
+            ],
+        ),
+        (False, {"citiesIds": None}, STATE_OFF, []),
     ],
-    ids=("plain", "drill", "invalid area"),
+    ids=("plain", "drill", "invalid area", "update", "no cities"),
 )
-async def test_message(
+async def test_message(  # noqa: PLR0913
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
+    alert: bool,  # noqa: FBT001
     overrides: dict,
     expected_state: str,
+    expected_updates: list[dict],
 ) -> None:
     """Test tzevaadom message."""
     freezer.move_to("2025-06-30T15:00:00+0300")
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
-    alert = load_json_fixture("single_alert_tzevaadom.json")
-    alert["data"].update(overrides)
-    data = json.dumps(alert).encode("utf-8")
+    message = load_json_fixture(
+        f"single_{'alert' if alert else 'update'}_tzevaadom.json"
+    )
+    message["data"].update(overrides)
+    data = json.dumps(message).encode("utf-8")
     with mock_ws([WSMessage(type=WSMsgType.TEXT, data=data, extra=None)]) as ws:
         config_entry = await setup_test(hass)
         await ws.wait_closed()
         state = hass.states.get(ENTITY_ID)
         assert state is not None
         assert state.state == expected_state
+        assert state.attributes[ATTR_SELECTED_AREAS_UPDATES] == expected_updates
         await cleanup_test(hass, config_entry)
-    assert f"WS message: {alert}" in caplog.text
+    assert f"WS message: {message}" in caplog.text
 
 
 @pytest.mark.parametrize(
-    ("message_type", "log_message"),
+    ("message_type", "log_message", "data"),
     [
-        (WSMsgType.BINARY, "WS system message (BINARY), ignoring."),
-        (WSMsgType.PING, "WS system message (PING), ignoring."),
-        (WSMsgType.PONG, "WS system message (PONG), ignoring."),
-        (WSMsgType.ERROR, "Unexpected WS message (ERROR): {}"),
-        (WSMsgType.TEXT, "Error processing WS message"),
+        (WSMsgType.BINARY, "WS system message (BINARY), ignoring.", None),
+        (WSMsgType.PING, "WS system message (PING), ignoring.", None),
+        (WSMsgType.PONG, "WS system message (PONG), ignoring.", None),
+        (WSMsgType.ERROR, "Unexpected WS message (ERROR): {}", None),
+        (WSMsgType.TEXT, "Error processing WS message", None),
+        (WSMsgType.TEXT, "Tzevaadom unknown message type: test", '{"type": "test"}'),
     ],
-    ids=("binary", "ping", "pong", "error", "invalid"),
+    ids=("binary", "ping", "pong", "error", "invalid", "unknown internal type"),
 )
 async def test_other_messages(
     hass: HomeAssistant,
     caplog: pytest.LogCaptureFixture,
     message_type: WSMsgType,
     log_message: str,
+    data: str | None,
 ) -> None:
-    """Test tzevaadom non-text message types."""
-    with mock_ws([WSMessage(type=message_type, data="{}", extra=None)]) as ws:
+    """Test tzevaadom message types."""
+    with mock_ws([WSMessage(type=message_type, data=data or "{}", extra=None)]) as ws:
         config_entry = await setup_test(hass)
         await ws.wait_closed()
         await cleanup_test(hass, config_entry)

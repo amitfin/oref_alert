@@ -17,6 +17,9 @@ from custom_components.oref_alert.categories import (
     tzevaadom_threat_id_to_history_category,
 )
 from custom_components.oref_alert.metadata.areas import AREAS
+from custom_components.oref_alert.metadata.tzevaadom_id_to_area import (
+    TZEVAADOM_ID_TO_AREA,
+)
 from custom_components.oref_alert.ttl_deque import TTLDeque
 
 from .const import (
@@ -135,15 +138,11 @@ class TzevaAdomNotifications:
                 self._stop.wait(), timeout=secrets.SystemRandom().uniform(5, 15)
             )
 
-    async def _on_message(self, message: dict) -> None:
-        """Handle incoming WebSocket messages."""
-        try:
-            LOGGER.debug("WS message: %s", message)
-
+    def _parse_message(self, message: dict) -> dict | None:
+        """Parse the message and return parsed/converted fields."""
+        if message["type"] == MessageType.ALERT:
             if (
-                message["type"] != MessageType.ALERT
-                or message["data"]["isDrill"]
-                or (title := THREAT_TITLES[int(message["data"]["threat"])]) is None
+                message["data"]["isDrill"]
                 or (
                     category := tzevaadom_threat_id_to_history_category(
                         int(message["data"]["threat"])
@@ -151,18 +150,48 @@ class TzevaAdomNotifications:
                 )
                 is None
             ):
-                return
-            alert_date = datetime.fromtimestamp(
-                message["data"]["time"], tz=IST
-            ).strftime("%Y-%m-%d %H:%M:%S")
+                return None
+            fields = {
+                AlertField.TITLE: THREAT_TITLES[int(message["data"]["threat"])],
+                AlertField.CATEGORY: category,
+                "areas": message["data"]["cities"],
+                "id": f"{MessageType.ALERT}_{message['data']['notificationId']}",
+            }
 
-            message_id = message["data"]["notificationId"]
-            if message_id in self._ids.items():
+        elif message["type"] == MessageType.SYSTEM_MESSAGE:
+            if (cities_ids := message["data"].get("citiesIds")) is None:
+                return None
+            fields = {
+                AlertField.TITLE: message["data"]["titleHe"],
+                AlertField.CATEGORY: 14,  # 14 is pre-alert and 13 is post-alert.
+                "areas": [TZEVAADOM_ID_TO_AREA[city_id] for city_id in cities_ids],
+                "id": f"{MessageType.SYSTEM_MESSAGE}_{message['data']['id']}",
+            }
+
+        else:
+            LOGGER.warning("Tzevaadom unknown message type: %s", message["type"])
+            return None
+
+        fields[AlertField.DATE] = datetime.fromtimestamp(
+            message["data"]["time"], tz=IST
+        ).strftime("%Y-%m-%d %H:%M:%S")
+
+        return fields
+
+    async def _on_message(self, message: dict) -> None:
+        """Handle incoming WebSocket messages."""
+        try:
+            LOGGER.debug("WS message: %s", message)
+
+            if (fields := self._parse_message(message)) is None:
                 return
-            self._ids.add(message_id)
+
+            if fields["id"] in self._ids.items():
+                return
+            self._ids.add(fields["id"])
 
             new_alert = False
-            for area in message["data"]["cities"]:
+            for area in fields["areas"]:
                 if area not in AREAS:
                     LOGGER.warning(
                         "Unknown area '%s' in Tzeva Adom alert, skipping.", area
@@ -170,10 +199,10 @@ class TzevaAdomNotifications:
                     continue
                 self.alerts.add(
                     {
-                        AlertField.DATE: alert_date,
-                        AlertField.TITLE: title,
+                        AlertField.DATE: fields[AlertField.DATE],
+                        AlertField.TITLE: fields[AlertField.TITLE],
                         AlertField.AREA: area,
-                        AlertField.CATEGORY: category,
+                        AlertField.CATEGORY: fields[AlertField.CATEGORY],
                         AlertField.CHANNEL: AlertSource.TZEVAADOM,
                     }
                 )
