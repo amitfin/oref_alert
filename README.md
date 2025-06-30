@@ -79,16 +79,16 @@ All sensors have the following extra attributes:
 
 ## Alert's Attributes
 
-An alert or update inside an attribute has the following fields:
+Alerts and updates inside attributes have the following fields:
 1. `alertDate`: e.g. `2025-06-30 15:00:00` (Israel timezone).
-2. `title`: e.g. `ירי רקטות וטילים`.
-3. `data`: area name, always a single location, e.g. `תל אביב - מרכז העיר`.
-4. `category`: integer with the category number as listed [here](https://www.oref.org.il/alerts/alertCategories.json). Categories 13 and 14 are used for updates.
-5. `channel`: the receiving channel. Below is the ordered list of options. When the same alert is coming on multiple channels, the higher channel will be used. The fields of the alerts are normalized and have the exact same format regardless of the channel.
-    1. `website-history`: the history file from the official website.
-    2. `website`: the real-time file from the official website.
+2. `title`: e.g. `ירי רקטות וטילים`. Always in Hebrew.
+3. `data`: a single area name, e.g. `תל אביב - מרכז העיר`.
+4. `category`: an integer of the category as listed [here](https://www.oref.org.il/alerts/alertCategories.json). Categories 13 and 14 are used for updates.
+5. `channel`: the receiving channel. Below is the ordered list of options. When the same alert is coming on multiple channels, only the higher channel will be used. The fields of the alerts are normalized and have the same format regardless of the channel.
+    1. `website-history`: the history file of the official website (polling).
+    2. `website`: the real-time file of the official website (polling).
     3. `mobile`: the mobile notification channel of the official app.
-    4. `tzevaadom`: notification channel of [tzevaadom.co.il](https://www.tzevaadom.co.il/).
+    4. `tzevaadom`: the notification channel of [tzevaadom.co.il](https://www.tzevaadom.co.il/).
     5. `synthetic`: synthetic alert for testing purposes generated via the [synthetic-alert action](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.synthetic_alert).
 
 ## Time To Shelter Sensors
