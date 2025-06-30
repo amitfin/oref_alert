@@ -89,8 +89,10 @@ class TzevaAdomNotifications:
                         else:
                             if message.type != aiohttp.WSMsgType.CLOSING:
                                 LOGGER.debug(
-                                    "Unexpected WS message: type: %d payload: %s",
-                                    message.type,
+                                    "Unexpected WS message (%s): %s",
+                                    WSMsgType(message.type).name
+                                    if isinstance(message.type, int)
+                                    else "None",
                                     message.data,
                                 )
                                 await self._delay()
