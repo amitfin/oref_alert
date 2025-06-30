@@ -72,6 +72,7 @@ class TzevaAdomNotifications:
         self.alerts: TTLDeque = TTLDeque(
             config_entry.options[CONF_ALERT_ACTIVE_DURATION]
         )
+        self._ids: TTLDeque = TTLDeque(config_entry.options[CONF_ALERT_ACTIVE_DURATION])
         self._http_client = async_get_clientsession(hass)
         self._stop = asyncio.Event()
         self._task: asyncio.Task | None = None
@@ -154,6 +155,11 @@ class TzevaAdomNotifications:
             alert_date = datetime.fromtimestamp(
                 message["data"]["time"], tz=IST
             ).strftime("%Y-%m-%d %H:%M:%S")
+
+            message_id = message["data"]["notificationId"]
+            if message_id in self._ids.items():
+                return
+            self._ids.add(message_id)
 
             new_alert = False
             for area in message["data"]["cities"]:

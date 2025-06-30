@@ -22,6 +22,7 @@ from custom_components.oref_alert.const import (
     DOMAIN,
     OREF_ALERT_UNIQUE_ID,
 )
+from custom_components.oref_alert.tzevaadom import TzevaAdomNotifications
 from tests.utils import load_json_fixture
 
 if TYPE_CHECKING:
@@ -134,3 +135,17 @@ async def test_other_messages(
         await ws.wait_closed()
         await cleanup_test(hass, config_entry)
     assert log_message in caplog.text
+
+
+async def test_duplicate(hass: HomeAssistant) -> None:
+    """Test 2 messages with the same ID."""
+    alert = load_json_fixture("single_alert_tzevaadom.json")
+    data = json.dumps(alert).encode("utf-8")
+    tzevaadom = TzevaAdomNotifications(
+        hass, MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
+    )
+    with mock_ws([WSMessage(type=WSMsgType.TEXT, data=data, extra=None)] * 3) as ws:
+        await tzevaadom.start()
+        await ws.wait_closed()
+        assert len(tzevaadom.alerts.items()) == 1
+        await tzevaadom.stop()

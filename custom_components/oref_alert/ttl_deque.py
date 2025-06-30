@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import deque
 from datetime import datetime, timedelta
+from typing import Any
 
 import homeassistant.util.dt as dt_util
 
@@ -16,7 +17,7 @@ class TTLDeque:
         self._ttl = timedelta(minutes=ttl)
         self._deque = deque()
 
-    def add(self, item: dict) -> None:
+    def add(self, item: Any) -> None:
         """Add an item."""
         self._deque.appendleft((dt_util.now(), item))
         self._prune()
@@ -27,7 +28,7 @@ class TTLDeque:
         while self._deque and now - self._deque[-1][0] >= self._ttl:
             self._deque.pop()
 
-    def items(self) -> list[dict]:
+    def items(self) -> list[Any]:
         """Return the items."""
         self._prune()
         return [item for _, item in self._deque]
