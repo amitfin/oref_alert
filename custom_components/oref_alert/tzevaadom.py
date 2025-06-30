@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import enum
 import secrets
+import sys
 from datetime import datetime
 from typing import TYPE_CHECKING, Final
 
@@ -159,7 +160,10 @@ class TzevaAdomNotifications:
             }
 
         elif message["type"] == MessageType.SYSTEM_MESSAGE:
-            if (cities_ids := message["data"].get("citiesIds")) is None:
+            if (
+                cities_ids := message["data"].get("citiesIds")
+                # SYSTEM_MESSAGE is working for now only for testing purposes.
+            ) is None or "pytest" not in sys.modules:
                 return None
             fields = {
                 AlertField.TITLE: message["data"]["titleHe"],
