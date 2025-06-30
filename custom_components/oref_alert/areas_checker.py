@@ -15,6 +15,7 @@ from .const import DOMAIN, LOGGER
 CITIES_MIX_URL = "https://alerts-history.oref.org.il/Shared/Ajax/GetCitiesMix.aspx"
 FILTER_SUFFIX1 = " - כל האזורים"
 FILTER_SUFFIX2 = " כל - האזורים"
+AREAS_TO_IGNORE = {"אל-ח'וואלד מערב", "כמאנה", "נאות חובב"}
 
 
 class AreasChecker:
@@ -45,6 +46,7 @@ class AreasChecker:
                 for area in data
                 if not area["label_he"].endswith(FILTER_SUFFIX1)
                 and not area["label_he"].endswith(FILTER_SUFFIX2)
+                and area["label_he"] not in AREAS_TO_IGNORE
             }
             new = sorted(areas.difference(AREAS))
             old = sorted(AREAS.difference(areas))
