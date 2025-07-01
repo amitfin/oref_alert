@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from asyncio import Event
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from aiohttp import WSMessage, WSMsgType
@@ -43,7 +44,8 @@ def mock_ws(messages: list[WSMessage]) -> Generator[AsyncMock]:
     ws_closed = Event()
     ws = AsyncMock()
     ws.receive = AsyncMock(side_effect=messages)
-    ws.close = AsyncMock(side_effect=lambda: ws_closed.set())
+    ws.set_test_event = lambda: ws_closed.set()
+    ws.close = AsyncMock(side_effect=lambda: ws.set_test_event())
     ws.wait_closed = lambda: ws_closed.wait()
 
     with (
@@ -172,3 +174,20 @@ async def test_duplicate(hass: HomeAssistant) -> None:
         await ws.wait_closed()
         assert len(tzevaadom.alerts.items()) == 1
         await tzevaadom.stop()
+
+
+async def test_ws_receive_canceled(hass: HomeAssistant) -> None:
+    """Test that we cancel receive() on shutdown."""
+    receive = asyncio.Future()
+
+    async def _close(ws: AsyncMock) -> None:
+        ws.set_test_event()
+        receive.set_result("test")
+
+    with mock_ws([]) as ws:
+        ws.receive = Mock(return_value=receive)
+        ws.close = Mock(return_value=_close(ws))
+        config_entry = await setup_test(hass)
+        await cleanup_test(hass, config_entry)
+
+    assert (await receive) =="test"
