@@ -78,6 +78,7 @@ class TzevaAdomNotifications:
         )
         self._ids: TTLDeque = TTLDeque(config_entry.options[CONF_ALERT_ACTIVE_DURATION])
         self._http_client = async_get_clientsession(hass)
+        self._ws: ClientWebSocketResponse | None = None
         self._stop = asyncio.Event()
         self._task: asyncio.Task | None = None
 
@@ -88,12 +89,19 @@ class TzevaAdomNotifications:
     async def stop(self) -> None:
         """Stop the WebSocket listener."""
         self._stop.set()
+        await self._close()
         if self._task:
             await self._task
 
+    async def _close(self) -> None:
+        """Close WS."""
+        if self._ws:
+            with contextlib.suppress(Exception):
+                await self._ws.close()
+            self._ws = None
+
     async def _listen(self) -> None:
         """Listen for WebSocket messages."""
-        ws: ClientWebSocketResponse | None = None
         while not self._stop.is_set():
             try:
                 async with self._http_client.ws_connect(
@@ -103,9 +111,9 @@ class TzevaAdomNotifications:
                         ws_receive=WS_IDLE_TIMEOUT,  # type: ignore  # noqa: PGH003
                         ws_close=WS_CLOSE_TIMEOUT,  # type: ignore  # noqa: PGH003
                     ),
-                ) as ws:
+                ) as self._ws:
                     while True:
-                        message = await ws.receive()
+                        message = await self._ws.receive()
                         if message.type == aiohttp.WSMsgType.TEXT:
                             await self._on_message(message.json())
                         elif message.type in WS_SYSTEM_MESSAGES:
@@ -128,9 +136,7 @@ class TzevaAdomNotifications:
             except:  # noqa: E722
                 LOGGER.exception("Error in WS listener")
                 await self._delay()
-            if ws:
-                await ws.close()
-                ws = None
+            await self._close()
 
     async def _delay(self) -> None:
         """Delay for a short period before reconnecting."""
