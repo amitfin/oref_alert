@@ -44,8 +44,7 @@ def mock_ws(messages: list[WSMessage]) -> Generator[AsyncMock]:
     ws_closed = Event()
     ws = AsyncMock()
     ws.receive = AsyncMock(side_effect=messages)
-    ws.set_test_event = lambda: ws_closed.set()
-    ws.close = AsyncMock(side_effect=lambda: ws.set_test_event())
+    ws.close = AsyncMock(side_effect=lambda: ws_closed.set())
     ws.wait_closed = lambda: ws_closed.wait()
 
     with (
@@ -179,15 +178,9 @@ async def test_duplicate(hass: HomeAssistant) -> None:
 async def test_ws_receive_canceled(hass: HomeAssistant) -> None:
     """Test that we cancel receive() on shutdown."""
     receive = asyncio.Future()
-
-    async def _close(ws: AsyncMock) -> None:
-        ws.set_test_event()
-        receive.set_result("test")
-
     with mock_ws([]) as ws:
         ws.receive = Mock(return_value=receive)
-        ws.close = Mock(return_value=_close(ws))
+        ws.close = AsyncMock(side_effect=lambda: receive.set_result("test"))
         config_entry = await setup_test(hass)
         await cleanup_test(hass, config_entry)
-
-    assert (await receive) =="test"
+    assert (await receive) == "test"
