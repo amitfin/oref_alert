@@ -155,6 +155,7 @@ data:
   title: ירי רקטות וטילים
   icon: mdi:rocket-launch
   emoji: 🚀
+  source: mobile
 ```
 
 In the [Mobile Notifications: Detailed Alerts](#detailed-alerts) section there is an example for usage of this event.
@@ -172,6 +173,7 @@ data:
   title: ניתן לצאת מהמרחב המוגן
   icon: mdi:message-alert
   emoji: ⚠
+  source: website
 ```
 
 ## Synthetic Alert
