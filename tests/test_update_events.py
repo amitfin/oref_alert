@@ -77,6 +77,7 @@ async def test_event(
         "title": "ניתן לצאת מהמרחב המוגן",
         "icon": "mdi:flash-alert",
         "emoji": "⚡",
+        "channel": "website-history",
     }
 
     await async_shutdown(hass, config_id)

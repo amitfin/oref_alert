@@ -192,6 +192,7 @@ class OrefAlertLocationEventManager:
                     AlertField.TITLE: attributes.get(AlertField.TITLE),
                     ATTR_ICON: attributes.get(ATTR_ICON),
                     ATTR_EMOJI: attributes.get(ATTR_EMOJI),
+                    AlertField.CHANNEL: attributes.get(AlertField.CHANNEL),
                 },
             )
 

@@ -244,6 +244,7 @@ async def test_bus_event(
         "title": "ירי רקטות וטילים",
         "icon": "mdi:rocket-launch",
         "emoji": "🚀",
+        "channel": "website-history",
     }
 
     await async_shutdown(hass, config_id)
