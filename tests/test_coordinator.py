@@ -358,6 +358,23 @@ async def test_area_name_typo(
     assert coordinator.data.alerts[0]["data"] == "ביר הדאג\u0027"
 
 
+async def test_json_parsing_error(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test logging for JSON parsing error."""
+    mock_urls(aioclient_mock, "single_alert_real_time_invalid.txt", None)
+    coordinator = create_coordinator(hass)
+    with pytest.raises(ConfigEntryNotReady):
+        await coordinator.async_config_entry_first_refresh()
+    assert (
+        "JSON parsing failed for "
+        "'https://www.oref.org.il/warningMessages/alert/Alerts.json': "
+        "'invalid' hex: '696e76616c6964'"
+    ) in caplog.text
+
+
 async def test_synthetic_alert(
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,

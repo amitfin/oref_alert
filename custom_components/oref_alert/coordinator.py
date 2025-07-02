@@ -173,8 +173,17 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                     if response.status == HTTPStatus.NOT_MODIFIED:
                         return cached_content, False
                     raw = await response.read()
-                    text = raw.decode("utf-8-sig").strip()
-                    content = None if not text else json.loads(text)
+                    text = raw.decode("utf-8-sig").replace("\x00", "").strip()
+                    try:
+                        content = None if not text else json.loads(text)
+                    except:
+                        LOGGER.debug(
+                            "JSON parsing failed for '%s': '%s' hex: '%s'",
+                            url,
+                            text,
+                            text.encode("utf-8").hex(),
+                        )
+                        raise
                     self._http_cache[url] = (
                         content,
                         response.headers.get("Last-Modified"),
