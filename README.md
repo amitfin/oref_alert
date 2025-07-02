@@ -36,7 +36,7 @@ Once the component is installed, it's possible to control additional parameters 
 There are 6 configuration fields:
 1. Selected areas: list of areas to monitor. It's also possible to select a district (מחוז) and all-areas (כל האזורים) for cities with sub-areas.
 2. Active duration of an alert: this is the alert's active time period (in minutes). The default is 10 minutes.
-3. Update frequency: pooling frequency from the website (in seconds). The default is 2 seconds. Note: the data is also received via push on MQTT channel (i.e. immediately) regardless of this setting.
+3. Update frequency: polling frequency from the website (in seconds). The default is 2 seconds. Note: the data is also received via push on MQTT channel (i.e. immediately) regardless of this setting.
 4. On icon: the icon to be used when there are active alerts in one of the selected areas. This is the icon which is displayed when the state of the binary sensor is "on".
 5. Off icon: the icon to  be used when the state of the binary sensor is "off".
 6. Add 'All Alerts' attributes: when it's off (the default) the attributes `Country alerts` and `Selected areas alerts` are not added to the binary sensors. These attributes hold the list of all alerts over the last 24-hours which can be long and cause performance issues on weaker systems. Both attributes are not used often and are not part of any example below.
