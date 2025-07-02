@@ -111,6 +111,26 @@ The integration creates an additional set of sensors which monitor the time to t
 
 *Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the action `oref_alert.add_sensor`.*
 
+## Updates Processing
+
+Updates can be sent a few minutes before the alert. They can also be sent for indicating that it's safe to get out of the shelter. However, these updates are less structured so their parsing is not fully reliable and can get broken if the text (or category) is changed. Nevertheless, this data is valuable. Below you can see how it can be done (currently). Note that it can get broken, so keep monitoring for changes and change your settings accordingly:
+
+[![Open your Home Assistant instance and show your helper entities.](https://my.home-assistant.io/badges/helpers.svg)](https://my.home-assistant.io/redirect/helpers/)
+
+→ Click `+ CREATE HELPER` button → `Template` → `Template a binary sensor`:
+
+### Preemptive Update
+
+<kbd><img src="https://github.com/user-attachments/assets/d35c47db-8028-4c0b-b91f-73e02c859c53" width="400"/></kbd>
+
+`{{ is_state('binary_sensor.oref_alert', 'off') and state_attr('binary_sensor.oref_alert', 'selected_areas_updates') and state_attr('binary_sensor.oref_alert', 'selected_areas_updates')[0]['title'] is search('התרעה מקדימה') }}`
+
+### Ending Update
+
+<kbd><img src="https://github.com/user-attachments/assets/c6628c85-868b-4fa0-a0e9-01e85cfb7d95" width="400"/></kbd>
+
+`{{ is_state('binary_sensor.oref_alert', 'off') and state_attr('binary_sensor.oref_alert', 'selected_areas_updates') and state_attr('binary_sensor.oref_alert', 'selected_areas_updates')[0]['title'] is search('האירוע הסתיים') }}`
+
 ## Geo Location Entities
 
 Geo-location entities are created for every active alert in Israel (regardless of the selected areas). These entities exist while the corresponding alert is active (10 minutes by default). The state of the entity is the distance in kilometers from HA home's coordinate. In addition, each entity has the following attributes:
