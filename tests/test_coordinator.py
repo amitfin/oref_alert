@@ -274,11 +274,37 @@ async def test_cached_content_on_failure(
     assert coordinator.data.alerts == alerts
     assert coordinator.data.active_alerts == alerts
 
+    freezer.tick()  # Skip the throttling threshold
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
     mock_urls(aioclient_mock, None, None, exc=Exception("dummy log for testing"))
     await coordinator.async_refresh()
     assert "dummy log for testing" in caplog.text
     assert coordinator.data.alerts == alerts
     assert coordinator.data.active_alerts == alerts
+
+
+async def test_request_throttling(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test HTTP request throttling logic."""
+    mock_urls(aioclient_mock, "single_alert_real_time.json", None)
+    coordinator = create_coordinator(hass)
+    assert aioclient_mock.call_count == 0
+    await coordinator.async_config_entry_first_refresh()
+    assert aioclient_mock.call_count == 2
+    aioclient_mock.mock_calls.clear()
+    assert len(coordinator.data.alerts) == 1
+
+    for i in range(10):
+        await coordinator.async_refresh()
+        assert aioclient_mock.call_count == 2 * (i // 2)
+        assert len(coordinator.data.alerts) == 1
+        freezer.tick(0.7)
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_active_alerts(

@@ -40,13 +40,13 @@ OREF_ALERTS_URL = "https://www.oref.org.il/warningMessages/alert/Alerts.json"
 OREF_HISTORY_URL = (
     "https://www.oref.org.il/warningMessages/alert/History/AlertsHistory.json"
 )
-
 OREF_HEADERS = {
     "Referer": "https://www.oref.org.il/",
     "X-Requested-With": "XMLHttpRequest",
     "Content-Type": "application/json",
 }
 REQUEST_RETRIES = 3
+REQUEST_THROTTLING = 0.8
 REAL_TIME_ALERT_LOGIC_WINDOW = 2
 
 
@@ -161,7 +161,12 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
     async def _async_fetch_url(self, url: str) -> tuple[Any, bool]:
         """Fetch data from Oref servers."""
         exc_info = Exception()
-        cached_content, last_modified = self._http_cache.get(url, (None, None))
+        now = dt_util.now().timestamp()
+        cached_content, last_modified, last_request = self._http_cache.get(
+            url, (None, None, None)
+        )
+        if last_request is not None and (now - last_request) < REQUEST_THROTTLING:
+            return cached_content, False
         headers = (
             OREF_HEADERS
             if not last_modified
@@ -171,6 +176,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             try:
                 async with self._http_client.get(url, headers=headers) as response:
                     if response.status == HTTPStatus.NOT_MODIFIED:
+                        self._http_cache[url] = (cached_content, last_modified, now)
                         return cached_content, False
                     raw = await response.read()
                     text = raw.decode("utf-8-sig").replace("\x00", "").strip()
@@ -187,6 +193,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                     self._http_cache[url] = (
                         content,
                         response.headers.get("Last-Modified"),
+                        now,
                     )
                     return content, not (content is None and cached_content is None)
             except Exception as ex:  # noqa: BLE001
@@ -198,6 +205,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 url,
                 exc_info=exc_info,
             )
+            self._http_cache[url] = (cached_content, last_modified, now)
             return cached_content, False
         LOGGER.error("Failed to fetch '%s'", url)
         raise exc_info
