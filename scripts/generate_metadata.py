@@ -342,10 +342,10 @@ class OrefMetadata:
                 [
                     {"label_he": label_he}
                     for label_he in sorted(
-                        [
+                        {
                             area["label_he"]
                             for area in self._fetch_url_json(CITIES_MIX_URL)
-                        ]
+                        }
                     )
                 ],
                 fixture,
