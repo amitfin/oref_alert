@@ -17,6 +17,7 @@ sys.path.insert(0, str((Path(__file__).parent / "..").resolve()))
 from custom_components.oref_alert.areas_checker import AREAS_TO_IGNORE
 from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
 from custom_components.oref_alert.pushy import TEST_SEGMENTS
+from custom_components.oref_alert.tzevaadom import TZEVAADOM_SPELLING_FIX
 
 RELATIVE_OUTPUT_DIRECTORY = "custom_components/oref_alert/metadata/"
 AREAS_OUTPUT = "areas.py"
@@ -48,9 +49,6 @@ assert set(ALL_AREAS.keys()) == ALL_AREAS_ALIASES
 
 SPELLING_FIX = {"חדרה כל - האזורים": "חדרה - כל האזורים"}
 
-TZEVAADOM_SPELLING_FIX = {
-    "אשדוד -יא,יב,טו,יז,מרינה,סיט": "אשדוד -יא,יב,טו,יז,מרינה,סיטי"  # noqa: RUF001
-}
 TZEVAADOM_ALL_AREAS = {10000000: next(iter(ALL_AREAS))}
 
 

@@ -58,7 +58,9 @@ THREAT_TITLES = {
     8: "התרעות פיקוד העורף",
 }
 
-SPELLING_FIX = {"אשדוד -יא,יב,טו,יז,מרינה,סיט": "אשדוד -יא,יב,טו,יז,מרינה,סיטי"}  # noqa: RUF001
+TZEVAADOM_SPELLING_FIX = {
+    "אשדוד -יא,יב,טו,יז,מרינה,סיט": "אשדוד -יא,יב,טו,יז,מרינה,סיטי"  # noqa: RUF001
+}
 
 
 class MessageType(str, enum.Enum):
@@ -204,7 +206,7 @@ class TzevaAdomNotifications:
 
             new_alert = False
             for area in fields["areas"]:
-                name = SPELLING_FIX.get(area, area)
+                name = TZEVAADOM_SPELLING_FIX.get(area, area)
                 if name not in AREAS:
                     LOGGER.warning(
                         "Unknown area '%s' in Tzeva Adom alert, skipping.", name
