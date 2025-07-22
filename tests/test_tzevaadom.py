@@ -135,6 +135,35 @@ async def test_message(  # noqa: PLR0913
 
 
 @pytest.mark.parametrize(
+    ("area", "valid"),
+    [
+        ("פתח תקווה", True),
+        ("1פתח תקווה", True),
+        ("אשדוד -יא,יב,טו,יז,מרינה,סיטי", True),  # noqa: RUF001
+        ("אשדוד -יא,יב,טו,יז,מרינה,סיט", True),  # noqa: RUF001
+    ],
+    ids=("valid", "invalid", "valid2", "truncated and fixed"),
+)
+async def test_area_name_validity(
+    hass: HomeAssistant,
+    caplog: pytest.LogCaptureFixture,
+    area: str,
+    valid: bool,  # noqa: FBT001
+) -> None:
+    """Test valid and invalid area names."""
+    data = json.dumps(
+        {**load_json_fixture("single_alert_tzevaadom.json"), "cities": [area]}
+    ).encode("utf-8")
+    with mock_ws([WSMessage(type=WSMsgType.TEXT, data=data, extra=None)]) as ws:
+        config_entry = await setup_test(hass)
+        await ws.wait_closed()
+        await cleanup_test(hass, config_entry)
+    assert (f"Unknown area '{area}' in Tzeva Adom alert, skipping." in caplog.text) == (
+        not valid
+    )
+
+
+@pytest.mark.parametrize(
     ("message_type", "log_message", "data"),
     [
         (WSMsgType.BINARY, "WS system message (BINARY), ignoring.", None),
