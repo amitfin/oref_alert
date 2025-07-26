@@ -6,11 +6,15 @@ from datetime import timedelta
 from typing import TYPE_CHECKING
 
 import pytest
+from homeassistant.config_entries import ConfigEntryDisabler
 from homeassistant.const import (
     CONF_ENTITY_ID,
     CONF_NAME,
     STATE_OFF,
     Platform,
+)
+from homeassistant.exceptions import (
+    ServiceValidationError,
 )
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers import issue_registry as ir
@@ -254,3 +258,42 @@ async def test_unknown_area(hass: HomeAssistant) -> None:
         f"{DOMAIN}_unknown2",
     }
     unregister()
+
+
+async def test_action_without_config_entry(hass: HomeAssistant) -> None:
+    """Test action service without config entry."""
+    for service in [
+        ADD_SENSOR_ACTION,
+        REMOVE_SENSOR_ACTION,
+        EDIT_SENSOR_ACTION,
+        SYNTHETIC_ALERT_ACTION,
+    ]:
+        assert not hass.services.has_service(DOMAIN, service)
+
+    config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+
+    async def call() -> None:
+        await hass.services.async_call(
+            DOMAIN,
+            SYNTHETIC_ALERT_ACTION,
+            {CONF_AREA: "פתח תקווה"},
+            blocking=True,
+        )
+
+    await call()
+
+    assert await hass.config_entries.async_set_disabled_by(
+        config_entry.entry_id, ConfigEntryDisabler.USER
+    )
+
+    with pytest.raises(ServiceValidationError) as exc:
+        await call()
+    assert str(exc.value) == "Config entry not loaded"
+
+    assert await hass.config_entries.async_remove(config_entry.entry_id)
+
+    with pytest.raises(ServiceValidationError) as exc:
+        await call()
+    assert str(exc.value) == "Config entry not found"

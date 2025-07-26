@@ -9,7 +9,9 @@ from typing import TYPE_CHECKING, Final
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, Platform
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry, selector
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.service import async_register_admin_service
@@ -112,7 +114,7 @@ SYNTHETIC_ALERT_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: PLR0915
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up entity from a config entry."""
     entry.async_on_unload(entry.add_update_listener(config_entry_update_listener))
 
@@ -164,18 +166,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         entry.runtime_data[PUSHY].start(), entry.runtime_data[TZEVAADOM].start()
     )
 
+    return True
+
+
+async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
+    """Set up custom actions."""
+
+    def get_config_entry() -> ConfigEntry:
+        """Get the integration's config first (and only) entry."""
+        config_entries = hass.config_entries.async_entries(DOMAIN)
+        if not config_entries:
+            message = "Config entry not found"
+            raise ServiceValidationError(message)
+        if config_entries[0].state is not ConfigEntryState.LOADED:
+            message = "Config entry not loaded"
+            raise ServiceValidationError(message)
+        return config_entries[0]
+
     async def add_sensor(service_call: ServiceCall) -> None:
         """Add an additional sensor (different areas)."""
-        config_entry = hass.config_entries.async_get_entry(entry.entry_id)
-        if config_entry is not None:
-            sensors = {**config_entry.options.get(CONF_SENSORS, {})}
-            sensors[f"{TITLE} {service_call.data[CONF_NAME]}"] = service_call.data[
-                CONF_AREAS
-            ]
-            hass.config_entries.async_update_entry(
-                config_entry,
-                options={**config_entry.options, CONF_SENSORS: sensors},
-            )
+        config_entry = get_config_entry()
+        sensors = {**config_entry.options.get(CONF_SENSORS, {})}
+        sensors[f"{TITLE} {service_call.data[CONF_NAME]}"] = service_call.data[
+            CONF_AREAS
+        ]
+        hass.config_entries.async_update_entry(
+            config_entry,
+            options={**config_entry.options, CONF_SENSORS: sensors},
+        )
 
     async_register_admin_service(
         hass,
@@ -190,22 +208,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         entity_reg = entity_registry.async_get(hass)
         entity_id = service_call.data[CONF_ENTITY_ID]
         entity_name = getattr(entity_reg.async_get(entity_id), "original_name", "")
-        config_entry = hass.config_entries.async_get_entry(entry.entry_id)
-        if config_entry is not None:
-            sensors = {
-                name: areas
-                for name, areas in config_entry.options.get(CONF_SENSORS, {}).items()
-                if name != entity_name
-            }
-            entity_reg.async_remove(entity_id)
-            for suffix in [TIME_TO_SHELTER_ID_SUFFIX, END_TIME_ID_SUFFIX]:
-                delete_entity = f"{Platform.SENSOR}.{entity_id.split('.')[1]}_{suffix}"
-                if entity_reg.async_get(delete_entity) is not None:
-                    entity_reg.async_remove(delete_entity)
-            hass.config_entries.async_update_entry(
-                config_entry,
-                options={**config_entry.options, CONF_SENSORS: sensors},
-            )
+        config_entry = get_config_entry()
+        sensors = {
+            name: areas
+            for name, areas in config_entry.options.get(CONF_SENSORS, {}).items()
+            if name != entity_name
+        }
+        entity_reg.async_remove(entity_id)
+        for suffix in [TIME_TO_SHELTER_ID_SUFFIX, END_TIME_ID_SUFFIX]:
+            delete_entity = f"{Platform.SENSOR}.{entity_id.split('.')[1]}_{suffix}"
+            if entity_reg.async_get(delete_entity) is not None:
+                entity_reg.async_remove(delete_entity)
+        hass.config_entries.async_update_entry(
+            config_entry,
+            options={**config_entry.options, CONF_SENSORS: sensors},
+        )
 
     async_register_admin_service(
         hass,
@@ -220,21 +237,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         entity_reg = entity_registry.async_get(hass)
         entity_id = service_call.data[CONF_ENTITY_ID]
         entity_name = getattr(entity_reg.async_get(entity_id), "original_name", "")
-        config_entry = hass.config_entries.async_get_entry(entry.entry_id)
-        if config_entry is not None:
-            sensors = {**config_entry.options.get(CONF_SENSORS, {})}
-            if areas := sensors.get(entity_name):
-                sensors[entity_name] = [
-                    area
-                    for area in (areas + service_call.data[ADD_AREAS])
-                    if area not in service_call.data[REMOVE_AREAS]
-                ]
-                hass.config_entries.async_update_entry(
-                    config_entry,
-                    options={**config_entry.options, CONF_SENSORS: sensors},
-                )
-                if service_call.return_response:
-                    return {CONF_AREAS: sensors[entity_name]}
+        config_entry = get_config_entry()
+        sensors = {**get_config_entry().options.get(CONF_SENSORS, {})}
+        if areas := sensors.get(entity_name):
+            sensors[entity_name] = [
+                area
+                for area in (areas + service_call.data[ADD_AREAS])
+                if area not in service_call.data[REMOVE_AREAS]
+            ]
+            hass.config_entries.async_update_entry(
+                config_entry,
+                options={**config_entry.options, CONF_SENSORS: sensors},
+            )
+            if service_call.return_response:
+                return {CONF_AREAS: sensors[entity_name]}
         return None
 
     async_register_admin_service(
@@ -253,7 +269,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
 
     async def synthetic_alert(service_call: ServiceCall) -> None:
         """Add a synthetic alert for testing purposes."""
-        entry.runtime_data[DATA_COORDINATOR].add_synthetic_alert(service_call.data)
+        get_config_entry().runtime_data[DATA_COORDINATOR].add_synthetic_alert(
+            service_call.data
+        )
 
     async_register_admin_service(
         hass,
@@ -281,11 +299,4 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     entry.runtime_data[UNLOAD_TEMPLATE_EXTENSIONS]()
     entry.runtime_data = None
-    for service in [
-        ADD_SENSOR_ACTION,
-        REMOVE_SENSOR_ACTION,
-        EDIT_SENSOR_ACTION,
-        SYNTHETIC_ALERT_ACTION,
-    ]:
-        hass.services.async_remove(DOMAIN, service)
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
