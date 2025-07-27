@@ -33,7 +33,7 @@ from .const import (
     TITLE,
     AlertField,
 )
-from .coordinator import OrefAlertCoordinatorData, OrefAlertDataUpdateCoordinator
+from .coordinator import OrefAlertDataUpdateCoordinator
 from .metadata.area_to_migun_time import AREA_TO_MIGUN_TIME
 from .metadata.areas import AREAS
 
