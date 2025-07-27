@@ -91,19 +91,12 @@ class OrefAlertTimerSensor(
     ) -> None:
         """Initialize object with defaults."""
         super().__init__(coordinator)
-        self._data: OrefAlertCoordinatorData = coordinator.data
         self._config_entry = config_entry
         self._active_duration: int = config_entry.options[CONF_ALERT_ACTIVE_DURATION]
         self._area: str = area
         self._alert: dict[str, Any] | None = None
         self._alert_timestamp: float | None = None
         self._unsub_update: Callable[[], None] | None = None
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Take the data from the coordinator."""
-        self._data = self.coordinator.data
-        super()._handle_coordinator_update()
 
     def _get_alert(self) -> dict[str, Any] | None:
         """Return the latest active alert in the area."""
@@ -114,7 +107,7 @@ class OrefAlertTimerSensor(
                 return self._alert
             self._alert = None
             self._alert_timestamp = None
-        for alert in self._data.active_alerts:
+        for alert in self.coordinator.data.active_alerts:
             if (
                 alert[AlertField.AREA] == self._area
                 or alert[AlertField.AREA] in ALL_AREAS_ALIASES
@@ -166,7 +159,7 @@ class OrefAlertTimerSensor(
     @property
     def native_value(self) -> int | None:
         """Return the value and schedule another update when needed."""
-        if seconds := self.oref_value_seconds():
+        if (seconds := self.oref_value_seconds()) is not None:
             self._update_in_1_second()
         return seconds
 
