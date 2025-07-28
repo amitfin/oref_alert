@@ -489,6 +489,17 @@ actions:
 mode: queued
 ```
 
+## Removing the Integration
+
+1. **Delete the configuration:**  
+   Open the integration page ([my-link](https://my.home-assistant.io/redirect/integration/?domain=oref_alert)), click the 3‑dot menu (⋮), and select **Delete**.
+
+2. **Remove the integration files:**  
+   - If the integration was installed via **HACS**, follow the [official HACS removal instructions](https://www.hacs.xyz/docs/use/repositories/dashboard/#removing-a-repository).  
+   - Otherwise, manually delete the integration’s folder `custom_components/oref_alert`.
+
+📌 A **Home Assistant core restart** is required in both cases to fully apply the removal.
+
 ## Contributions are welcome!
 
 If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
