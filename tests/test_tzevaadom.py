@@ -94,7 +94,7 @@ async def test_lifecycle(hass: HomeAssistant) -> None:
             [
                 {
                     "alertDate": "2025-06-30 15:00:00",
-                    "title": "מבזק פיקוד העורף - התרעה מקדימה",
+                    "title": "בדקות הקרובות צפויות להתקבל התרעות באזורך",
                     "data": "גבעת שמואל",
                     "category": 14,
                     "channel": "tzevaadom",
