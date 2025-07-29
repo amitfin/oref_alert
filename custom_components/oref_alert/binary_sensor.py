@@ -149,6 +149,7 @@ class AlertSensor(AlertAreaSensorBase):
         else:
             self._attr_name = name
             self._attr_unique_id = name.lower().replace(" ", "_")
+        self.entity_id = f"{binary_sensor.DOMAIN}.{self._attr_unique_id}"
 
     @property
     def is_on(self) -> bool:
@@ -219,6 +220,7 @@ class AlertSensorAllAreas(AlertSensorBase):
         super().__init__(config_entry)
         self._attr_name = f"{TITLE} {ALL_AREAS_NAME_SUFFIX}"
         self._attr_unique_id = f"{OREF_ALERT_UNIQUE_ID}_{ALL_AREAS_ID_SUFFIX}"
+        self.entity_id = f"{binary_sensor.DOMAIN}.{self._attr_unique_id}"
 
     @property
     def is_on(self) -> bool:

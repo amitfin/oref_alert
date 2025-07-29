@@ -22,9 +22,12 @@ from custom_components.oref_alert.const import (
     CONF_AREAS,
     DOMAIN,
     END_TIME_ID_SUFFIX,
+    END_TIME_NAME_SUFFIX,
     OREF_ALERT_UNIQUE_ID,
     REMOVE_SENSOR_ACTION,
     TIME_TO_SHELTER_ID_SUFFIX,
+    TIME_TO_SHELTER_NAME_SUFFIX,
+    TITLE,
 )
 
 from .utils import load_json_fixture, mock_urls
@@ -84,6 +87,7 @@ async def test_time_to_shelter_state(
     state = hass.states.get(TIME_TO_SHELTER_ENTITY_ID)
     assert state is not None
     assert state.state == str(time_to_shelter)
+    assert state.name == f"{TITLE} {TIME_TO_SHELTER_NAME_SUFFIX}"
     assert (
         state.attributes[ATTR_ALERT]
         == load_json_fixture("single_alert_history.json", "website-history")[0]
@@ -171,6 +175,7 @@ async def test_alert_end_time_state(
 
     state = hass.states.get(END_TIME_ENTITY_ID)
     assert state is not None
+    assert state.name == f"{TITLE} {END_TIME_NAME_SUFFIX}"
     assert (
         state.attributes[ATTR_ALERT]
         == load_json_fixture("single_alert_history.json", "website-history")[0]
@@ -227,19 +232,26 @@ async def test_additional_sensor(
     await hass.services.async_call(
         DOMAIN,
         ADD_SENSOR_ACTION,
-        {CONF_NAME: "test", CONF_AREAS: ["רעננה"]},
+        {CONF_NAME: "Test", CONF_AREAS: ["רעננה"]},
         blocking=True,
     )
     await hass.async_block_till_done(wait_background_tasks=True)
     sensors = hass.states.async_entity_ids(Platform.SENSOR)
     assert len(sensors) == 2
-    for entity_id in (
-        f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_test_{TIME_TO_SHELTER_ID_SUFFIX}",
-        f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_test_{END_TIME_ID_SUFFIX}",
+    for entity_id, name in (
+        (
+            f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_test_{TIME_TO_SHELTER_ID_SUFFIX}",
+            f"{TITLE} Test {TIME_TO_SHELTER_NAME_SUFFIX}",
+        ),
+        (
+            f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_test_{END_TIME_ID_SUFFIX}",
+            f"{TITLE} Test {END_TIME_NAME_SUFFIX}",
+        ),
     ):
         assert entity_id in sensors
         state = hass.states.get(entity_id)
         assert state is not None
+        assert state.name == name
         assert state.attributes[ATTR_AREA] == "רעננה"
     await async_shutdown(hass, config_id)
 

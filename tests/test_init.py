@@ -17,6 +17,7 @@ from homeassistant.exceptions import (
     ServiceValidationError,
 )
 from homeassistant.helpers import entity_registry
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
@@ -55,7 +56,7 @@ DEFAULT_OPTIONS = {
 ENTITY_ID = f"{Platform.BINARY_SENSOR}.{OREF_ALERT_UNIQUE_ID}"
 
 
-async def test_setup(hass: HomeAssistant) -> None:
+async def test_setup(hass: HomeAssistant, entity_registry: er.EntityRegistry) -> None:
     """Test basic setup flow."""
     config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
     config_entry.add_to_hass(hass)
@@ -64,6 +65,9 @@ async def test_setup(hass: HomeAssistant) -> None:
     state = hass.states.get(ENTITY_ID)
     assert state is not None
     assert state.state == STATE_OFF
+    entity = entity_registry.async_get(ENTITY_ID)
+    assert entity is not None
+    assert entity.device_id is not None
     assert await hass.config_entries.async_remove(config_entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert not hass.states.get(ENTITY_ID)

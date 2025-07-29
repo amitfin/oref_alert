@@ -15,6 +15,7 @@ from pytest_homeassistant_custom_component.common import (
 from custom_components.oref_alert.const import (
     ADD_SENSOR_ACTION,
     ALL_AREAS_ID_SUFFIX,
+    ALL_AREAS_NAME_SUFFIX,
     ATTR_COUNTRY_ACTIVE_ALERTS,
     ATTR_COUNTRY_ALERTS,
     ATTR_COUNTRY_UPDATES,
@@ -32,6 +33,7 @@ from custom_components.oref_alert.const import (
     DOMAIN,
     OREF_ALERT_UNIQUE_ID,
     SYNTHETIC_ALERT_ACTION,
+    TITLE,
 )
 
 from .utils import load_json_fixture, mock_urls
@@ -84,6 +86,7 @@ async def test_state(
     state = hass.states.get(ENTITY_ID)
     assert state is not None
     assert state.state == STATE_ON
+    assert state.name == TITLE
 
     freezer.move_to("2023-10-07 06:39:50+03:00")
     async_fire_time_changed(hass)
@@ -320,13 +323,14 @@ async def test_additional_sensor(
     await hass.services.async_call(
         DOMAIN,
         ADD_SENSOR_ACTION,
-        {CONF_NAME: "test", CONF_AREAS: ["תל אביב - כל האזורים"]},
+        {CONF_NAME: "Test", CONF_AREAS: ["תל אביב - כל האזורים"]},
         blocking=True,
     )
     await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(f"{ENTITY_ID}_test")
     assert state is not None
     assert state.state == STATE_ON
+    assert state.name == f"{TITLE} Test"
     await async_shutdown(hass, config_id)
 
 
@@ -342,6 +346,7 @@ async def test_all_areas_sensor(
     state = hass.states.get(f"{ENTITY_ID}_{ALL_AREAS_ID_SUFFIX}")
     assert state is not None
     assert state.state == STATE_ON
+    assert state.name == f"{TITLE} {ALL_AREAS_NAME_SUFFIX}"
     expected_alerts = load_json_fixture(
         "single_alert_random_area_history.json", "website-history"
     )

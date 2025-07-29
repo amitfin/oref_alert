@@ -7,6 +7,7 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 import homeassistant.util.dt as dt_util
+from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.const import UnitOfTime
@@ -186,6 +187,7 @@ class TimeToShelterSensor(OrefAlertTimerSensor):
         self._attr_unique_id = (
             f"{name.lower().replace(' ', '_')}_{TIME_TO_SHELTER_ID_SUFFIX}"
         )
+        self.entity_id = f"{SENSOR_DOMAIN}.{self._attr_unique_id}"
 
     def oref_value_seconds(self) -> int | None:
         """Return the remaining seconds to shelter."""
@@ -230,6 +232,7 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
         super().__init__(area, config_entry)
         self._attr_name = f"{name} {END_TIME_NAME_SUFFIX}"
         self._attr_unique_id = f"{name.lower().replace(' ', '_')}_{END_TIME_ID_SUFFIX}"
+        self.entity_id = f"{SENSOR_DOMAIN}.{self._attr_unique_id}"
 
     def oref_value_seconds(self) -> int | None:
         """Return the remaining seconds till the end of the alert."""
