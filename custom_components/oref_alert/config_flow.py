@@ -12,7 +12,7 @@ from homeassistant.core import async_get_hass, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import selector
 
-from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
+from .metadata import ALL_AREAS_ALIASES
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigFlowResult

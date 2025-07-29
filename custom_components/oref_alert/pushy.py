@@ -17,25 +17,24 @@ from paho.mqtt.client import Client as MQTTClient
 from paho.mqtt.client import MQTTMessage
 from paho.mqtt.enums import CallbackAPIVersion
 
-from custom_components.oref_alert.categories import pushy_thread_id_to_history_category
-from custom_components.oref_alert.metadata.area_info import AREA_INFO
-from custom_components.oref_alert.metadata.segment_to_area import SEGMENT_TO_AREA
-from custom_components.oref_alert.ttl_deque import TTLDeque
-
+from .categories import pushy_thread_id_to_history_category
 from .const import (
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_SENSORS,
-    DATA_COORDINATOR,
     LOGGER,
     AlertField,
     AlertSource,
 )
+from .metadata.area_info import AREA_INFO
+from .metadata.segment_to_area import SEGMENT_TO_AREA
+from .ttl_deque import TTLDeque
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
     from paho.mqtt.reasoncodes import ReasonCode
+
+    from . import OrefAlertConfigEntry
 
 API_ENDPOINT: Final = "https://pushy.ioref.app"
 MQTT_HOST: Final = "mqtt-{timestamp}.ioref.io"
@@ -82,7 +81,7 @@ async def get_device_id(hass: HomeAssistant) -> str:
 class PushyNotifications:
     """Register for notifications coming from Pushy."""
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, hass: HomeAssistant, config_entry: OrefAlertConfigEntry) -> None:
         """Initialize PushyNotifications."""
         self._hass = hass
         self._config_entry = config_entry
@@ -290,11 +289,10 @@ class PushyNotifications:
                         }
                     )
                     new_alert = True
-            if new_alert and (
-                coordinator := self._config_entry.runtime_data.get(DATA_COORDINATOR)
-            ):
+            if new_alert:
                 asyncio.run_coroutine_threadsafe(
-                    coordinator.async_refresh(), self._hass.loop
+                    self._config_entry.runtime_data.coordinator.async_refresh(),
+                    self._hass.loop,
                 )
         except:  # noqa: E722
             LOGGER.exception("Failed to process MQTT message.")

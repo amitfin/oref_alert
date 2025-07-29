@@ -13,27 +13,26 @@ import aiohttp
 from aiohttp import ClientWebSocketResponse, ClientWSTimeout, WSMsgType
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from custom_components.oref_alert.categories import (
+from .categories import (
     tzevaadom_threat_id_to_history_category,
 )
-from custom_components.oref_alert.metadata.areas import AREAS
-from custom_components.oref_alert.metadata.tzevaadom_id_to_area import (
-    TZEVAADOM_ID_TO_AREA,
-)
-from custom_components.oref_alert.ttl_deque import TTLDeque
-
 from .const import (
     CONF_ALERT_ACTIVE_DURATION,
-    DATA_COORDINATOR,
     IST,
     LOGGER,
     AlertField,
     AlertSource,
 )
+from .metadata.areas import AREAS
+from .metadata.tzevaadom_id_to_area import (
+    TZEVAADOM_ID_TO_AREA,
+)
+from .ttl_deque import TTLDeque
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
+
+    from . import OrefAlertConfigEntry
 
 WS_URL: Final = "wss://ws.tzevaadom.co.il/socket?platform=WEB"
 ORIGIN_HEADER: Final = "https://www.tzevaadom.co.il"
@@ -74,7 +73,7 @@ class MessageType(str, enum.Enum):
 class TzevaAdomNotifications:
     """Register for notifications coming from Tzeva Adom."""
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, hass: HomeAssistant, config_entry: OrefAlertConfigEntry) -> None:
         """Initialize TzevaAdomNotifications."""
         self._hass = hass
         self._config_entry = config_entry
@@ -229,10 +228,8 @@ class TzevaAdomNotifications:
                 )
                 new_alert = True
 
-            if new_alert and (
-                coordinator := self._config_entry.runtime_data.get(DATA_COORDINATOR)
-            ):
-                await coordinator.async_refresh()
+            if new_alert:
+                await self._config_entry.runtime_data.coordinator.async_refresh()
 
         except:  # noqa: E722
             LOGGER.exception("Error processing WS message")

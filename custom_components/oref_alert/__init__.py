@@ -5,10 +5,11 @@ from __future__ import annotations
 import asyncio
 import inspect
 import itertools
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
+from attr import dataclass
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, Platform
 from homeassistant.exceptions import ServiceValidationError
@@ -16,14 +17,16 @@ from homeassistant.helpers import entity_registry, selector
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.service import async_register_admin_service
 
-from custom_components.oref_alert.areas_checker import AreasChecker
-from custom_components.oref_alert.metadata.areas_and_groups import AREAS_AND_GROUPS
-from custom_components.oref_alert.pushy import PushyNotifications
-from custom_components.oref_alert.template import inject_template_extensions
-from custom_components.oref_alert.tzevaadom import TzevaAdomNotifications
-from custom_components.oref_alert.update_events import OrefAlertUpdateEventManager
+from .areas_checker import AreasChecker
+from .metadata.areas_and_groups import AREAS_AND_GROUPS
+from .pushy import PushyNotifications
+from .template import inject_template_extensions
+from .tzevaadom import TzevaAdomNotifications
+from .update_events import OrefAlertUpdateEventManager
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import (
         HomeAssistant,
@@ -45,7 +48,6 @@ from .const import (
     CONF_AREAS,
     CONF_DURATION,
     CONF_SENSORS,
-    DATA_COORDINATOR,
     DOMAIN,
     EDIT_SENSOR_ACTION,
     END_TIME_ID_SUFFIX,
@@ -59,10 +61,6 @@ from .const import (
 from .coordinator import OrefAlertDataUpdateCoordinator
 from .metadata.areas import AREAS
 
-AREAS_CHECKER: Final = "areas_checker"
-UNLOAD_TEMPLATE_EXTENSIONS: Final = "unload_template_extensions"
-PUSHY: Final = "pushy"
-TZEVAADOM: Final = "tzevaadom"
 PLATFORMS = (Platform.BINARY_SENSOR, Platform.SENSOR, Platform.GEO_LOCATION)
 
 ADD_SENSOR_SCHEMA = vol.Schema(
@@ -114,7 +112,21 @@ SYNTHETIC_ALERT_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+@dataclass
+class OrefAlertRuntimeData:
+    """Oref Alert runtime data dataclass."""
+
+    coordinator: OrefAlertDataUpdateCoordinator
+    areas_checker: AreasChecker
+    unload_template_extensions: Callable[[], None]
+    pushy: PushyNotifications
+    tzevaadom: TzevaAdomNotifications
+
+
+type OrefAlertConfigEntry = ConfigEntry[OrefAlertRuntimeData]
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) -> bool:
     """Set up entity from a config entry."""
     entry.async_on_unload(entry.add_update_listener(config_entry_update_listener))
 
@@ -146,24 +158,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     pushy = PushyNotifications(hass, entry)
     tzevaadom = TzevaAdomNotifications(hass, entry)
 
-    entry.runtime_data = {
-        DATA_COORDINATOR: OrefAlertDataUpdateCoordinator(
-            hass, entry, [pushy.alerts, tzevaadom.alerts]
-        ),
-        AREAS_CHECKER: AreasChecker(hass),
-        UNLOAD_TEMPLATE_EXTENSIONS: await inject_template_extensions(hass),
-        PUSHY: pushy,
-        TZEVAADOM: tzevaadom,
-    }
+    entry.runtime_data = OrefAlertRuntimeData(
+        OrefAlertDataUpdateCoordinator(hass, entry, [pushy.alerts, tzevaadom.alerts]),
+        AreasChecker(hass),
+        await inject_template_extensions(hass),
+        pushy,
+        tzevaadom,
+    )
 
-    await entry.runtime_data[DATA_COORDINATOR].async_config_entry_first_refresh()
+    await entry.runtime_data.coordinator.async_config_entry_first_refresh()
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     OrefAlertUpdateEventManager(hass, entry)
 
     await asyncio.gather(
-        entry.runtime_data[PUSHY].start(), entry.runtime_data[TZEVAADOM].start()
+        entry.runtime_data.pushy.start(), entry.runtime_data.tzevaadom.start()
     )
 
     return True
@@ -172,7 +182,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
     """Set up custom actions."""
 
-    def get_config_entry() -> ConfigEntry:
+    def get_config_entry() -> OrefAlertConfigEntry:
         """Get the integration's config first (and only) entry."""
         config_entries = hass.config_entries.async_entries(DOMAIN)
         if not config_entries:
@@ -269,7 +279,7 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
 
     async def synthetic_alert(service_call: ServiceCall) -> None:
         """Add a synthetic alert for testing purposes."""
-        get_config_entry().runtime_data[DATA_COORDINATOR].add_synthetic_alert(
+        get_config_entry().runtime_data.coordinator.add_synthetic_alert(
             service_call.data
         )
 
@@ -284,19 +294,20 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
     return True
 
 
-async def config_entry_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def config_entry_update_listener(
+    hass: HomeAssistant, entry: OrefAlertConfigEntry
+) -> None:
     """Update listener, called when the config entry options are changed."""
     hass.config_entries.async_schedule_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) -> bool:
     """Unload a config entry."""
     if not getattr(entry, "runtime_data", None):
         return True
-    entry.runtime_data[AREAS_CHECKER].stop()
+    entry.runtime_data.areas_checker.stop()
     await asyncio.gather(
-        entry.runtime_data[PUSHY].stop(), entry.runtime_data[TZEVAADOM].stop()
+        entry.runtime_data.pushy.stop(), entry.runtime_data.tzevaadom.stop()
     )
-    entry.runtime_data[UNLOAD_TEMPLATE_EXTENSIONS]()
-    entry.runtime_data = None
+    entry.runtime_data.unload_template_extensions()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

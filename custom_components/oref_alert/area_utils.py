@@ -1,5 +1,7 @@
 """Utilities for metadata information."""
 
+from __future__ import annotations
+
 from .metadata.city_all_areas import CITY_ALL_AREAS
 from .metadata.district_to_areas import DISTRICT_AREAS
 

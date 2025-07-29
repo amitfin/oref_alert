@@ -1,4 +1,4 @@
-"""Support for representing daily schedule as binary sensors."""
+"""Support for representing oref alert as binary sensors."""
 
 from __future__ import annotations
 
@@ -8,11 +8,12 @@ import homeassistant.util.dt as dt_util
 from homeassistant.components import binary_sensor
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
+from .metadata import ALL_AREAS_ALIASES
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+    from . import OrefAlertConfigEntry
 
 from .area_utils import expand_areas_and_groups
 from .const import (
@@ -30,7 +31,6 @@ from .const import (
     CONF_OFF_ICON,
     CONF_ON_ICON,
     CONF_SENSORS,
-    DATA_COORDINATOR,
     DEFAULT_OFF_ICON,
     DEFAULT_ON_ICON,
     IST,
@@ -50,11 +50,11 @@ SECONDS_IN_A_MINUTE = 60
 
 async def async_setup_entry(
     _: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: OrefAlertConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize config entry."""
-    coordinator = config_entry.runtime_data[DATA_COORDINATOR]
+    coordinator = config_entry.runtime_data.coordinator
     names = [None, *list(config_entry.options.get(CONF_SENSORS, {}).keys())]
     async_add_entities(
         [AlertSensor(name, config_entry, coordinator) for name in names]
@@ -84,7 +84,7 @@ class AlertSensorBase(
 
     def __init__(
         self,
-        config_entry: ConfigEntry,
+        config_entry: OrefAlertConfigEntry,
         coordinator: OrefAlertDataUpdateCoordinator,
     ) -> None:
         """Initialize object with defaults."""
@@ -113,7 +113,7 @@ class AlertAreaSensorBase(AlertSensorBase):
     def __init__(
         self,
         areas: list[str],
-        config_entry: ConfigEntry,
+        config_entry: OrefAlertConfigEntry,
         coordinator: OrefAlertDataUpdateCoordinator,
     ) -> None:
         """Initialize object with defaults."""
@@ -138,7 +138,7 @@ class AlertSensor(AlertAreaSensorBase):
     def __init__(
         self,
         name: str | None,
-        config_entry: ConfigEntry,
+        config_entry: OrefAlertConfigEntry,
         coordinator: OrefAlertDataUpdateCoordinator,
     ) -> None:
         """Initialize object with defaults."""
@@ -223,7 +223,7 @@ class AlertSensorAllAreas(AlertSensorBase):
 
     def __init__(
         self,
-        config_entry: ConfigEntry,
+        config_entry: OrefAlertConfigEntry,
         coordinator: OrefAlertDataUpdateCoordinator,
     ) -> None:
         """Initialize object with defaults."""

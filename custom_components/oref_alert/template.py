@@ -2,12 +2,11 @@
 
 # The injection logic is based on:
 # https://github.com/PiotrMachowski/Home-Assistant-custom-components-Custom-Templates/blob/master/custom_components/custom_templates/__init__.py
+from __future__ import annotations
 
 import inspect
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.template import (
     Template,
     TemplateEnvironment,
@@ -16,17 +15,8 @@ from homeassistant.helpers.template import (
     distance as distance_func,
 )
 
-from custom_components.oref_alert.categories import category_to_emoji, category_to_icon
-from custom_components.oref_alert.metadata.area_info import AREA_INFO
-from custom_components.oref_alert.metadata.area_to_migun_time import AREA_TO_MIGUN_TIME
-from custom_components.oref_alert.metadata.area_to_polygon import (
-    find_area,
-    init_area_to_polygon,
-)
-from custom_components.oref_alert.metadata.areas import AREAS
-from custom_components.oref_alert.metadata.areas_and_groups import AREAS_AND_GROUPS
-
 from . import const
+from .categories import category_to_emoji, category_to_icon
 from .const import (
     AREAS_TEMPLATE_FUNCTION,
     COORDINATE_TEMPLATE_FUNCTION,
@@ -38,7 +28,20 @@ from .const import (
     ICON_TEMPLATE_FUNCTION,
     SHELTER_TEMPLATE_FUNCTION,
 )
+from .metadata.area_info import AREA_INFO
 from .metadata.area_to_district import AREA_TO_DISTRICT
+from .metadata.area_to_migun_time import AREA_TO_MIGUN_TIME
+from .metadata.area_to_polygon import (
+    find_area,
+    init_area_to_polygon,
+)
+from .metadata.areas import AREAS
+from .metadata.areas_and_groups import AREAS_AND_GROUPS
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from homeassistant.core import HomeAssistant
 
 _template_environment_init_signature = inspect.signature(TemplateEnvironment.__init__)
 

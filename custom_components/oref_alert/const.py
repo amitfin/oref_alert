@@ -8,7 +8,6 @@ from typing import Final
 DOMAIN: Final = "oref_alert"
 TITLE: Final = "Oref Alert"
 LOGGER = logging.getLogger(__package__)
-DATA_COORDINATOR: Final = "coordinator"
 IST = zoneinfo.ZoneInfo("Asia/Jerusalem")
 
 ATTR_ALERT: Final = "alert"

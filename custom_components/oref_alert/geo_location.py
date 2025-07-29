@@ -19,16 +19,14 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.util.location import vincenty
 
-from custom_components.oref_alert.categories import (
+from .categories import (
     category_to_emoji,
     category_to_icon,
 )
-
 from .const import (
     ATTR_AREA,
     ATTR_EMOJI,
     ATTR_HOME_DISTANCE,
-    DATA_COORDINATOR,
     DOMAIN,
     IST,
     LOCATION_ID_SUFFIX,
@@ -38,15 +36,15 @@ from .const import (
 from .metadata.area_info import AREA_INFO
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+    from . import OrefAlertConfigEntry
     from .coordinator import OrefAlertDataUpdateCoordinator
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: OrefAlertConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize config entry."""
@@ -128,7 +126,7 @@ class OrefAlertLocationEventManager:
     def __init__(
         self,
         hass: HomeAssistant,
-        config_entry: ConfigEntry,
+        config_entry: OrefAlertConfigEntry,
         async_add_entities: AddEntitiesCallback,
     ) -> None:
         """Initialize object with defaults."""
@@ -136,9 +134,9 @@ class OrefAlertLocationEventManager:
         self._hass = hass
         self._config_entry = config_entry
         self._async_add_entities = async_add_entities
-        self._coordinator: OrefAlertDataUpdateCoordinator = config_entry.runtime_data[
-            DATA_COORDINATOR
-        ]
+        self._coordinator: OrefAlertDataUpdateCoordinator = (
+            config_entry.runtime_data.coordinator
+        )
         self._coordinator.async_add_listener(self._async_update)
         self._async_update()
 

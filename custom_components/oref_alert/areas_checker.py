@@ -1,5 +1,7 @@
 """Check if list of areas was changed."""
 
+from __future__ import annotations
+
 from datetime import datetime, timedelta
 
 import homeassistant.util.dt as dt_util
@@ -8,9 +10,8 @@ from homeassistant.helpers import event
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from custom_components.oref_alert.metadata.areas import AREAS
-
 from .const import DOMAIN, LOGGER
+from .metadata.areas import AREAS
 
 CITIES_MIX_URL = "https://alerts-history.oref.org.il/Shared/Ajax/GetCitiesMix.aspx"
 FILTER_SUFFIX1 = " - כל האזורים"

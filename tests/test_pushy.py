@@ -28,7 +28,6 @@ from custom_components.oref_alert.const import (
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_SENSORS,
-    DATA_COORDINATOR,
     DOMAIN,
     LOGGER,
     OREF_ALERT_UNIQUE_ID,
@@ -343,7 +342,7 @@ async def test_simple_message(
     payload = load_json_fixture("pushy_alert.json")
     message.payload = json.dumps(payload).encode("utf-8")
     listener.on_message(message)
-    await config.runtime_data[DATA_COORDINATOR].async_refresh()
+    await config.runtime_data.coordinator.async_refresh()
     assert f"MQTT message: {payload}" in caplog.text
     assert listener.alerts.items() == load_json_fixture("pushy_alerts_as_history.json")
     state = hass.states.get(ENTITY_ID)

@@ -1,8 +1,9 @@
 """Fire event for updates."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_ICON,
     ATTR_LATITUDE,
@@ -11,26 +12,25 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.util.location import vincenty
 
-from custom_components.oref_alert.categories import (
+from .categories import (
     category_to_emoji,
     category_to_icon,
 )
-from custom_components.oref_alert.metadata.area_info import AREA_INFO
-from custom_components.oref_alert.metadata.areas import AREAS
-from custom_components.oref_alert.ttl_deque import TTLDeque
-
 from .const import (
     ATTR_AREA,
     ATTR_EMOJI,
     ATTR_HOME_DISTANCE,
     CONF_ALERT_ACTIVE_DURATION,
-    DATA_COORDINATOR,
     DOMAIN,
     AlertField,
 )
+from .metadata.area_info import AREA_INFO
+from .metadata.areas import AREAS
+from .ttl_deque import TTLDeque
 
 if TYPE_CHECKING:
-    from custom_components.oref_alert.coordinator import OrefAlertDataUpdateCoordinator
+    from . import OrefAlertConfigEntry
+    from .coordinator import OrefAlertDataUpdateCoordinator
 
 
 class OrefAlertUpdateEventManager:
@@ -39,16 +39,16 @@ class OrefAlertUpdateEventManager:
     def __init__(
         self,
         hass: HomeAssistant,
-        config_entry: ConfigEntry,
+        config_entry: OrefAlertConfigEntry,
     ) -> None:
         """Initialize object with defaults."""
         self._hass = hass
         self._previous_updates: TTLDeque = TTLDeque(
             config_entry.options[CONF_ALERT_ACTIVE_DURATION]
         )
-        self._coordinator: OrefAlertDataUpdateCoordinator = config_entry.runtime_data[
-            DATA_COORDINATOR
-        ]
+        self._coordinator: OrefAlertDataUpdateCoordinator = (
+            config_entry.runtime_data.coordinator
+        )
         self._coordinator.async_add_listener(self._async_update)
         self._async_update()
 

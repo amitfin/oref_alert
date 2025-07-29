@@ -1,5 +1,7 @@
 """Alert categories metadata."""
 
+from __future__ import annotations
+
 # Based on the content of: https://www.oref.org.il/alerts/alertCategories.json
 
 # Each category contains: (icon, emoji, is_alert)

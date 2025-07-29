@@ -1,4 +1,4 @@
-"""Support for representing daily schedule as binary sensors."""
+"""Support for representing oref alert as sensors."""
 
 from __future__ import annotations
 
@@ -14,8 +14,6 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import event as event_helper
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
-
 from .const import (
     ATTR_ALERT,
     ATTR_AREA,
@@ -24,7 +22,6 @@ from .const import (
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_SENSORS,
-    DATA_COORDINATOR,
     END_TIME_ID_SUFFIX,
     END_TIME_NAME_SUFFIX,
     IST,
@@ -34,25 +31,27 @@ from .const import (
     AlertField,
 )
 from .coordinator import OrefAlertDataUpdateCoordinator
+from .metadata import ALL_AREAS_ALIASES
 from .metadata.area_to_migun_time import AREA_TO_MIGUN_TIME
 from .metadata.areas import AREAS
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
-    from homeassistant.config_entries import ConfigEntry
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+    from . import OrefAlertConfigEntry
 
 SECONDS_IN_A_MINUTE = 60
 
 
 async def async_setup_entry(
     _: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: OrefAlertConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize config entry."""
-    coordinator = config_entry.runtime_data[DATA_COORDINATOR]
+    coordinator = config_entry.runtime_data.coordinator
     entities = [
         (name, areas[0])
         for name, areas in [
@@ -87,7 +86,7 @@ class OrefAlertTimerSensor(
         self,
         area: str,
         coordinator: OrefAlertDataUpdateCoordinator,
-        config_entry: ConfigEntry,
+        config_entry: OrefAlertConfigEntry,
     ) -> None:
         """Initialize object with defaults."""
         super().__init__(coordinator)
@@ -192,7 +191,7 @@ class TimeToShelterSensor(OrefAlertTimerSensor):
         name: str,
         area: str,
         coordinator: OrefAlertDataUpdateCoordinator,
-        config_entry: ConfigEntry,
+        config_entry: OrefAlertConfigEntry,
     ) -> None:
         """Initialize object with defaults."""
         super().__init__(area, coordinator, config_entry)
@@ -240,7 +239,7 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
         name: str,
         area: str,
         coordinator: OrefAlertDataUpdateCoordinator,
-        config_entry: ConfigEntry,
+        config_entry: OrefAlertConfigEntry,
     ) -> None:
         """Initialize object with defaults."""
         super().__init__(area, coordinator, config_entry)

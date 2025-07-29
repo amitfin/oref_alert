@@ -1,25 +1,23 @@
 """DataUpdateCoordinator for oref_alert integration."""
 
+from __future__ import annotations
+
 import asyncio
 import json
 from datetime import datetime, timedelta
 from functools import cmp_to_key
 from http import HTTPStatus
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import homeassistant.util.dt as dt_util
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from custom_components.oref_alert.categories import (
+from .categories import (
     category_is_alert,
     category_is_update,
     real_time_to_history_category,
 )
-from custom_components.oref_alert.ttl_deque import TTLDeque
-
 from .const import (
     CONF_ALERT_ACTIVE_DURATION,
     CONF_ALL_ALERTS_ATTRIBUTES,
@@ -35,6 +33,12 @@ from .const import (
     AlertSource,
 )
 from .metadata.areas import AREAS
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+
+    from . import OrefAlertConfigEntry
+    from .ttl_deque import TTLDeque
 
 OREF_ALERTS_URL = "https://www.oref.org.il/warningMessages/alert/Alerts.json"
 OREF_HISTORY_URL = (
@@ -92,7 +96,10 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
     """Class to manage fetching Oref Alert data."""
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, channels: list[TTLDeque]
+        self,
+        hass: HomeAssistant,
+        config_entry: OrefAlertConfigEntry,
+        channels: list[TTLDeque],
     ) -> None:
         """Initialize global data updater."""
         super().__init__(
