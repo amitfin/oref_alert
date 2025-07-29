@@ -6,7 +6,6 @@ import asyncio
 import contextlib
 import enum
 import secrets
-import sys
 from datetime import datetime
 from typing import TYPE_CHECKING, Final
 
@@ -170,16 +169,20 @@ class TzevaAdomNotifications:
             }
 
         elif message["type"] == MessageType.SYSTEM_MESSAGE:
-            if (
-                cities_ids := message["data"].get("citiesIds")
-                # SYSTEM_MESSAGE is working for now only for testing purposes.
-            ) is None or "pytest" not in sys.modules:
+            areas = [
+                TZEVAADOM_ID_TO_AREA[city_id]
+                for city_id in message["data"].get("citiesIds") or []
+            ]
+            # Filter out empty areas and ensure the message is a pre-alert.
+            if not areas or message["data"].get("instructionType") != 0:
                 return None
             fields = {
                 AlertField.TITLE: message["data"]["titleHe"],
                 AlertField.CATEGORY: 14,  # 14 is pre-alert and 13 is post-alert.
-                "areas": [TZEVAADOM_ID_TO_AREA[city_id] for city_id in cities_ids],
-                "id": f"{MessageType.SYSTEM_MESSAGE}_{message['data']['id']}",
+                "areas": areas,
+                "id": (
+                    f"{MessageType.SYSTEM_MESSAGE}_{message['data']['notificationId']}"
+                ),
             }
 
         else:
