@@ -217,7 +217,12 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
         """Remove an additional sensor."""
         entity_reg = entity_registry.async_get(hass)
         entity_id = service_call.data[CONF_ENTITY_ID]
-        entity_name = getattr(entity_reg.async_get(entity_id), "original_name", "")
+        name = (
+            getattr(entity_reg.async_get(entity_id), "original_name", "")
+            .removeprefix(TITLE)  # For backwards compatibility
+            .strip()
+        )
+        entity_name = f"{TITLE} {name}"
         config_entry = get_config_entry()
         sensors = {
             name: areas
@@ -246,7 +251,12 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
         """Edit sensor."""
         entity_reg = entity_registry.async_get(hass)
         entity_id = service_call.data[CONF_ENTITY_ID]
-        entity_name = getattr(entity_reg.async_get(entity_id), "original_name", "")
+        name = (
+            getattr(entity_reg.async_get(entity_id), "original_name", "")
+            .removeprefix(TITLE)  # For backwards compatibility
+            .strip()
+        )
+        entity_name = f"{TITLE} {name}"
         config_entry = get_config_entry()
         sensors = {**get_config_entry().options.get(CONF_SENSORS, {})}
         if areas := sensors.get(entity_name):

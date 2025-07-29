@@ -35,7 +35,6 @@ from .const import (
     DEFAULT_ON_ICON,
     IST,
     OREF_ALERT_UNIQUE_ID,
-    TITLE,
     AlertField,
 )
 
@@ -144,12 +143,16 @@ class AlertSensor(AlertAreaSensorBase):
         )
         self._is_on_timestamp: float = 0
         if not name:
-            self._attr_name = TITLE
+            self.use_device_name = True
             self._attr_unique_id = OREF_ALERT_UNIQUE_ID
         else:
-            self._attr_name = name
+            self._attr_name = self.calculate_name(name)
             self._attr_unique_id = name.lower().replace(" ", "_")
         self.entity_id = f"{binary_sensor.DOMAIN}.{self._attr_unique_id}"
+
+    def _default_to_device_class_name(self) -> bool:
+        """Do not use device class name for binary sensors."""
+        return False
 
     @property
     def is_on(self) -> bool:
@@ -218,7 +221,7 @@ class AlertSensorAllAreas(AlertSensorBase):
     ) -> None:
         """Initialize object with defaults."""
         super().__init__(config_entry)
-        self._attr_name = f"{TITLE} {ALL_AREAS_NAME_SUFFIX}"
+        self._attr_name = ALL_AREAS_NAME_SUFFIX
         self._attr_unique_id = f"{OREF_ALERT_UNIQUE_ID}_{ALL_AREAS_ID_SUFFIX}"
         self.entity_id = f"{binary_sensor.DOMAIN}.{self._attr_unique_id}"
 

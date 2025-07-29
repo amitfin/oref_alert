@@ -127,6 +127,9 @@ async def test_add_remove_sensor_action(hass: HomeAssistant) -> None:
     await hass.async_block_till_done(wait_background_tasks=True)
     assert hass.states.get(entity_id) is None
     assert entity_reg.async_get(entity_id) is None
+    entity_config_entry = hass.config_entries.async_get_entry(config_id)
+    assert entity_config_entry is not None
+    assert f"{TITLE} test" not in entity_config_entry.options[CONF_SENSORS]
 
 
 async def test_edit_sensor_actions(hass: HomeAssistant) -> None:
