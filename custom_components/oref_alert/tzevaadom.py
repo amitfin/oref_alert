@@ -57,6 +57,8 @@ THREAT_TITLES = {
     8: "התרעות פיקוד העורף",
 }
 
+PRE_ALERT_TITLE = "בדקות הקרובות צפויות להתקבל התרעות באזורך"
+
 TZEVAADOM_SPELLING_FIX = {
     "אשדוד -יא,יב,טו,יז,מרינה,סיט": "אשדוד -יא,יב,טו,יז,מרינה,סיטי"  # noqa: RUF001
 }
@@ -178,7 +180,7 @@ class TzevaAdomNotifications:
                 return None
             fields = {
                 # We use the official title for pre-alerts.
-                AlertField.TITLE: "בדקות הקרובות צפויות להתקבל התרעות באזורך",
+                AlertField.TITLE: PRE_ALERT_TITLE,
                 AlertField.CATEGORY: 14,  # 14 is pre-alert and 13 is post-alert.
                 "areas": areas,
                 "id": (

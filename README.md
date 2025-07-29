@@ -123,7 +123,7 @@ Updates can be sent a few minutes before the alert. They can also be sent for in
 
 <kbd><img src="https://github.com/user-attachments/assets/d35c47db-8028-4c0b-b91f-73e02c859c53" width="400"/></kbd>
 
-`{{ is_state('binary_sensor.oref_alert', 'off') and state_attr('binary_sensor.oref_alert', 'selected_areas_updates') and state_attr('binary_sensor.oref_alert', 'selected_areas_updates')[0]['title'] is search('התרעה מקדימה') }}`
+`{{ is_state('binary_sensor.oref_alert', 'off') and state_attr('binary_sensor.oref_alert', 'selected_areas_updates') and state_attr('binary_sensor.oref_alert', 'selected_areas_updates')[0]['title'] is search('בדקות הקרובות') }}`
 
 ### Ending Update Binary Sensor
 
@@ -491,11 +491,11 @@ mode: queued
 
 ## Removing the Integration
 
-1. **Delete the configuration:**  
+1. **Delete the configuration:**
    Open the integration page ([my-link](https://my.home-assistant.io/redirect/integration/?domain=oref_alert)), click the 3‑dot menu (⋮), and select **Delete**.
 
-2. **Remove the integration files:**  
-   - If the integration was installed via **HACS**, follow the [official HACS removal instructions](https://www.hacs.xyz/docs/use/repositories/dashboard/#removing-a-repository).  
+2. **Remove the integration files:**
+   - If the integration was installed via **HACS**, follow the [official HACS removal instructions](https://www.hacs.xyz/docs/use/repositories/dashboard/#removing-a-repository).
    - Otherwise, manually delete the integration’s folder `custom_components/oref_alert`.
 
 📌 A **Home Assistant core restart** is required in both cases to fully apply the removal.
