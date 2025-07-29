@@ -80,7 +80,6 @@ class OrefAlertLocationEvent(GeolocationEvent):
         attributes: dict,
     ) -> None:
         """Initialize entity."""
-        self._hass = hass
         self._attr_name = area
         self._attr_latitude: float = AREA_INFO[area]["lat"]
         self._attr_longitude: float = AREA_INFO[area]["lon"]
@@ -108,7 +107,7 @@ class OrefAlertLocationEvent(GeolocationEvent):
     @callback
     def async_remove_self(self) -> None:
         """Remove this entity."""
-        self._hass.async_create_task(self.async_remove(force_remove=True))
+        self.hass.async_create_task(self.async_remove(force_remove=True))
 
     def async_update(self, attributes: dict) -> bool:
         """Update the extra attributes when needed."""

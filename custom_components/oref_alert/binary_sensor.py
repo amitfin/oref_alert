@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any
 
 import homeassistant.util.dt as dt_util
 from homeassistant.components import binary_sensor
-from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
@@ -39,10 +38,12 @@ from .const import (
     TITLE,
     AlertField,
 )
-from .coordinator import OrefAlertCoordinatorData, OrefAlertDataUpdateCoordinator
+from .coordinator import OrefAlertDataUpdateCoordinator
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+    from homeassistant.core import HomeAssistant
 
 SECONDS_IN_A_MINUTE = 60
 
@@ -91,7 +92,6 @@ class AlertSensorBase(
         self._config_entry = config_entry
         self._on_icon = self._config_entry.options.get(CONF_ON_ICON, DEFAULT_ON_ICON)
         self._off_icon = self._config_entry.options.get(CONF_OFF_ICON, DEFAULT_OFF_ICON)
-        self._data: OrefAlertCoordinatorData = coordinator.data
         self._common_attributes = {
             CONF_ALERT_ACTIVE_DURATION: self._config_entry.options[
                 CONF_ALERT_ACTIVE_DURATION
@@ -100,12 +100,6 @@ class AlertSensorBase(
         self._add_all_alerts_attributes: bool = config_entry.options.get(
             CONF_ALL_ALERTS_ATTRIBUTES, False
         )
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Take the data from the coordinator."""
-        self._data = self.coordinator.data
-        super()._handle_coordinator_update()
 
     @property
     def icon(self) -> str:
@@ -173,7 +167,7 @@ class AlertSensor(AlertAreaSensorBase):
             # The state should stay "on" for the active duration.
             return True
 
-        for alert in self._data.active_alerts:
+        for alert in self.coordinator.data.active_alerts:
             if self.is_selected_area(alert):
                 if not self.coordinator.is_synthetic_alert(alert):
                     self._is_on_timestamp = (
@@ -193,14 +187,14 @@ class AlertSensor(AlertAreaSensorBase):
             **self._common_area_sensor_attributes,
             ATTR_SELECTED_AREAS_ACTIVE_ALERTS: [
                 alert
-                for alert in self._data.active_alerts
+                for alert in self.coordinator.data.active_alerts
                 if self.is_selected_area(alert)
             ],
             **(
                 {
                     ATTR_SELECTED_AREAS_ALERTS: [
                         alert
-                        for alert in self._data.alerts
+                        for alert in self.coordinator.data.alerts
                         if self.is_selected_area(alert)
                     ],
                 }
@@ -208,17 +202,19 @@ class AlertSensor(AlertAreaSensorBase):
                 else {}
             ),
             ATTR_SELECTED_AREAS_UPDATES: [
-                alert for alert in self._data.updates if self.is_selected_area(alert)
+                alert
+                for alert in self.coordinator.data.updates
+                if self.is_selected_area(alert)
             ],
-            ATTR_COUNTRY_ACTIVE_ALERTS: self._data.active_alerts,
+            ATTR_COUNTRY_ACTIVE_ALERTS: self.coordinator.data.active_alerts,
             **(
                 {
-                    ATTR_COUNTRY_ALERTS: self._data.alerts,
+                    ATTR_COUNTRY_ALERTS: self.coordinator.data.alerts,
                 }
                 if self._add_all_alerts_attributes
                 else {}
             ),
-            ATTR_COUNTRY_UPDATES: self._data.updates,
+            ATTR_COUNTRY_UPDATES: self.coordinator.data.updates,
         }
 
 
@@ -238,20 +234,20 @@ class AlertSensorAllAreas(AlertSensorBase):
     @property
     def is_on(self) -> bool:
         """Return True is sensor is on."""
-        return len(self._data.active_alerts) > 0
+        return len(self.coordinator.data.active_alerts) > 0
 
     @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return additional attributes."""
         return {
             **self._common_attributes,
-            ATTR_COUNTRY_ACTIVE_ALERTS: self._data.active_alerts,
+            ATTR_COUNTRY_ACTIVE_ALERTS: self.coordinator.data.active_alerts,
             **(
                 {
-                    ATTR_COUNTRY_ALERTS: self._data.alerts,
+                    ATTR_COUNTRY_ALERTS: self.coordinator.data.alerts,
                 }
                 if self._add_all_alerts_attributes
                 else {}
             ),
-            ATTR_COUNTRY_UPDATES: self._data.updates,
+            ATTR_COUNTRY_UPDATES: self.coordinator.data.updates,
         }
