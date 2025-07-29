@@ -121,7 +121,7 @@ Updates can be sent a few minutes before the alert. They can also be sent for in
 
 ### Preemptive Update Binary Sensor
 
-<kbd><img src="https://github.com/user-attachments/assets/d35c47db-8028-4c0b-b91f-73e02c859c53" width="400"/></kbd>
+<kbd><img src="https://github.com/user-attachments/assets/5413ca09-8f69-4808-ac6e-066c7be5768e" width="400"/></kbd>
 
 `{{ is_state('binary_sensor.oref_alert', 'off') and state_attr('binary_sensor.oref_alert', 'selected_areas_updates') and state_attr('binary_sensor.oref_alert', 'selected_areas_updates')[0]['title'] is search('בדקות הקרובות') }}`
 
