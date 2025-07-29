@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Any
 
 import homeassistant.util.dt as dt_util
 from homeassistant.components import binary_sensor
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .entity import OrefAlertCoordinatorEntity
 from .metadata import ALL_AREAS_ALIASES
 
 if TYPE_CHECKING:
@@ -38,7 +38,6 @@ from .const import (
     TITLE,
     AlertField,
 )
-from .coordinator import OrefAlertDataUpdateCoordinator
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -54,20 +53,16 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize config entry."""
-    coordinator = config_entry.runtime_data.coordinator
     names = [None, *list(config_entry.options.get(CONF_SENSORS, {}).keys())]
     async_add_entities(
-        [AlertSensor(name, config_entry, coordinator) for name in names]
-        + [AlertSensorAllAreas(config_entry, coordinator)]
+        [AlertSensor(name, config_entry) for name in names]
+        + [AlertSensorAllAreas(config_entry)]
     )
 
 
-class AlertSensorBase(
-    CoordinatorEntity[OrefAlertDataUpdateCoordinator], binary_sensor.BinarySensorEntity
-):
+class AlertSensorBase(OrefAlertCoordinatorEntity, binary_sensor.BinarySensorEntity):
     """Representation of the alert sensor base."""
 
-    _attr_has_entity_name = True
     _attr_device_class = binary_sensor.BinarySensorDeviceClass.SAFETY
     _entity_component_unrecorded_attributes = frozenset(
         {
@@ -85,11 +80,9 @@ class AlertSensorBase(
     def __init__(
         self,
         config_entry: OrefAlertConfigEntry,
-        coordinator: OrefAlertDataUpdateCoordinator,
     ) -> None:
         """Initialize object with defaults."""
-        super().__init__(coordinator)
-        self._config_entry = config_entry
+        super().__init__(config_entry)
         self._on_icon = self._config_entry.options.get(CONF_ON_ICON, DEFAULT_ON_ICON)
         self._off_icon = self._config_entry.options.get(CONF_OFF_ICON, DEFAULT_OFF_ICON)
         self._common_attributes = {
@@ -114,10 +107,9 @@ class AlertAreaSensorBase(AlertSensorBase):
         self,
         areas: list[str],
         config_entry: OrefAlertConfigEntry,
-        coordinator: OrefAlertDataUpdateCoordinator,
     ) -> None:
         """Initialize object with defaults."""
-        super().__init__(config_entry, coordinator)
+        super().__init__(config_entry)
         self._areas = expand_areas_and_groups(areas)
         self._common_area_sensor_attributes = {
             CONF_AREAS: self._areas,
@@ -139,7 +131,6 @@ class AlertSensor(AlertAreaSensorBase):
         self,
         name: str | None,
         config_entry: OrefAlertConfigEntry,
-        coordinator: OrefAlertDataUpdateCoordinator,
     ) -> None:
         """Initialize object with defaults."""
         super().__init__(
@@ -147,7 +138,6 @@ class AlertSensor(AlertAreaSensorBase):
             if not name
             else config_entry.options[CONF_SENSORS][name],
             config_entry,
-            coordinator,
         )
         self._active_seconds: int = (
             config_entry.options[CONF_ALERT_ACTIVE_DURATION] * SECONDS_IN_A_MINUTE
@@ -224,10 +214,9 @@ class AlertSensorAllAreas(AlertSensorBase):
     def __init__(
         self,
         config_entry: OrefAlertConfigEntry,
-        coordinator: OrefAlertDataUpdateCoordinator,
     ) -> None:
         """Initialize object with defaults."""
-        super().__init__(config_entry, coordinator)
+        super().__init__(config_entry)
         self._attr_name = f"{TITLE} {ALL_AREAS_NAME_SUFFIX}"
         self._attr_unique_id = f"{OREF_ALERT_UNIQUE_ID}_{ALL_AREAS_ID_SUFFIX}"
 

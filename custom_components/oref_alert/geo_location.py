@@ -33,6 +33,7 @@ from .const import (
     OREF_ALERT_UNIQUE_ID,
     AlertField,
 )
+from .entity import OrefAlertEntity
 from .metadata.area_info import AREA_INFO
 
 if TYPE_CHECKING:
@@ -51,12 +52,10 @@ async def async_setup_entry(
     OrefAlertLocationEventManager(hass, config_entry, async_add_entities)
 
 
-class OrefAlertLocationEvent(GeolocationEvent):
+class OrefAlertLocationEvent(OrefAlertEntity, GeolocationEvent):
     """Represents an oref alert."""
 
-    _attr_should_poll = False
     _attr_source = DOMAIN
-    _attr_has_entity_name = True
     _unrecorded_attributes = frozenset(
         {
             ATTR_SOURCE,
@@ -74,10 +73,12 @@ class OrefAlertLocationEvent(GeolocationEvent):
     def __init__(
         self,
         hass: HomeAssistant,
+        config_entry: OrefAlertConfigEntry,
         area: str,
         attributes: dict,
     ) -> None:
         """Initialize entity."""
+        super().__init__(config_entry)
         self._attr_name = area
         self._attr_latitude: float = AREA_INFO[area]["lat"]
         self._attr_longitude: float = AREA_INFO[area]["lon"]
@@ -208,7 +209,9 @@ class OrefAlertLocationEventManager:
         }
 
         to_add = {
-            area: OrefAlertLocationEvent(self._hass, area, self._alert_attributes(area))
+            area: OrefAlertLocationEvent(
+                self._hass, self._config_entry, area, self._alert_attributes(area)
+            )
             for area in active - exists
             if area in AREA_INFO
         }

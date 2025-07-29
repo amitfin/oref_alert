@@ -12,7 +12,6 @@ from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import event as event_helper
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     ATTR_ALERT,
@@ -30,7 +29,7 @@ from .const import (
     TITLE,
     AlertField,
 )
-from .coordinator import OrefAlertDataUpdateCoordinator
+from .entity import OrefAlertCoordinatorEntity
 from .metadata import ALL_AREAS_ALIASES
 from .metadata.area_to_migun_time import AREA_TO_MIGUN_TIME
 from .metadata.areas import AREAS
@@ -51,7 +50,6 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize config entry."""
-    coordinator = config_entry.runtime_data.coordinator
     entities = [
         (name, areas[0])
         for name, areas in [
@@ -61,23 +59,14 @@ async def async_setup_entry(
         if len(areas) == 1 and areas[0] in AREAS
     ]
     async_add_entities(
-        [
-            TimeToShelterSensor(name, area, coordinator, config_entry)
-            for name, area in entities
-        ]
-        + [
-            AlertEndTimeSensor(name, area, coordinator, config_entry)
-            for name, area in entities
-        ]
+        [TimeToShelterSensor(name, area, config_entry) for name, area in entities]
+        + [AlertEndTimeSensor(name, area, config_entry) for name, area in entities]
     )
 
 
-class OrefAlertTimerSensor(
-    CoordinatorEntity[OrefAlertDataUpdateCoordinator], SensorEntity
-):
+class OrefAlertTimerSensor(OrefAlertCoordinatorEntity, SensorEntity):
     """Representation of a timer sensor."""
 
-    _attr_has_entity_name = True
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_native_unit_of_measurement = UnitOfTime.SECONDS
     _attr_icon = "mdi:timer-sand"
@@ -85,12 +74,10 @@ class OrefAlertTimerSensor(
     def __init__(
         self,
         area: str,
-        coordinator: OrefAlertDataUpdateCoordinator,
         config_entry: OrefAlertConfigEntry,
     ) -> None:
         """Initialize object with defaults."""
-        super().__init__(coordinator)
-        self._config_entry = config_entry
+        super().__init__(config_entry)
         self._active_duration: int = config_entry.options[CONF_ALERT_ACTIVE_DURATION]
         self._area: str = area
         self._alert: dict[str, Any] | None = None
@@ -190,11 +177,10 @@ class TimeToShelterSensor(OrefAlertTimerSensor):
         self,
         name: str,
         area: str,
-        coordinator: OrefAlertDataUpdateCoordinator,
         config_entry: OrefAlertConfigEntry,
     ) -> None:
         """Initialize object with defaults."""
-        super().__init__(area, coordinator, config_entry)
+        super().__init__(area, config_entry)
         self._migun_time: int = AREA_TO_MIGUN_TIME[area]
         self._attr_name = f"{name} {TIME_TO_SHELTER_NAME_SUFFIX}"
         self._attr_unique_id = (
@@ -238,11 +224,10 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
         self,
         name: str,
         area: str,
-        coordinator: OrefAlertDataUpdateCoordinator,
         config_entry: OrefAlertConfigEntry,
     ) -> None:
         """Initialize object with defaults."""
-        super().__init__(area, coordinator, config_entry)
+        super().__init__(area, config_entry)
         self._attr_name = f"{name} {END_TIME_NAME_SUFFIX}"
         self._attr_unique_id = f"{name.lower().replace(' ', '_')}_{END_TIME_ID_SUFFIX}"
 
