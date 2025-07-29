@@ -6,7 +6,6 @@ import asyncio
 import contextlib
 import enum
 import secrets
-import sys
 from datetime import datetime
 from typing import TYPE_CHECKING, Final
 
@@ -57,6 +56,8 @@ THREAT_TITLES = {
     7: "חשש לאירוע כימי",
     8: "התרעות פיקוד העורף",
 }
+
+PRE_ALERT_TITLE = "בדקות הקרובות צפויות להתקבל התרעות באזורך"
 
 TZEVAADOM_SPELLING_FIX = {
     "אשדוד -יא,יב,טו,יז,מרינה,סיט": "אשדוד -יא,יב,טו,יז,מרינה,סיטי"  # noqa: RUF001
@@ -170,16 +171,21 @@ class TzevaAdomNotifications:
             }
 
         elif message["type"] == MessageType.SYSTEM_MESSAGE:
-            if (
-                cities_ids := message["data"].get("citiesIds")
-                # SYSTEM_MESSAGE is working for now only for testing purposes.
-            ) is None or "pytest" not in sys.modules:
+            areas = [
+                TZEVAADOM_ID_TO_AREA[city_id]
+                for city_id in message["data"].get("citiesIds") or []
+            ]
+            # Filter out empty areas and ensure the message is a pre-alert.
+            if not areas or message["data"].get("instructionType") != 0:
                 return None
             fields = {
-                AlertField.TITLE: message["data"]["titleHe"],
+                # We use the official title for pre-alerts.
+                AlertField.TITLE: PRE_ALERT_TITLE,
                 AlertField.CATEGORY: 14,  # 14 is pre-alert and 13 is post-alert.
-                "areas": [TZEVAADOM_ID_TO_AREA[city_id] for city_id in cities_ids],
-                "id": f"{MessageType.SYSTEM_MESSAGE}_{message['data']['id']}",
+                "areas": areas,
+                "id": (
+                    f"{MessageType.SYSTEM_MESSAGE}_{message['data']['notificationId']}"
+                ),
             }
 
         else:
