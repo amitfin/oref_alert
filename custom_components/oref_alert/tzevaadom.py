@@ -177,7 +177,8 @@ class TzevaAdomNotifications:
             if not areas or message["data"].get("instructionType") != 0:
                 return None
             fields = {
-                AlertField.TITLE: message["data"]["titleHe"],
+                # We use the official title for pre-alerts.
+                AlertField.TITLE: "בדקות הקרובות צפויות להתקבל התרעות באזורך",
                 AlertField.CATEGORY: 14,  # 14 is pre-alert and 13 is post-alert.
                 "areas": areas,
                 "id": (
