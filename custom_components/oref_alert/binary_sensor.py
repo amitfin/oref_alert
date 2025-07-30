@@ -43,6 +43,8 @@ if TYPE_CHECKING:
 
     from homeassistant.core import HomeAssistant
 
+PARALLEL_UPDATES = 0
+
 SECONDS_IN_A_MINUTE = 60
 
 

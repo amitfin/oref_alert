@@ -42,6 +42,8 @@ if TYPE_CHECKING:
 
     from . import OrefAlertConfigEntry
 
+PARALLEL_UPDATES = 0
+
 SECONDS_IN_A_MINUTE = 60
 
 

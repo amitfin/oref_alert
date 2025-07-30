@@ -42,6 +42,8 @@ if TYPE_CHECKING:
     from . import OrefAlertConfigEntry
     from .coordinator import OrefAlertDataUpdateCoordinator
 
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
