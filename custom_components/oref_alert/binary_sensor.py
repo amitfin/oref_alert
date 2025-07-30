@@ -146,7 +146,7 @@ class AlertSensor(AlertAreaSensorBase):
             self.use_device_name = True
             self._attr_unique_id = OREF_ALERT_UNIQUE_ID
         else:
-            self._attr_name = self.calculate_name(name)
+            self.set_attr_name(name)
             self._attr_unique_id = name.lower().replace(" ", "_")
         self.entity_id = f"{binary_sensor.DOMAIN}.{self._attr_unique_id}"
 
