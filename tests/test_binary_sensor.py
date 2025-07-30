@@ -27,9 +27,6 @@ from custom_components.oref_alert.const import (
     CONF_AREA,
     CONF_AREAS,
     CONF_DURATION,
-    CONF_OFF_ICON,
-    CONF_ON_ICON,
-    CONF_POLL_INTERVAL,
     DOMAIN,
     OREF_ALERT_UNIQUE_ID,
     SYNTHETIC_ALERT_ACTION,
@@ -168,10 +165,13 @@ async def test_interval(
         config_entry,
         options={
             **config_entry.options,
-            CONF_POLL_INTERVAL: 125,
             CONF_ALERT_ACTIVE_DURATION: 1,
         },
     )
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    freezer.tick(datetime.timedelta(seconds=50))
+    async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
 
     state = hass.states.get(ENTITY_ID)
@@ -179,14 +179,14 @@ async def test_interval(
     assert state.state == STATE_ON
     mock_urls(aioclient_mock, None, None)
 
-    freezer.tick(datetime.timedelta(seconds=120))
+    freezer.tick(datetime.timedelta(seconds=9))
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(ENTITY_ID)
     assert state is not None
     assert state.state == STATE_ON
 
-    freezer.tick(datetime.timedelta(seconds=10))
+    freezer.tick(datetime.timedelta(seconds=2))
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(ENTITY_ID)
@@ -261,34 +261,6 @@ async def test_state_no_caching_for_synthetic(
     assert state is not None
     assert state.state == STATE_OFF
 
-    await async_shutdown(hass, config_id)
-
-
-async def test_icons(
-    hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
-    freezer: FrozenDateTimeFactory,
-) -> None:
-    """Test state attributes."""
-    mock_urls(aioclient_mock, "single_alert_real_time.json", None)
-    config_id = await async_setup(
-        hass,
-        {
-            CONF_AREAS: ["תל אביב - כל האזורים"],
-            CONF_ON_ICON: "mdi:emoticon-sad",
-            CONF_OFF_ICON: "mdi:emoticon-happy",
-        },
-    )
-    state = hass.states.get(ENTITY_ID)
-    assert state is not None
-    assert state.attributes["icon"] == "mdi:emoticon-sad"
-    mock_urls(aioclient_mock, None, None)
-    freezer.tick(datetime.timedelta(seconds=600))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get(ENTITY_ID)
-    assert state is not None
-    assert state.attributes["icon"] == "mdi:emoticon-happy"
     await async_shutdown(hass, config_id)
 
 

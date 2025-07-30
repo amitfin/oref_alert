@@ -72,7 +72,7 @@ class OrefAlertTimerSensor(OrefAlertCoordinatorEntity, SensorEntity):
 
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_native_unit_of_measurement = UnitOfTime.SECONDS
-    _attr_icon = "mdi:timer-sand"
+    _attr_translation_key = "timer"
 
     def __init__(
         self,

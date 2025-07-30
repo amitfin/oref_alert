@@ -1,4 +1,19 @@
 {
+  "entity": {
+    "binary_sensor": {
+      "home_alert": {
+        "default": "mdi:home-outline",
+        "state": {
+          "on": "mdi:home-alert-outline"
+        }
+      }
+    },
+    "sensor": {
+      "timer": {
+        "default": "mdi:timer-sand"
+      }
+    }
+  },
   "services": {
     "add_sensor": "mdi:map-marker-plus-outline",
     "remove_sensor": "mdi:map-marker-remove-outline",

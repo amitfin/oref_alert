@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import homeassistant.util.dt as dt_util
 from homeassistant.config_entries import ConfigEntryDisabler
@@ -29,7 +29,6 @@ from custom_components.oref_alert.const import (
     ATTR_HOME_DISTANCE,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
-    CONF_POLL_INTERVAL,
     DOMAIN,
     LOCATION_ID_SUFFIX,
     OREF_ALERT_UNIQUE_ID,
@@ -48,14 +47,9 @@ DEFAULT_OPTIONS = {CONF_AREAS: ["בארי"], CONF_ALERT_ACTIVE_DURATION: 10}
 ENTITY_ID = f"{Platform.GEO_LOCATION}.{OREF_ALERT_UNIQUE_ID}_{LOCATION_ID_SUFFIX}"
 
 
-async def async_setup(
-    hass: HomeAssistant, options: dict[str, Any] | None = None
-) -> str:
+async def async_setup(hass: HomeAssistant) -> str:
     """Integration setup."""
-    options = options or {}
-    config_entry = MockConfigEntry(
-        domain=DOMAIN, options={**DEFAULT_OPTIONS, **options}
-    )
+    config_entry = MockConfigEntry(domain=DOMAIN, options={**DEFAULT_OPTIONS})
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
@@ -112,10 +106,10 @@ async def test_add_remove(
 ) -> None:
     """Test adding and removing entities."""
     freezer.move_to("2023-10-07 06:30:00+03:00")
-    config_id = await async_setup(hass, {CONF_POLL_INTERVAL: 1})
+    config_id = await async_setup(hass)
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 0
     mock_urls(aioclient_mock, None, "multi_alerts_history.json")
-    freezer.tick(2)
+    freezer.tick(11)
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert {
@@ -126,12 +120,12 @@ async def test_add_remove(
         for entry in er.async_entries_for_config_entry(er.async_get(hass), config_id)
     )
     mock_urls(aioclient_mock, None, None)
-    freezer.tick(2)
+    freezer.tick(11)
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 0
     mock_urls(aioclient_mock, None, "single_alert_history.json")
-    freezer.tick(2)
+    freezer.tick(11)
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert {

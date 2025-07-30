@@ -21,7 +21,6 @@ from custom_components.oref_alert.const import (
     CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREA,
     CONF_DURATION,
-    CONF_POLL_INTERVAL,
     DEFAULT_ALERT_ACTIVE_DURATION,
     DOMAIN,
     IST,
@@ -217,10 +216,10 @@ async def test_updates(
         nonlocal updates
         updates += 1
 
-    coordinator = create_coordinator(hass, {CONF_POLL_INTERVAL: 100})
+    coordinator = create_coordinator(hass)
     coordinator.async_add_listener(update)
     for _ in range(10):
-        freezer.tick(timedelta(seconds=50))
+        freezer.tick(timedelta(seconds=5))
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
     assert updates == 5
@@ -341,13 +340,13 @@ async def test_real_time_timestamp(
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
-    for _ in range(25):
+    for _ in range(9):
         # Timestamp should stay the same for the first 2 minutes.
         assert coordinator.data.items[0]["alertDate"] == "2023-10-07 06:30:00"
-        freezer.tick(timedelta(seconds=5))
+        freezer.tick(timedelta(seconds=15))
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
-    assert coordinator.data.items[0]["alertDate"] == "2023-10-07 06:32:05"
+    assert coordinator.data.items[0]["alertDate"] == "2023-10-07 06:32:15"
     await coordinator.async_shutdown()
 
 
@@ -406,9 +405,7 @@ async def test_synthetic_alert(
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test synthetic alert."""
-    coordinator = create_coordinator(
-        hass, {CONF_POLL_INTERVAL: 1, CONF_ALERT_ACTIVE_DURATION: 100}
-    )
+    coordinator = create_coordinator(hass, {CONF_ALERT_ACTIVE_DURATION: 100})
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
     assert len(coordinator.data.alerts) == 0
@@ -433,7 +430,7 @@ async def test_synthetic_alert(
         ] == synthetic_alert_time.strftime("%Y-%m-%d %H:%M:%S")
         assert coordinator.data.alerts[index]["category"] == 4
         assert coordinator.data.alerts[index]["title"] == "test"
-    freezer.tick(timedelta(seconds=2))
+    freezer.tick(timedelta(seconds=11))
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(coordinator.data.alerts) == 0

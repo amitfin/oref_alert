@@ -23,9 +23,7 @@ from .const import (
     CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREA,
     CONF_DURATION,
-    CONF_POLL_INTERVAL,
     DEFAULT_ALERT_ACTIVE_DURATION,
-    DEFAULT_POLL_INTERVAL,
     DOMAIN,
     IST,
     LOGGER,
@@ -106,11 +104,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             hass,
             LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(
-                seconds=config_entry.options.get(
-                    CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL
-                )
-            ),
+            update_interval=timedelta(seconds=10),
         )
         self._active_duration = config_entry.options.get(
             CONF_ALERT_ACTIVE_DURATION, DEFAULT_ALERT_ACTIVE_DURATION

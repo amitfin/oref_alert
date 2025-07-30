@@ -28,11 +28,7 @@ from .const import (
     CONF_ALERT_ACTIVE_DURATION,
     CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREAS,
-    CONF_OFF_ICON,
-    CONF_ON_ICON,
     CONF_SENSORS,
-    DEFAULT_OFF_ICON,
-    DEFAULT_ON_ICON,
     IST,
     OREF_ALERT_UNIQUE_ID,
     AlertField,
@@ -65,6 +61,7 @@ class AlertSensorBase(OrefAlertCoordinatorEntity, binary_sensor.BinarySensorEnti
     """Representation of the alert sensor base."""
 
     _attr_device_class = binary_sensor.BinarySensorDeviceClass.SAFETY
+    _attr_translation_key = "home_alert"
     _entity_component_unrecorded_attributes = frozenset(
         {
             ATTR_COUNTRY_ACTIVE_ALERTS,
@@ -84,8 +81,6 @@ class AlertSensorBase(OrefAlertCoordinatorEntity, binary_sensor.BinarySensorEnti
     ) -> None:
         """Initialize object with defaults."""
         super().__init__(config_entry)
-        self._on_icon = self._config_entry.options.get(CONF_ON_ICON, DEFAULT_ON_ICON)
-        self._off_icon = self._config_entry.options.get(CONF_OFF_ICON, DEFAULT_OFF_ICON)
         self._common_attributes = {
             CONF_ALERT_ACTIVE_DURATION: self._config_entry.options[
                 CONF_ALERT_ACTIVE_DURATION
@@ -94,11 +89,6 @@ class AlertSensorBase(OrefAlertCoordinatorEntity, binary_sensor.BinarySensorEnti
         self._add_all_alerts_attributes: bool = config_entry.options.get(
             CONF_ALL_ALERTS_ATTRIBUTES, False
         )
-
-    @property
-    def icon(self) -> str:
-        """Return the sensor icon."""
-        return self._on_icon if self.is_on else self._off_icon
 
 
 class AlertAreaSensorBase(AlertSensorBase):

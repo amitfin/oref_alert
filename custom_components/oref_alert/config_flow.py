@@ -21,13 +21,7 @@ from .const import (
     CONF_ALERT_ACTIVE_DURATION,
     CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREAS,
-    CONF_OFF_ICON,
-    CONF_ON_ICON,
-    CONF_POLL_INTERVAL,
     DEFAULT_ALERT_ACTIVE_DURATION,
-    DEFAULT_OFF_ICON,
-    DEFAULT_ON_ICON,
-    DEFAULT_POLL_INTERVAL,
     DOMAIN,
     TITLE,
 )
@@ -86,9 +80,6 @@ class OrefAlertConfigFlow(ConfigFlow, domain=DOMAIN):
                 options={
                     CONF_AREAS: user_input.get(CONF_AREAS, [self._auto_detected_area]),
                     CONF_ALERT_ACTIVE_DURATION: DEFAULT_ALERT_ACTIVE_DURATION,
-                    CONF_POLL_INTERVAL: DEFAULT_POLL_INTERVAL,
-                    CONF_ON_ICON: DEFAULT_ON_ICON,
-                    CONF_OFF_ICON: DEFAULT_OFF_ICON,
                     CONF_ALL_ALERTS_ATTRIBUTES: False,
                 },
             )
@@ -130,24 +121,6 @@ class OptionsFlowHandler(OptionsFlow):
                         CONF_ALERT_ACTIVE_DURATION,
                         default=self._config_entry.options[CONF_ALERT_ACTIVE_DURATION],
                     ): cv.positive_int,
-                    vol.Required(
-                        CONF_POLL_INTERVAL,
-                        default=self._config_entry.options.get(
-                            CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL
-                        ),
-                    ): cv.positive_int,
-                    vol.Required(
-                        CONF_ON_ICON,
-                        default=self._config_entry.options.get(
-                            CONF_ON_ICON, DEFAULT_ON_ICON
-                        ),
-                    ): selector.IconSelector(),
-                    vol.Required(
-                        CONF_OFF_ICON,
-                        default=self._config_entry.options.get(
-                            CONF_OFF_ICON, DEFAULT_OFF_ICON
-                        ),
-                    ): selector.IconSelector(),
                     vol.Required(
                         CONF_ALL_ALERTS_ATTRIBUTES,
                         default=self._config_entry.options.get(
