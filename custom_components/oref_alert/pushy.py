@@ -134,7 +134,7 @@ class PushyNotifications:
         self._hass.config_entries.async_update_entry(
             self._config_entry,
             data={
-                **(self._config_entry.data or {}),
+                **self._config_entry.data,
                 PUSHY_CREDENTIALS_KEY: credentials,
             },
         )
@@ -159,7 +159,7 @@ class PushyNotifications:
                 self._config_entry,
                 data={
                     key: value
-                    for key, value in (self._config_entry.data or {}).items()
+                    for key, value in self._config_entry.data.items()
                     if key != PUSHY_CREDENTIALS_KEY
                 },
             )
@@ -184,11 +184,11 @@ class PushyNotifications:
         if LOGGER.isEnabledFor(logging.DEBUG):
             topics.extend(TEST_SEGMENTS)
 
-        if (
-            previous_topics := (self._config_entry.data or {}).get(PUSHY_TOPICS_KEY)
-        ) is None:
+        previous_topics: list[str] = []
+        if PUSHY_TOPICS_KEY not in self._config_entry.data:
             await self._unsubscribe(["*"])
-            previous_topics = []
+        else:
+            previous_topics = self._config_entry.data[PUSHY_TOPICS_KEY]
 
         if removed := [topic for topic in previous_topics if topic not in topics]:
             await self._unsubscribe(removed)
@@ -207,7 +207,7 @@ class PushyNotifications:
             self._hass.config_entries.async_update_entry(
                 self._config_entry,
                 data={
-                    **(self._config_entry.data or {}),
+                    **self._config_entry.data,
                     PUSHY_TOPICS_KEY: topics,
                 },
             )
@@ -299,9 +299,7 @@ class PushyNotifications:
 
     async def start(self) -> None:
         """Register for notifications."""
-        if (
-            credentials := (self._config_entry.data or {}).get(PUSHY_CREDENTIALS_KEY)
-        ) is None:
+        if (credentials := self._config_entry.data.get(PUSHY_CREDENTIALS_KEY)) is None:
             await self._register()
             return  # The config entry data was changed so the integration will reload
         if not (await self._validate(credentials)):

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
 
 import homeassistant.util.dt as dt_util
 from homeassistant.core import HomeAssistant, callback
@@ -12,6 +13,9 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, LOGGER
 from .metadata.areas import AREAS
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 CITIES_MIX_URL = "https://alerts-history.oref.org.il/Shared/Ajax/GetCitiesMix.aspx"
 FILTER_SUFFIX1 = " - כל האזורים"
@@ -26,8 +30,10 @@ class AreasChecker:
         """Initialize areas checker."""
         self._hass = hass
         self._http_client = async_get_clientsession(hass)
-        self._unsub_next_check = event.async_track_point_in_time(
-            hass, self._check, dt_util.now() + timedelta(minutes=1)
+        self._unsub_next_check: Callable[[], None] | None = (
+            event.async_track_point_in_time(
+                hass, self._check, dt_util.now() + timedelta(minutes=1)
+            )
         )
 
     def stop(self) -> None:

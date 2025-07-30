@@ -15,7 +15,7 @@ class TTLDeque:
     def __init__(self, ttl: int) -> None:
         """Initialize the deque."""
         self._ttl = timedelta(minutes=ttl)
-        self._deque = deque()
+        self._deque: deque[tuple[datetime, Any]] = deque()
 
     def add(self, item: Any) -> None:
         """Add an item."""

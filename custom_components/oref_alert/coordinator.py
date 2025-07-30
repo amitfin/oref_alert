@@ -119,7 +119,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             CONF_ALL_ALERTS_ATTRIBUTES, False
         )
         self._http_client = async_get_clientsession(hass)
-        self._http_cache = {}
+        self._http_cache: dict[str, tuple[Any, str, float]] = {}
         self._channels: list[TTLDeque] = channels
         self._channels_change: list[datetime | None] = []
         self._synthetic_alerts: list[tuple[float, dict[str, Any]]] = []
@@ -170,9 +170,9 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         exc_info = Exception()
         now = dt_util.now().timestamp()
         cached_content, last_modified, last_request = self._http_cache.get(
-            url, (None, None, None)
+            url, (None, "", 0)
         )
-        if last_request is not None and (now - last_request) < REQUEST_THROTTLING:
+        if (now - last_request) < REQUEST_THROTTLING:
             return cached_content, False
         headers = (
             OREF_HEADERS
@@ -199,7 +199,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                         raise
                     self._http_cache[url] = (
                         content,
-                        response.headers.get("Last-Modified"),
+                        response.headers.get("Last-Modified", ""),
                         now,
                     )
                     return content, not (content is None and cached_content is None)
@@ -261,7 +261,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
     def _add_channels(self, alerts: list[dict[str, Any]]) -> None:
         """Add alerts from the different channels after de-dup."""
         dedup_window = REAL_TIME_ALERT_LOGIC_WINDOW * 60
-        new_alerts = []
+        new_alerts: list[dict] = []
         for channel in self._channels:
             if channel.changed() is None:
                 continue

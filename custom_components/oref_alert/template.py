@@ -160,7 +160,7 @@ async def inject_template_extensions(hass: HomeAssistant) -> Callable[[], None]:
 
     def unload_template_extensions() -> None:
         """Remove template extensions."""
-        TemplateEnvironment.__init__ = template_environment_init
+        TemplateEnvironment.__init__ = template_environment_init  # type: ignore[method-assign]
         fix_cached_environments(revert_environment)
 
     return unload_template_extensions
