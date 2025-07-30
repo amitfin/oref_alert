@@ -1,6 +1,17 @@
 """GENERATED FILE. DO NOT EDIT MANUALLY."""
 
-AREA_INFO: dict[str, dict[str, float | int | None]] = {
+from typing import TypedDict
+
+
+class AreaInfoType(TypedDict):
+    """Type for area info."""
+
+    lat: float
+    lon: float
+    segment: int
+
+
+AREA_INFO: dict[str, AreaInfoType] = {
     "אבו גוש": {"lat": 31.8068, "lon": 35.1103, "segment": 5000511},
     "אבו נוור": {"lat": 31.7621, "lon": 35.2938, "segment": 5002024},
     "אבו סנאן": {"lat": 32.958, "lon": 35.172, "segment": 5001470},
@@ -298,7 +309,7 @@ AREA_INFO: dict[str, dict[str, float | int | None]] = {
     "ברוכין": {"lat": 32.0822, "lon": 35.0941, "segment": 5000782},
     "ברור חיל": {"lat": 31.557, "lon": 34.6465, "segment": 5000267},
     "ברוש": {"lat": 31.371091, "lon": 34.634933, "segment": 5000189},
-    "ברחבי הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": None},
+    "ברחבי הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": 0},
     "ברטעה": {"lat": 32.4721, "lon": 35.095, "segment": 5001017},
     "ברכיה": {"lat": 31.668, "lon": 34.6243, "segment": 5000344},
     "ברעם": {"lat": 33.059, "lon": 35.4332, "segment": 5001575},
@@ -638,7 +649,7 @@ AREA_INFO: dict[str, dict[str, float | int | None]] = {
     "כינרת קבוצה": {"lat": 32.7142, "lon": 35.5627, "segment": 5001223},
     "כיסופים": {"lat": 31.3745, "lon": 34.399, "segment": 5000188},
     "כישור": {"lat": 32.9467, "lon": 35.2502, "segment": 5001449},
-    "כל הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": None},
+    "כל הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": 0},
     "כלא דמון": {"lat": 32.7332, "lon": 35.0234, "segment": 5001241},
     "כליל": {"lat": 32.9836, "lon": 35.1997, "segment": 5001492},
     "כלנית": {"lat": 32.8753, "lon": 35.454, "segment": 5001394},

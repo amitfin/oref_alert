@@ -42,10 +42,19 @@ CITY_ALL_AREAS_SUFFIX = " - כל האזורים"
 DISTRICT_PREFIX = "מחוז "
 
 ALL_AREAS = {
-    "ברחבי הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": None},
-    "כל הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": None},
+    "ברחבי הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": 0},
+    "כל הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": 0},
 }
 assert set(ALL_AREAS.keys()) == ALL_AREAS_ALIASES
+
+AREA_INFO_TYPE = '''
+from typing import TypedDict
+class AreaInfoType(TypedDict):
+    """Type for area info."""
+    lat: float
+    lon: float
+    segment: int
+'''
 
 SPELLING_FIX = {"חדרה כל - האזורים": "חדרה - כל האזורים"}
 
@@ -304,7 +313,7 @@ class OrefMetadata:
             ),
             (
                 AREA_INFO_OUTPUT,
-                "AREA_INFO: dict[str, dict[str, float | int | None]]",
+                AREA_INFO_TYPE + "AREA_INFO: dict[str, AreaInfoType]",
                 self._area_info,
             ),
             (SEGMENT_TO_AREA_OUTPUT, "SEGMENT_TO_AREA: dict[int, str]", self._segments),
