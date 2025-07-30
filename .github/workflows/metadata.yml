@@ -1,9 +1,9 @@
-name: "Metadata"
+name: Metadata
 
 on:
   workflow_dispatch:
   schedule:
-    - cron:  "0 0 * * *"
+    - cron: "0 0 * * *"
 
 permissions:
   contents: write
@@ -11,37 +11,37 @@ permissions:
 
 jobs:
   metadata:
-    name: "Metadata sync"
-    runs-on: "ubuntu-latest"
+    name: Metadata sync
+    runs-on: ubuntu-latest
     steps:
-        - name: "Checkout the repository"
-          uses: "actions/checkout@v4.2.2"
+      - name: Checkout the repository
+        uses: actions/checkout@v4.2.2
 
-        - name: "Set up Python"
-          uses: actions/setup-python@v5.6.0
-          with:
-            python-version: "3.13"
-            cache: "pip"
+      - name: Set up Python
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: "3.13"
+          cache: pip
 
-        - name: "Install requirements"
-          run: python3 -m pip install -r requirements.txt
+      - name: Install requirements
+        run: python3 -m pip install -r requirements.txt
 
-        - name: "Regenerate metadata"
-          shell: "bash"
-          env:
-            PROXY: ${{ secrets.proxy }}
-          run: |
-            for i in {1..3}; do
-              echo "Attempt $i"
-              scripts/generate_metadata.py --proxy=$PROXY && exit 0
-              sleep 10
-            done
-            exit 1
+      - name: Regenerate metadata
+        shell: bash
+        env:
+          PROXY: ${{ secrets.proxy }}
+        run: |
+          for i in {1..3}; do
+            echo "Attempt $i"
+            scripts/generate_metadata.py --proxy=$PROXY && exit 0
+            sleep 10
+          done
+          exit 1
 
-        - name: Create Pull Request
-          uses: peter-evans/create-pull-request@v7.0.8
-          with:
-            branch: create-pull-request/metadata
-            title: Metadata auto-sync
-            body: Automated changes by "Metadata" GitHub action
-            commit-message: Metadata update
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7.0.8
+        with:
+          branch: create-pull-request/metadata
+          title: Metadata auto-sync
+          body: Automated changes by "Metadata" GitHub action
+          commit-message: Metadata update

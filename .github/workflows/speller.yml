@@ -1,23 +1,23 @@
-name: "Speller"
+name: Speller
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - "main"
+      - main
   pull_request:
     branches:
-      - "main"
+      - main
 
 jobs:
   speller:
-    name: "Spell Check"
-    runs-on: "ubuntu-latest"
+    name: Spell Check
+    runs-on: ubuntu-latest
     steps:
-      - name: "Checkout the repository"
-        uses: "actions/checkout@v4.2.2"
+      - name: Checkout the repository
+        uses: actions/checkout@v4.2.2
 
-      - name: "Run"
+      - name: Run
         uses: streetsidesoftware/cspell-action@v7.2.0
         with:
           incremental_files_only: false

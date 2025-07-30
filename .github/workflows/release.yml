@@ -1,35 +1,35 @@
-name: "Release"
+name: Release
 
 on:
   release:
     types:
-      - "published"
+      - published
 
 permissions: {}
 
 jobs:
   release:
-    name: "Release"
-    runs-on: "ubuntu-latest"
+    name: Release
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: "Checkout the repository"
-        uses: "actions/checkout@v4.2.2"
+      - name: Checkout the repository
+        uses: actions/checkout@v4.2.2
 
-      - name: "Adjust version number"
-        shell: "bash"
+      - name: Adjust version number
+        shell: bash
         run: |
           yq -i -o json '.version="${{ github.event.release.tag_name }}"' \
             "${{ github.workspace }}/custom_components/oref_alert/manifest.json"
 
-      - name: "ZIP the integration directory"
-        shell: "bash"
+      - name: ZIP the integration directory
+        shell: bash
         run: |
           cd "${{ github.workspace }}/custom_components/oref_alert"
           zip oref_alert.zip -r ./
 
-      - name: "Upload the ZIP file to the release"
+      - name: Upload the ZIP file to the release
         uses: softprops/action-gh-release@v2.3.2
         with:
           files: ${{ github.workspace }}/custom_components/oref_alert/oref_alert.zip
