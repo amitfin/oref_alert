@@ -1,6 +1,6 @@
 """GENERATED FILE. DO NOT EDIT MANUALLY."""
 
-DISTRICT_AREAS = {
+DISTRICT_AREAS: dict[str, list[str]] = {
     "מחוז אילת": ["אזור תעשייה שחורת", "אילות", "אילת"],
     "מחוז בקעה": [
         "ארגמן",

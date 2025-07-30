@@ -1,6 +1,6 @@
 """GENERATED FILE. DO NOT EDIT MANUALLY."""
 
-TZEVAADOM_ID_TO_AREA = {
+TZEVAADOM_ID_TO_AREA: dict[int, str] = {
     4: "אילת",
     9: "אילות",
     10: "אזור תעשייה שחורת",

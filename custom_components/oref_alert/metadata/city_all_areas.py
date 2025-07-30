@@ -1,6 +1,6 @@
 """GENERATED FILE. DO NOT EDIT MANUALLY."""
 
-CITY_ALL_AREAS = {
+CITY_ALL_AREAS: dict[str, list[str]] = {
     "אשדוד - כל האזורים": [
         "אשדוד - א,ב,ד,ה",
         "אשדוד - איזור תעשייה צפוני",

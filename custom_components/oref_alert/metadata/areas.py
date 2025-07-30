@@ -1,6 +1,6 @@
 """GENERATED FILE. DO NOT EDIT MANUALLY."""
 
-AREAS = {
+AREAS: set[str] = {
     "אבו גוש",
     "אבו נוור",
     "אבו סנאן",

@@ -1,6 +1,6 @@
 """GENERATED FILE. DO NOT EDIT MANUALLY."""
 
-AREA_TO_MIGUN_TIME = {
+AREA_TO_MIGUN_TIME: dict[str, int] = {
     "אבו גוש": 90,
     "אבו נוור": 90,
     "אבו סנאן": 30,

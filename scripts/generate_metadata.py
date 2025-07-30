@@ -272,21 +272,45 @@ class OrefMetadata:
     def generate(self) -> None:
         """Generate the output files."""
         for file_name, variable_name, variable_data in (
-            (AREAS_AND_GROUPS_OUTPUT, "AREAS_AND_GROUPS", self._areas_and_groups),
-            (CITY_ALL_AREAS_OUTPUT, "CITY_ALL_AREAS", self._city_to_areas),
-            (AREA_TO_MIGUN_TIME_OUTPUT, "AREA_TO_MIGUN_TIME", self._area_to_migun_time),
-            (DISTRICT_TO_AREAS_OUTPUT, "DISTRICT_AREAS", self._district_to_areas),
-            (AREA_TO_DISTRICT_OUTPUT, "AREA_TO_DISTRICT", self._area_to_district),
+            (
+                AREAS_AND_GROUPS_OUTPUT,
+                "AREAS_AND_GROUPS: list[str]",
+                self._areas_and_groups,
+            ),
+            (
+                CITY_ALL_AREAS_OUTPUT,
+                "CITY_ALL_AREAS: dict[str, list[str]]",
+                self._city_to_areas,
+            ),
+            (
+                AREA_TO_MIGUN_TIME_OUTPUT,
+                "AREA_TO_MIGUN_TIME: dict[str, int]",
+                self._area_to_migun_time,
+            ),
+            (
+                DISTRICT_TO_AREAS_OUTPUT,
+                "DISTRICT_AREAS: dict[str, list[str]]",
+                self._district_to_areas,
+            ),
+            (
+                AREA_TO_DISTRICT_OUTPUT,
+                "AREA_TO_DISTRICT: dict[str, str]",
+                self._area_to_district,
+            ),
             (
                 AREAS_OUTPUT,
-                "AREAS",
+                "AREAS: set[str]",
                 str(self._areas_no_group).replace("[", "{").replace("]", "}"),
             ),
-            (AREA_INFO_OUTPUT, "AREA_INFO", self._area_info),
-            (SEGMENT_TO_AREA_OUTPUT, "SEGMENT_TO_AREA", self._segments),
+            (
+                AREA_INFO_OUTPUT,
+                "AREA_INFO: dict[str, dict[str, float | int | None]]",
+                self._area_info,
+            ),
+            (SEGMENT_TO_AREA_OUTPUT, "SEGMENT_TO_AREA: dict[int, str]", self._segments),
             (
                 TZEVAADOM_ID_TO_AREA_OUTPUT,
-                "TZEVAADOM_ID_TO_AREA",
+                "TZEVAADOM_ID_TO_AREA: dict[int, str]",
                 self._tzevaadom_id_to_area,
             ),
         ):

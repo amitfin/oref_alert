@@ -1,6 +1,6 @@
 """GENERATED FILE. DO NOT EDIT MANUALLY."""
 
-SEGMENT_TO_AREA = {
+SEGMENT_TO_AREA: dict[int, str] = {
     5000004: "אילת",
     5000009: "אילות",
     5000010: "אזור תעשייה שחורת",

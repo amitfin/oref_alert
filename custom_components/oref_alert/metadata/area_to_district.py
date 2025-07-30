@@ -1,6 +1,6 @@
 """GENERATED FILE. DO NOT EDIT MANUALLY."""
 
-AREA_TO_DISTRICT = {
+AREA_TO_DISTRICT: dict[str, str] = {
     "אבו גוש": "שפלת יהודה",
     "אבו נוור": "יהודה",
     "אבו סנאן": "גליל עליון",

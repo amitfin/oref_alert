@@ -1,6 +1,6 @@
 """GENERATED FILE. DO NOT EDIT MANUALLY."""
 
-AREA_INFO = {
+AREA_INFO: dict[str, dict[str, float | int | None]] = {
     "אבו גוש": {"lat": 31.8068, "lon": 35.1103, "segment": 5000511},
     "אבו נוור": {"lat": 31.7621, "lon": 35.2938, "segment": 5002024},
     "אבו סנאן": {"lat": 32.958, "lon": 35.172, "segment": 5001470},

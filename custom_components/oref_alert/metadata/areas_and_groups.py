@@ -1,6 +1,6 @@
 """GENERATED FILE. DO NOT EDIT MANUALLY."""
 
-AREAS_AND_GROUPS = [
+AREAS_AND_GROUPS: list[str] = [
     "אבו גוש",
     "אבו נוור",
     "אבו סנאן",
