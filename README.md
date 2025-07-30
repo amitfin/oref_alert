@@ -492,7 +492,7 @@ mode: queued
 ## Removing the Integration
 
 1. **Delete the configuration:**
-   Open the integration page ([my-link](https://my.home-assistant.io/redirect/integration/?domain=oref_alert)), click the 3‑dot menu (⋮), and select **Delete**.
+   - Open the integration page ([my-link](https://my.home-assistant.io/redirect/integration/?domain=oref_alert)), click the 3‑dot menu (⋮), and select **Delete**.
 
 2. **Remove the integration files:**
    - If the integration was installed via **HACS**, follow the [official HACS removal instructions](https://www.hacs.xyz/docs/use/repositories/dashboard/#removing-a-repository).
