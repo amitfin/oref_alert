@@ -129,59 +129,6 @@ class OrefAlertRuntimeData:
 type OrefAlertConfigEntry = ConfigEntry[OrefAlertRuntimeData]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) -> bool:
-    """Set up entity from a config entry."""
-    entry.async_on_unload(entry.add_update_listener(config_entry_update_listener))
-
-    if CONF_ALERT_MAX_AGE_DEPRECATED in entry.options:
-        options = {**entry.options}
-        options[CONF_ALERT_ACTIVE_DURATION] = options.pop(CONF_ALERT_MAX_AGE_DEPRECATED)
-        hass.config_entries.async_update_entry(entry, options=options)
-        # config_entry_update_listener will be called and trigger a reload.
-        return True
-
-    for area in itertools.chain(
-        entry.options[CONF_AREAS],
-        itertools.chain.from_iterable(entry.options.get(CONF_SENSORS, {}).values()),
-    ):
-        if area not in AREAS_AND_GROUPS:
-            ir.async_create_issue(
-                hass,
-                DOMAIN,
-                f"{DOMAIN}_{area}",
-                is_fixable=False,
-                learn_more_url="https://github.com/amitfin/oref_alert",
-                severity=ir.IssueSeverity.ERROR,
-                translation_key="unknown_area",
-                translation_placeholders={
-                    "area": area,
-                },
-            )
-
-    pushy = PushyNotifications(hass, entry)
-    tzevaadom = TzevaAdomNotifications(hass, entry)
-
-    entry.runtime_data = OrefAlertRuntimeData(
-        OrefAlertDataUpdateCoordinator(hass, entry, [pushy.alerts, tzevaadom.alerts]),
-        AreasChecker(hass),
-        await inject_template_extensions(hass),
-        pushy,
-        tzevaadom,
-    )
-
-    await entry.runtime_data.coordinator.async_config_entry_first_refresh()
-
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    OrefAlertUpdateEventManager(hass, entry)
-
-    await asyncio.gather(
-        entry.runtime_data.pushy.start(), entry.runtime_data.tzevaadom.start()
-    )
-
-    return True
-
-
 async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
     """Set up custom actions."""
 
@@ -300,6 +247,59 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
         SYNTHETIC_ALERT_ACTION,
         synthetic_alert,
         SYNTHETIC_ALERT_SCHEMA,
+    )
+
+    return True
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) -> bool:
+    """Set up entity from a config entry."""
+    entry.async_on_unload(entry.add_update_listener(config_entry_update_listener))
+
+    if CONF_ALERT_MAX_AGE_DEPRECATED in entry.options:
+        options = {**entry.options}
+        options[CONF_ALERT_ACTIVE_DURATION] = options.pop(CONF_ALERT_MAX_AGE_DEPRECATED)
+        hass.config_entries.async_update_entry(entry, options=options)
+        # config_entry_update_listener will be called and trigger a reload.
+        return True
+
+    for area in itertools.chain(
+        entry.options[CONF_AREAS],
+        itertools.chain.from_iterable(entry.options.get(CONF_SENSORS, {}).values()),
+    ):
+        if area not in AREAS_AND_GROUPS:
+            ir.async_create_issue(
+                hass,
+                DOMAIN,
+                f"{DOMAIN}_{area}",
+                is_fixable=False,
+                learn_more_url="https://github.com/amitfin/oref_alert",
+                severity=ir.IssueSeverity.ERROR,
+                translation_key="unknown_area",
+                translation_placeholders={
+                    "area": area,
+                },
+            )
+
+    pushy = PushyNotifications(hass, entry)
+    tzevaadom = TzevaAdomNotifications(hass, entry)
+
+    entry.runtime_data = OrefAlertRuntimeData(
+        OrefAlertDataUpdateCoordinator(hass, entry, [pushy.alerts, tzevaadom.alerts]),
+        AreasChecker(hass),
+        await inject_template_extensions(hass),
+        pushy,
+        tzevaadom,
+    )
+
+    await entry.runtime_data.coordinator.async_config_entry_first_refresh()
+
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    OrefAlertUpdateEventManager(hass, entry)
+
+    await asyncio.gather(
+        entry.runtime_data.pushy.start(), entry.runtime_data.tzevaadom.start()
     )
 
     return True
