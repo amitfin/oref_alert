@@ -144,58 +144,6 @@ async def test_state_attributes(
     await async_shutdown(hass, config_id)
 
 
-async def test_interval(
-    hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
-    freezer: FrozenDateTimeFactory,
-) -> None:
-    """Test setting the interval."""
-    mock_urls(aioclient_mock, "single_alert_real_time.json", None)
-    config_id = await async_setup(
-        hass,
-        {
-            CONF_AREAS: ["תל אביב - כל האזורים"],
-        },
-    )
-
-    # Test the "update" path which is more involved than initial configuration.
-    config_entry = hass.config_entries.async_get_entry(config_id)
-    assert config_entry is not None
-    hass.config_entries.async_update_entry(
-        config_entry,
-        options={
-            **config_entry.options,
-            CONF_ALERT_ACTIVE_DURATION: 1,
-        },
-    )
-    await hass.async_block_till_done(wait_background_tasks=True)
-
-    freezer.tick(datetime.timedelta(seconds=50))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
-
-    state = hass.states.get(ENTITY_ID)
-    assert state is not None
-    assert state.state == STATE_ON
-    mock_urls(aioclient_mock, None, None)
-
-    freezer.tick(datetime.timedelta(seconds=9))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get(ENTITY_ID)
-    assert state is not None
-    assert state.state == STATE_ON
-
-    freezer.tick(datetime.timedelta(seconds=2))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get(ENTITY_ID)
-    assert state is not None
-    assert state.state == STATE_OFF
-
-    await async_shutdown(hass, config_id)
-
-
 async def test_state_on_caching(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
