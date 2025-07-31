@@ -134,6 +134,7 @@ class AlertSensor(AlertAreaSensorBase):
             config_entry.options[CONF_ALERT_ACTIVE_DURATION] * SECONDS_IN_A_MINUTE
         )
         self._is_on_timestamp: float = 0
+        self._sensor_key: str = name or ""
         if not name:
             self.use_device_name = True
             self._attr_unique_id = OREF_ALERT_UNIQUE_ID
@@ -202,6 +203,10 @@ class AlertSensor(AlertAreaSensorBase):
             ),
             ATTR_COUNTRY_UPDATES: self.coordinator.data.updates,
         }
+
+    def get_sensor_key(self) -> str:
+        """Get the key of the extra sensor."""
+        return self._sensor_key
 
 
 class AlertSensorAllAreas(AlertSensorBase):

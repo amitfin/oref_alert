@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import itertools
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
@@ -15,6 +15,7 @@ from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, Platform
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry, selector
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.entity_platform import async_get_platforms
 from homeassistant.helpers.service import async_register_admin_service
 
 from .areas_checker import AreasChecker
@@ -33,6 +34,8 @@ if TYPE_CHECKING:
         ServiceCall,
         ServiceResponse,
     )
+
+    from .binary_sensor import AlertSensor
 
 from homeassistant.core import (
     SupportsResponse,
@@ -213,21 +216,25 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
         ADD_SENSOR_SCHEMA,
     )
 
+    def _get_sensor_key(entity_id: str) -> str:
+        """Return the entity by a given entity_id."""
+        for platform in async_get_platforms(hass, DOMAIN):
+            if entity_id in platform.entities:
+                return cast(
+                    "AlertSensor", platform.entities[entity_id]
+                ).get_sensor_key()
+        return ""
+
     async def remove_sensor(service_call: ServiceCall) -> None:
         """Remove an additional sensor."""
         entity_reg = entity_registry.async_get(hass)
         entity_id = service_call.data[CONF_ENTITY_ID]
-        name = (
-            getattr(entity_reg.async_get(entity_id), "original_name", "")
-            .removeprefix(TITLE)  # For backwards compatibility
-            .strip()
-        )
-        entity_name = f"{TITLE} {name}"
+        sensor_key = _get_sensor_key(entity_id)
         config_entry = get_config_entry()
         sensors = {
             name: areas
             for name, areas in config_entry.options.get(CONF_SENSORS, {}).items()
-            if name != entity_name
+            if name != sensor_key
         }
         entity_reg.async_remove(entity_id)
         for suffix in [TIME_TO_SHELTER_ID_SUFFIX, END_TIME_ID_SUFFIX]:
@@ -249,18 +256,12 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
 
     async def edit_sensor(service_call: ServiceCall) -> ServiceResponse | None:
         """Edit sensor."""
-        entity_reg = entity_registry.async_get(hass)
         entity_id = service_call.data[CONF_ENTITY_ID]
-        name = (
-            getattr(entity_reg.async_get(entity_id), "original_name", "")
-            .removeprefix(TITLE)  # For backwards compatibility
-            .strip()
-        )
-        entity_name = f"{TITLE} {name}"
+        sensor_key = _get_sensor_key(entity_id)
         config_entry = get_config_entry()
         sensors = {**get_config_entry().options.get(CONF_SENSORS, {})}
-        if areas := sensors.get(entity_name):
-            sensors[entity_name] = [
+        if areas := sensors.get(sensor_key):
+            sensors[sensor_key] = [
                 area
                 for area in (areas + service_call.data[ADD_AREAS])
                 if area not in service_call.data[REMOVE_AREAS]
@@ -270,7 +271,7 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
                 options={**config_entry.options, CONF_SENSORS: sensors},
             )
             if service_call.return_response:
-                return {CONF_AREAS: sensors[entity_name]}
+                return {CONF_AREAS: sensors[sensor_key]}
         return None
 
     async_register_admin_service(
