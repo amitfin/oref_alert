@@ -15,7 +15,6 @@ from pytest_homeassistant_custom_component.common import (
 from custom_components.oref_alert.const import (
     ADD_SENSOR_ACTION,
     ALL_AREAS_ID_SUFFIX,
-    ALL_AREAS_NAME_SUFFIX,
     ATTR_COUNTRY_ACTIVE_ALERTS,
     ATTR_COUNTRY_ALERTS,
     ATTR_COUNTRY_UPDATES,
@@ -266,7 +265,7 @@ async def test_all_areas_sensor(
     state = hass.states.get(f"{ENTITY_ID}_{ALL_AREAS_ID_SUFFIX}")
     assert state is not None
     assert state.state == STATE_ON
-    assert state.name == f"{TITLE} {ALL_AREAS_NAME_SUFFIX}"
+    assert state.name == "Oref Alert All Areas"
     expected_alerts = load_json_fixture(
         "single_alert_random_area_history.json", "website-history"
     )

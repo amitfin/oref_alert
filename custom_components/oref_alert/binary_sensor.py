@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 import homeassistant.util.dt as dt_util
 from homeassistant.components import binary_sensor
+from homeassistant.util import slugify
 
 from .entity import OrefAlertCoordinatorEntity
 from .metadata import ALL_AREAS_ALIASES
@@ -18,7 +19,6 @@ if TYPE_CHECKING:
 from .area_utils import expand_areas_and_groups
 from .const import (
     ALL_AREAS_ID_SUFFIX,
-    ALL_AREAS_NAME_SUFFIX,
     ATTR_COUNTRY_ACTIVE_ALERTS,
     ATTR_COUNTRY_ALERTS,
     ATTR_COUNTRY_UPDATES,
@@ -140,10 +140,9 @@ class AlertSensor(AlertAreaSensorBase):
             self._attr_unique_id = OREF_ALERT_UNIQUE_ID
         else:
             self._attr_name = name
-            self._attr_unique_id = (
+            self._attr_unique_id = slugify(
                 f"{OREF_ALERT_UNIQUE_ID}_{name.lower().replace(' ', '_')}"
             )
-        self.entity_id = f"{binary_sensor.DOMAIN}.{self._attr_unique_id}"
 
     def _default_to_device_class_name(self) -> bool:
         """Do not use device class name for binary sensors."""
@@ -214,15 +213,15 @@ class AlertSensor(AlertAreaSensorBase):
 class AlertSensorAllAreas(AlertSensorBase):
     """Representation of the alert sensor for all areas."""
 
+    _attr_translation_key = "all_areas"
+
     def __init__(
         self,
         config_entry: OrefAlertConfigEntry,
     ) -> None:
         """Initialize object with defaults."""
         super().__init__(config_entry)
-        self._attr_name = ALL_AREAS_NAME_SUFFIX
         self._attr_unique_id = f"{OREF_ALERT_UNIQUE_ID}_{ALL_AREAS_ID_SUFFIX}"
-        self.entity_id = f"{binary_sensor.DOMAIN}.{self._attr_unique_id}"
 
     @property
     def is_on(self) -> bool:

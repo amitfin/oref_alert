@@ -8,7 +8,7 @@ from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, TITLE
+from .const import DOMAIN
 from .coordinator import OrefAlertDataUpdateCoordinator
 
 if TYPE_CHECKING:
@@ -25,7 +25,7 @@ class OrefAlertEntity(Entity):
         """Initialize the entity."""
         self._config_entry = config_entry
         self._attr_device_info = DeviceInfo(
-            name=TITLE,
+            translation_key="default",
             entry_type=DeviceEntryType.SERVICE,
             identifiers={(DOMAIN, config_entry.entry_id)},
         )

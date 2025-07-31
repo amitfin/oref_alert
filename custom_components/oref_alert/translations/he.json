@@ -1,88 +1,109 @@
 {
-    "title": "\u05d4\u05ea\u05e8\u05e2\u05d5\u05ea\u0020\u05e4\u05d9\u05e7\u05d5\u05d3\u0020\u05d4\u05e2\u05d5\u05e8\u05e3",
+    "title": "התרעות פיקוד העורף",
     "config": {
         "step": {
             "user": {
-                "title": "\u05d4\u05ea\u05e7\u05e0\u05ea\u0020\u05d4\u05ea\u05e8\u05e2\u05d5\u05ea\u0020\u05e4\u05d9\u05e7\u05d5\u05d3\u0020\u05d4\u05e2\u05d5\u05e8\u05e3",
+                "title": "התקנת התרעות פיקוד העורף",
                 "data": {
-                    "areas": "\u05d1\u05d7\u05e8\u0020\u05d0\u05d6\u05d5\u05e8\u05d9\u05dd\u0020\u05dc\u05e0\u05d9\u05d8\u05d5\u05e8\u0020\u0028\u05d1\u05e2\u05d1\u05e8\u05d9\u05ea\u0020\u05d1\u05dc\u05d1\u05d3\u0029"
+                    "areas": "בחר אזורים לניטור (בעברית בלבד)"
                 }
             },
             "confirm": {
-                "title": "\u05d4\u05ea\u05e8\u05e2\u05d5\u05ea\u0020\u05e4\u05d9\u05e7\u05d5\u05d3\u0020\u05d4\u05e2\u05d5\u05e8\u05e3: {area}",
-                "description": "\u05d4\u05d0\u05dd\u0020\u05d1\u05e8\u05e6\u05d5\u05e0\u05da\u0020\u05dc\u05d4\u05ea\u05d7\u05d9\u05dc\u0020\u05d1\u05d4\u05d2\u05d3\u05e8\u05d4\u003f"
+                "title": "התרעות פיקוד העורף: {area}",
+                "description": "האם ברצונך להתחיל בהגדרה?"
             }
         },
         "abort": {
-            "single_instance_allowed": "\u05ea\u05e6\u05d5\u05e8\u05ea\u05d5 \u05db\u05d1\u05e8 \u05e0\u05e7\u05d1\u05e2\u05d4. \u05e8\u05e7 \u05ea\u05e6\u05d5\u05e8\u05d4 \u05d0\u05d7\u05ea \u05d0\u05e4\u05e9\u05e8\u05d9\u05ea."
+            "single_instance_allowed": "תצורתו כבר נקבעה. רק תצורה אחת אפשרית."
         }
     },
     "options": {
         "step": {
             "init": {
-                "title": "\u05ea\u05e6\u05d5\u05e8\u05ea\u0020\u05d4\u05ea\u05e8\u05e2\u05d5\u05ea\u0020\u05e4\u05d9\u05e7\u05d5\u05d3\u0020\u05d4\u05e2\u05d5\u05e8\u05e3",
+                "title": "תצורת התרעות פיקוד העורף",
                 "data": {
-                    "areas": "\u05d1\u05d7\u05e8\u0020\u05d0\u05d6\u05d5\u05e8\u05d9\u05dd\u0020\u05dc\u05e0\u05d9\u05d8\u05d5\u05e8\u0020\u0028\u05d1\u05e2\u05d1\u05e8\u05d9\u05ea\u0020\u05d1\u05dc\u05d1\u05d3\u0029",
-                    "alert_active_duration": "\u05de\u05e9\u05da\u0020\u05d4\u05d6\u05de\u05df\u0020\u05e9\u05d4\u05ea\u05e8\u05e2\u05d4\u0020\u05e0\u05d7\u05e9\u05d1\u05ea\u0020\u05db\u05e4\u05e2\u05d9\u05dc\u05d4\u0020\u0028\u05d3\u05e7\u05d5\u05ea\u0029",
-                    "all_alerts_attributes": "\u0020\u05d4\u05d5\u05e1\u05e3\u0020\u05d0\u05ea\u0020\u05d4\u05e9\u05d3\u05d5\u05ea\u0020\u05e2\u05d1\u05d5\u05e8\u0020\u05db\u05dc\u05dc\u0020\u05d4\u05d4\u05ea\u05e8\u05e2\u05d5\u05ea"
+                    "areas": "בחר אזורים לניטור (בעברית בלבד)",
+                    "alert_active_duration": "משך הזמן שהתרעה נחשבת כפעילה (דקות)",
+                    "all_alerts_attributes": " הוסף את השדות עבור כלל ההתרעות"
                 }
+            }
+        }
+    },
+    "entity": {
+        "binary_sensor": {
+            "all_areas": {
+                "name": "כל האזורים"
+            }
+        },
+        "sensor": {
+            "default_time_to_shelter": {
+                "name": "זמן להתמגן"
+            },
+            "named_time_to_shelter": {
+                "name": "{name} זמן להתמגן"
+            },
+            "default_end_time": {
+                "name": "סיום התמגנות"
+            },
+            "named_end_time": {
+                "name": "{name} סיום התמגנות"
             }
         }
     },
     "services": {
         "add_sensor": {
-            "name": "\u05d4\u05d5\u05e1\u05e4\u05ea\u0020\u05d7\u05d9\u05d9\u05e9\u05df",
-            "description": "\u05d4\u05d5\u05e1\u05e4\u05ea\u0020\u05d7\u05d9\u05d9\u05e9\u05df\u0020\u05e2\u05d1\u05d5\u05e8\u0020\u05d0\u05d6\u05d5\u05e8\u05d9\u05dd\u0020\u05dc\u05e0\u05d9\u05d8\u05d5\u05e8",
+            "name": "הוספת חיישן",
+            "description": "הוספת חיישן עבור אזורים לניטור",
             "fields": {
                 "name": {
-                    "name": "\u05e9\u05dd",
-                    "description": "\u05e9\u05dd\u0020\u05d4\u05d7\u05d9\u05d9\u05e9\u05df"
+                    "name": "שם",
+                    "description": "שם החיישן"
                 },
                 "areas": {
-                    "name": "\u05d0\u05d6\u05d5\u05e8\u05d9\u05dd",
-                    "description": "\u05d0\u05d6\u05d5\u05e8\u05d9\u05dd\u0020\u05dc\u05e0\u05d9\u05d8\u05d5\u05e8\u0020\u0028\u05d1\u05e2\u05d1\u05e8\u05d9\u05ea\u0020\u05d1\u05dc\u05d1\u05d3\u0029"
+                    "name": "אזורים",
+                    "description": "אזורים לניטור (בעברית בלבד)"
                 }
             }
         },
         "remove_sensor": {
-            "name": "\u05d4\u05e1\u05e8\u05ea\u0020\u05d7\u05d9\u05d9\u05e9\u05df",
-            "description": "\u05d4\u05e1\u05e8\u05ea\u0020\u05d7\u05d9\u05d9\u05e9\u05df",
+            "name": "הסרת חיישן",
+            "description": "הסרת חיישן",
             "fields": {
                 "entity_id": {
-                    "name": "\u05d9\u05e9\u05d5\u05ea",
-                    "description": "\u05d4\u05d9\u05e9\u05d5\u05ea\u0020\u05e9\u05ea\u05d5\u05e1\u05e8"
+                    "name": "ישות",
+                    "description": "הישות שתוסר"
                 }
             }
         },
         "edit_sensor": {
-            "name": "\u05e2\u05e8\u05d9\u05db\u05ea\u0020\u05d7\u05d9\u05d9\u05e9\u05df",
-            "description": "\u05e2\u05e8\u05d9\u05db\u05ea\u0020\u05d7\u05d9\u05d9\u05e9\u05df",
+            "name": "עריכת חיישן",
+            "description": "עריכת חיישן",
             "fields": {
                 "entity_id": {
-                    "name": "\u05d9\u05e9\u05d5\u05ea",
-                    "description": "\u05d4\u05d9\u05e9\u05d5\u05ea\u0020\u05dc\u05e2\u05e8\u05d9\u05db\u05d4"
+                    "name": "ישות",
+                    "description": "הישות לעריכה"
                 },
                 "add_areas": {
-                    "name": "\u05d0\u05d6\u05d5\u05e8\u05d9\u05dd\u0020\u05dc\u05d4\u05d5\u05e1\u05e4\u05d4",
-                    "description": "\u05d4\u05d0\u05d6\u05d5\u05e8\u05d9\u05dd\u0020\u05e9\u05d9\u05d5\u05e1\u05e4\u05d5\u0020\u05dc\u05d7\u05d9\u05d9\u05e9\u05df"
+                    "name": "אזורים להוספה",
+                    "description": "האזורים שיוספו לחיישן"
                 },
                 "remove_areas": {
-                    "name": "\u05d0\u05d6\u05d5\u05e8\u05d9\u05dd\u0020\u05dc\u05d4\u05d5\u05e8\u05d3\u05d4",
-                    "description": "\u05d4\u05d0\u05d6\u05d5\u05e8\u05d9\u05dd\u0020\u05e9\u05d9\u05d5\u05e8\u05d3\u05d5\u0020\u05de\u05d4\u05d7\u05d9\u05d9\u05e9\u05df"
+                    "name": "אזורים להורדה",
+                    "description": "האזורים שיורדו מהחיישן"
                 }
             }
         },
         "synthetic_alert": {
-            "name": "\u05d9\u05e6\u05d9\u05e8\u05ea\u0020\u05d4\u05ea\u05e8\u05e2\u05d4\u0020\u05e1\u05d9\u05e0\u05d8\u05d8\u05d9\u05ea",
-            "description": "\u05d9\u05e6\u05d9\u05e8\u05ea\u0020\u05d4\u05ea\u05e8\u05e2\u05d4\u0020\u05e1\u05d9\u05e0\u05d8\u05d8\u05d9\u05ea\u0020\u05dc\u05e6\u05d5\u05e8\u05da\u0020\u05d1\u05d3\u05d9\u05e7\u05d4",
+            "name": "יצירת התרעה סינטטית",
+            "description": "יצירת התרעה סינטטית לצורך בדיקה",
             "fields": {
                 "area": {
-                    "name": "\u05d0\u05d6\u05d5\u05e8",
-                    "description": "\u05d0\u05d6\u05d5\u05e8\u0028\u05d9\u0029\u0020\u05d4\u05d4\u05ea\u05e8\u05e2\u05d4"
+                    "name": "אזור",
+                    "description": "אזור(י) ההתרעה"
                 },
                 "duration": {
-                    "name": "\u05de\u05e9\u05da\u0020\u05d4\u05d6\u05de\u05df",
-                    "description": "\u05de\u05e9\u05da\u0020\u05d4\u05d6\u05de\u05df\u0020\u05e9\u05d1\u05d5\u0020\u05de\u05d3\u05d5\u05d5\u05d7\u05ea\u0020\u05d4\u05d4\u05ea\u05e8\u05e2\u05d4\u0020\u0028\u05e9\u05e0\u05d9\u05d5\u05ea\u0029"
+                    "name": "משך הזמן",
+                    "description": "משך הזמן שבו מדווחת ההתרעה (שניות)"
                 },
                 "category": {
                     "name": "קטגוריה",
@@ -97,12 +118,12 @@
     },
     "issues": {
         "unknown_area": {
-            "title": "\u05d0\u05d6\u05d5\u05e8\u0020\u05dc\u05d0\u0020\u05e7\u05d9\u05d9\u05dd\u0020\u05d1\u05e4\u05d9\u05e7\u05d5\u05d3\u0020\u05d4\u05e2\u05d5\u05e8\u05e3",
-            "description": "\u05d4\u05d0\u05d6\u05d5\u05e8 \"{area}\" \u05dc\u05d0\u0020\u05e7\u05d9\u05d9\u05dd\u002e\u0020\u05d0\u05e0\u05d0\u0020\u05de\u05d7\u05e7\u002f\u05d9\u0020\u05d0\u05d5\u05ea\u05d5\u0020\u05d5\u05d1\u05d7\u05e8\u002f\u05d9\u0020\u05d0\u05ea\u0020\u05d4\u05d0\u05d6\u05d5\u05e8\u0020\u05d4\u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9\u0020\u05de\u05d4\u05e8\u05e9\u05d9\u05de\u05d4\u002e"
+            "title": "אזור לא קיים בפיקוד העורף",
+            "description": "האזור '{area}' לא קיים. אנא מחק/י אותו ובחר/י את האזור הרלוונטי מהרשימה."
         },
         "upgrade_required": {
-            "title": "\u05e0\u05d3\u05e8\u05e9\u0020\u05e2\u05d9\u05d3\u05db\u05d5\u05df\u0020\u05d4\u05ea\u05d5\u05e1\u05e3\u0020\u05e9\u05dc\u0020\u05e4\u05d9\u05e7\u05d5\u05d3\u0020\u05d4\u05e2\u05d5\u05e8\u05e3",
-            "description": "\u05e8\u05e9\u05d9\u05de\u05ea\u0020\u05d4\u05d0\u05d6\u05d5\u05e8\u05d9\u05dd\u0020\u05d4\u05ea\u05e2\u05d3\u05db\u05e0\u05d4\u002e\u0020\u05d0\u05e0\u05d0\u0020\u05e2\u05d3\u05db\u05e0\u002f\u05d9\u0020\u05d0\u05ea\u0020\u05d4\u05ea\u05d5\u05e1\u05e3\u0020\u05e9\u05dc\u0020\u05e4\u05d9\u05e7\u05d5\u05d3\u0020\u05d4\u05e2\u05d5\u05e8\u05e3\u002e"
+            "title": "נדרש עידכון התוסף של פיקוד העורף",
+            "description": "רשימת האזורים התעדכנה. אנא עדכנ/י את התוסף של פיקוד העורף."
         }
     }
 }

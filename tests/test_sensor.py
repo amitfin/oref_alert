@@ -22,12 +22,9 @@ from custom_components.oref_alert.const import (
     CONF_AREAS,
     DOMAIN,
     END_TIME_ID_SUFFIX,
-    END_TIME_NAME_SUFFIX,
     OREF_ALERT_UNIQUE_ID,
     REMOVE_SENSOR_ACTION,
     TIME_TO_SHELTER_ID_SUFFIX,
-    TIME_TO_SHELTER_NAME_SUFFIX,
-    TITLE,
 )
 
 from .utils import load_json_fixture, mock_urls
@@ -87,7 +84,7 @@ async def test_time_to_shelter_state(
     state = hass.states.get(TIME_TO_SHELTER_ENTITY_ID)
     assert state is not None
     assert state.state == str(time_to_shelter)
-    assert state.name == f"{TITLE} {TIME_TO_SHELTER_NAME_SUFFIX}"
+    assert state.name == "Oref Alert Time To Shelter"
     assert (
         state.attributes[ATTR_ALERT]
         == load_json_fixture("single_alert_history.json", "website-history")[0]
@@ -175,7 +172,7 @@ async def test_alert_end_time_state(
 
     state = hass.states.get(END_TIME_ENTITY_ID)
     assert state is not None
-    assert state.name == f"{TITLE} {END_TIME_NAME_SUFFIX}"
+    assert state.name == "Oref Alert End Time"
     assert (
         state.attributes[ATTR_ALERT]
         == load_json_fixture("single_alert_history.json", "website-history")[0]
@@ -241,11 +238,11 @@ async def test_additional_sensor(
     for entity_id, name in (
         (
             f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_test_{TIME_TO_SHELTER_ID_SUFFIX}",
-            f"{TITLE} Test {TIME_TO_SHELTER_NAME_SUFFIX}",
+            "Oref Alert Test Time To Shelter",
         ),
         (
             f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_test_{END_TIME_ID_SUFFIX}",
-            f"{TITLE} Test {END_TIME_NAME_SUFFIX}",
+            "Oref Alert Test End Time",
         ),
     ):
         assert entity_id in sensors

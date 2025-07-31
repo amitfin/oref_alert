@@ -29,6 +29,32 @@
             }
         }
     },
+    "device": {
+        "default": {
+            "name": "Oref Alert"
+        }
+    },
+    "entity": {
+        "binary_sensor": {
+            "all_areas": {
+                "name": "All Areas"
+            }
+        },
+        "sensor": {
+            "default_time_to_shelter": {
+                "name": "Time To Shelter"
+            },
+            "named_time_to_shelter": {
+                "name": "{name} Time To Shelter"
+            },
+            "default_end_time": {
+                "name": "End Time"
+            },
+            "named_end_time": {
+                "name": "{name} End Time"
+            }
+        }
+    },
     "services": {
         "add_sensor": {
             "name": "Add Sensor",

@@ -7,12 +7,12 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 import homeassistant.util.dt as dt_util
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import event as event_helper
+from homeassistant.util import slugify
 
 from .const import (
     ATTR_ALERT,
@@ -23,11 +23,9 @@ from .const import (
     CONF_AREAS,
     CONF_SENSORS,
     END_TIME_ID_SUFFIX,
-    END_TIME_NAME_SUFFIX,
     IST,
     OREF_ALERT_UNIQUE_ID,
     TIME_TO_SHELTER_ID_SUFFIX,
-    TIME_TO_SHELTER_NAME_SUFFIX,
     AlertField,
 )
 from .entity import OrefAlertCoordinatorEntity
@@ -185,13 +183,17 @@ class TimeToShelterSensor(OrefAlertTimerSensor):
         """Initialize object with defaults."""
         super().__init__(area, config_entry)
         self._migun_time: int = AREA_TO_MIGUN_TIME[area]
-        self._attr_name = f"{name}{' ' if name else ''}{TIME_TO_SHELTER_NAME_SUFFIX}"
-        self._attr_unique_id = (
-            OREF_ALERT_UNIQUE_ID
-            + f"_{name.lower().replace(' ', '_')}_"
-            + TIME_TO_SHELTER_ID_SUFFIX
-        )
-        self.entity_id = f"{SENSOR_DOMAIN}.{self._attr_unique_id}"
+        if not name:
+            self._attr_translation_key = "default_time_to_shelter"
+            self._attr_unique_id = f"{OREF_ALERT_UNIQUE_ID}_{TIME_TO_SHELTER_ID_SUFFIX}"
+        else:
+            self._attr_translation_key = "named_time_to_shelter"
+            self._attr_translation_placeholders = {"name": name}
+            self._attr_unique_id = slugify(
+                OREF_ALERT_UNIQUE_ID
+                + f"_{name.lower().replace(' ', '_')}_"
+                + TIME_TO_SHELTER_ID_SUFFIX
+            )
 
     def oref_value_seconds(self) -> int | None:
         """Return the remaining seconds to shelter."""
@@ -234,13 +236,17 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
     ) -> None:
         """Initialize object with defaults."""
         super().__init__(area, config_entry)
-        self._attr_name = f"{name}{' ' if name else ''}{END_TIME_NAME_SUFFIX}"
-        self._attr_unique_id = (
-            OREF_ALERT_UNIQUE_ID
-            + f"_{name.lower().replace(' ', '_')}_"
-            + END_TIME_ID_SUFFIX
-        )
-        self.entity_id = f"{SENSOR_DOMAIN}.{self._attr_unique_id}"
+        if not name:
+            self._attr_translation_key = "default_end_time"
+            self._attr_unique_id = f"{OREF_ALERT_UNIQUE_ID}_{END_TIME_ID_SUFFIX}"
+        else:
+            self._attr_translation_key = "named_end_time"
+            self._attr_translation_placeholders = {"name": name}
+            self._attr_unique_id = slugify(
+                OREF_ALERT_UNIQUE_ID
+                + f"_{name.lower().replace(' ', '_')}_"
+                + END_TIME_ID_SUFFIX
+            )
 
     def oref_value_seconds(self) -> int | None:
         """Return the remaining seconds till the end of the alert."""
