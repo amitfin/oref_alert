@@ -29,6 +29,11 @@
             }
         }
     },
+    "device": {
+        "default": {
+            "name": "התרעות פיקוד העורף"
+        }
+    },
     "entity": {
         "binary_sensor": {
             "all_areas": {
