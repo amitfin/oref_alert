@@ -17,7 +17,6 @@ add_sensor:
       required: true
       selector:
         text:
-          prefix: Oref Alert
     areas:
       example:
       - פתח תקווה

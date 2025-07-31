@@ -129,7 +129,7 @@ class OrefAlertRuntimeData:
 type OrefAlertConfigEntry = ConfigEntry[OrefAlertRuntimeData]
 
 
-async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
+async def async_setup(hass: HomeAssistant, _config: dict) -> bool:  # noqa: PLR0915
     """Set up custom actions."""
 
     def get_config_entry() -> OrefAlertConfigEntry:
@@ -147,9 +147,7 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
         """Add an additional sensor (different areas)."""
         config_entry = get_config_entry()
         sensors = {**config_entry.options.get(CONF_SENSORS, {})}
-        sensors[f"{TITLE} {service_call.data[CONF_NAME]}"] = service_call.data[
-            CONF_AREAS
-        ]
+        sensors[service_call.data[CONF_NAME]] = service_call.data[CONF_AREAS]
         hass.config_entries.async_update_entry(
             config_entry,
             options={**config_entry.options, CONF_SENSORS: sensors},
@@ -165,12 +163,14 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
 
     def _get_sensor_key(entity_id: str) -> str:
         """Return the entity by a given entity_id."""
+        sensor_key = ""
         for platform in async_get_platforms(hass, DOMAIN):
             if entity_id in platform.entities:
-                return cast(
+                sensor_key = cast(
                     "AlertSensor", platform.entities[entity_id]
                 ).get_sensor_key()
-        return ""
+                break
+        return sensor_key
 
     async def remove_sensor(service_call: ServiceCall) -> None:
         """Remove an additional sensor."""
@@ -260,6 +260,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
         options = {**entry.options}
         options[CONF_ALERT_ACTIVE_DURATION] = options.pop(CONF_ALERT_MAX_AGE_DEPRECATED)
         hass.config_entries.async_update_entry(entry, options=options)
+        # config_entry_update_listener will be called and trigger a reload.
+        return True
+
+    sensor_key_renamed = False
+    sensors = {**entry.options.get(CONF_SENSORS, {})}
+    sensor_names = set(sensors.keys())
+    for sensor_name in sensor_names:
+        if sensor_name.startswith(TITLE):
+            sensors[sensor_name.removeprefix(TITLE).strip()] = sensors.pop(sensor_name)
+            sensor_key_renamed = True
+    if sensor_key_renamed:
+        hass.config_entries.async_update_entry(
+            entry,
+            options={**entry.options, CONF_SENSORS: sensors},
+        )
         # config_entry_update_listener will be called and trigger a reload.
         return True
 

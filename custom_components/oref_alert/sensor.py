@@ -25,9 +25,9 @@ from .const import (
     END_TIME_ID_SUFFIX,
     END_TIME_NAME_SUFFIX,
     IST,
+    OREF_ALERT_UNIQUE_ID,
     TIME_TO_SHELTER_ID_SUFFIX,
     TIME_TO_SHELTER_NAME_SUFFIX,
-    TITLE,
     AlertField,
 )
 from .entity import OrefAlertCoordinatorEntity
@@ -56,7 +56,7 @@ async def async_setup_entry(
     entities = [
         (name, areas[0])
         for name, areas in [
-            (TITLE, config_entry.options[CONF_AREAS]),
+            ("", config_entry.options[CONF_AREAS]),
             *list(config_entry.options.get(CONF_SENSORS, {}).items()),
         ]
         if len(areas) == 1 and areas[0] in AREAS
@@ -185,9 +185,11 @@ class TimeToShelterSensor(OrefAlertTimerSensor):
         """Initialize object with defaults."""
         super().__init__(area, config_entry)
         self._migun_time: int = AREA_TO_MIGUN_TIME[area]
-        self.set_attr_name(name, TIME_TO_SHELTER_NAME_SUFFIX)
+        self._attr_name = f"{name}{' ' if name else ''}{TIME_TO_SHELTER_NAME_SUFFIX}"
         self._attr_unique_id = (
-            f"{name.lower().replace(' ', '_')}_{TIME_TO_SHELTER_ID_SUFFIX}"
+            OREF_ALERT_UNIQUE_ID
+            + f"_{name.lower().replace(' ', '_')}_"
+            + TIME_TO_SHELTER_ID_SUFFIX
         )
         self.entity_id = f"{SENSOR_DOMAIN}.{self._attr_unique_id}"
 
@@ -232,8 +234,12 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
     ) -> None:
         """Initialize object with defaults."""
         super().__init__(area, config_entry)
-        self.set_attr_name(name, END_TIME_NAME_SUFFIX)
-        self._attr_unique_id = f"{name.lower().replace(' ', '_')}_{END_TIME_ID_SUFFIX}"
+        self._attr_name = f"{name}{' ' if name else ''}{END_TIME_NAME_SUFFIX}"
+        self._attr_unique_id = (
+            OREF_ALERT_UNIQUE_ID
+            + f"_{name.lower().replace(' ', '_')}_"
+            + END_TIME_ID_SUFFIX
+        )
         self.entity_id = f"{SENSOR_DOMAIN}.{self._attr_unique_id}"
 
     def oref_value_seconds(self) -> int | None:

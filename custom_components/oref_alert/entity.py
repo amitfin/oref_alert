@@ -30,16 +30,6 @@ class OrefAlertEntity(Entity):
             identifiers={(DOMAIN, config_entry.entry_id)},
         )
 
-    def set_attr_name(self, name: str, suffix: str | None = None) -> None:
-        """Calculate and set _attr_name."""
-        name = name.removeprefix(TITLE).strip()
-        if not suffix:
-            self._attr_name = name
-        elif not name:
-            self._attr_name = suffix
-        else:
-            self._attr_name = f"{name} {suffix}"
-
 
 class OrefAlertCoordinatorEntity(
     OrefAlertEntity, CoordinatorEntity[OrefAlertDataUpdateCoordinator]

@@ -41,7 +41,6 @@ from custom_components.oref_alert.const import (
     REMOVE_AREAS,
     REMOVE_SENSOR_ACTION,
     SYNTHETIC_ALERT_ACTION,
-    TITLE,
 )
 
 if TYPE_CHECKING:
@@ -116,7 +115,7 @@ async def test_add_remove_sensor_action(hass: HomeAssistant) -> None:
     assert config_id is not None
     entity_config_entry = hass.config_entries.async_get_entry(config_id)
     assert entity_config_entry is not None
-    assert f"{TITLE} test" in entity_config_entry.options[CONF_SENSORS]
+    assert "test" in entity_config_entry.options[CONF_SENSORS]
 
     await hass.services.async_call(
         DOMAIN,
@@ -129,7 +128,7 @@ async def test_add_remove_sensor_action(hass: HomeAssistant) -> None:
     assert entity_reg.async_get(entity_id) is None
     entity_config_entry = hass.config_entries.async_get_entry(config_id)
     assert entity_config_entry is not None
-    assert f"{TITLE} test" not in entity_config_entry.options[CONF_SENSORS]
+    assert "test" not in entity_config_entry.options[CONF_SENSORS]
 
 
 async def test_edit_sensor_actions(hass: HomeAssistant) -> None:
@@ -234,6 +233,21 @@ async def test_max_age_deprecation(hass: HomeAssistant) -> None:
     assert state.attributes[CONF_ALERT_ACTIVE_DURATION] == 15
     assert await hass.config_entries.async_remove(config_entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
+
+
+async def test_sensor_name_migration(hass: HomeAssistant) -> None:
+    """Test sensor name migration."""
+    config_entry = MockConfigEntry(
+        domain=DOMAIN,
+        options={
+            CONF_AREAS: [],
+            CONF_SENSORS: {"Oref Alert Test": []},
+        },
+    )
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert "Test" in config_entry.options[CONF_SENSORS]
 
 
 async def test_unknown_area(hass: HomeAssistant) -> None:
