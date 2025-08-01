@@ -13,9 +13,7 @@ from homeassistant.const import (
     STATE_OFF,
     Platform,
 )
-from homeassistant.exceptions import (
-    ServiceValidationError,
-)
+from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
@@ -309,12 +307,12 @@ async def test_action_without_config_entry(hass: HomeAssistant) -> None:
         config_entry.entry_id, ConfigEntryDisabler.USER
     )
 
-    with pytest.raises(ServiceValidationError) as exc:
+    with pytest.raises(ConfigEntryNotReady) as exc:
         await call()
     assert str(exc.value) == "Config entry not loaded"
 
     assert await hass.config_entries.async_remove(config_entry.entry_id)
 
-    with pytest.raises(ServiceValidationError) as exc:
+    with pytest.raises(ConfigEntryError) as exc:
         await call()
     assert str(exc.value) == "Config entry not found"

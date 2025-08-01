@@ -11,6 +11,7 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any, Final
 
 import homeassistant.util.dt as dt_util
+from homeassistant.exceptions import IntegrationError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.instance_id import async_get
 from paho.mqtt.client import Client as MQTTClient
@@ -22,6 +23,7 @@ from .const import (
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_SENSORS,
+    DOMAIN,
     LOGGER,
     AlertField,
     AlertSource,
@@ -102,10 +104,14 @@ class PushyNotifications:
                 ) as response:
                     content = await response.json()
                     if check and not content.get("success"):
-                        message = (
-                            f"{API_ENDPOINT}/{uri} reply payload is invalid: {content}"
+                        raise IntegrationError(  # noqa: TRY301
+                            translation_domain=DOMAIN,
+                            translation_key="pushy_invalid_response",
+                            translation_placeholders={
+                                "url": f"{API_ENDPOINT}/{uri}",
+                                "content": content,
+                            },
                         )
-                        raise ValueError(message)  # noqa: TRY301
                     return content
             except Exception as ex:  # noqa: BLE001
                 exc_info = ex

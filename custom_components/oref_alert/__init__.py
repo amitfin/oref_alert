@@ -12,7 +12,7 @@ import voluptuous as vol
 from attr import dataclass
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, Platform
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 from homeassistant.helpers import entity_registry, selector
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.entity_platform import async_get_platforms
@@ -129,18 +129,21 @@ class OrefAlertRuntimeData:
 type OrefAlertConfigEntry = ConfigEntry[OrefAlertRuntimeData]
 
 
-async def async_setup(hass: HomeAssistant, _config: dict) -> bool:  # noqa: PLR0915
+async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
     """Set up custom actions."""
 
     def get_config_entry() -> OrefAlertConfigEntry:
         """Get the integration's config first (and only) entry."""
         config_entries = hass.config_entries.async_entries(DOMAIN)
         if not config_entries:
-            message = "Config entry not found"
-            raise ServiceValidationError(message)
+            raise ConfigEntryError(
+                translation_domain=DOMAIN,
+                translation_key="no_config_entry",
+            )
         if config_entries[0].state is not ConfigEntryState.LOADED:
-            message = "Config entry not loaded"
-            raise ServiceValidationError(message)
+            raise ConfigEntryNotReady(
+                translation_domain=DOMAIN, translation_key="config_entry_not_loaded"
+            )
         return config_entries[0]
 
     async def add_sensor(service_call: ServiceCall) -> None:

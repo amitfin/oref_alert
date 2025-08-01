@@ -252,15 +252,22 @@ async def test_validation_failure(
 
 
 async def test_subscribe_failure(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test subscribe failure."""
-    aioclient_mock.post(f"{API_ENDPOINT}/devices/subscribe", exc=ClientError)
+    aioclient_mock.post(f"{API_ENDPOINT}/devices/subscribe", json={"success": False})
     config = await setup_test(
         hass, aioclient_mock, data={"pushy_credentials": DEFAULT_CREDENTIALS}
     )
     assert "pushy_topics" not in config.data
     await cleanup_test(hass, config)
+    assert (
+        "homeassistant.exceptions.IntegrationError: "
+        "https://pushy.ioref.app/devices/subscribe reply payload is invalid: "
+        "{'success': False}"
+    ) in caplog.text
 
 
 async def test_unsubscribe_failure(
