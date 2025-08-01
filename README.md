@@ -33,12 +33,12 @@ Once the component is installed, it's possible to control additional parameters 
 
 [![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=oref_alert)
 
-There are 6 configuration fields:
+There are 3 configuration fields:
 1. **Selected areas**: list of areas to monitor. It's also possible to select a district (מחוז) and all-areas (כל האזורים) for cities with sub-areas.
 2. **Active duration of an alert**: this is the alert's active time period (in minutes). The default is 10 minutes.
 3. **Add 'All Alerts' attributes**: when it's off (the default) the attributes `Country alerts` and `Selected areas alerts` are not added to the binary sensors. These attributes hold the list of all alerts over the last 24-hours which can be long and cause performance issues on weaker systems. Both attributes are not used often and are not part of any example below.
 
-<kbd><img src="https://github.com/user-attachments/assets/7a3e27f5-f8f9-4126-a2f3-beea20351270" width="400"></kbd>
+<kbd><img src="https://github.com/user-attachments/assets/960168bd-d7ad-47f6-88e7-26d216f705a9" width="400"></kbd>
 
 ## All Areas Sensor
 
