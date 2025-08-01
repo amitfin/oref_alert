@@ -64,7 +64,7 @@ Note: additional sensors created before v2.2.0 use a different implementation. I
 
 ## Additional Attributes
 
-All sensors have the following extra attributes:
+All sensors have the following attributes:
 1. `Areas`: the list of areas provided by the user.
 2. `Alert active duration`: as configured by the user.
 3. `Selected areas active alerts`: when the sensor is `on`, the alerts are listed here.
@@ -74,7 +74,7 @@ All sensors have the following extra attributes:
 7. `Country updates`: all updates in Israel.
 8. `Country alerts`: all alerts in Israel. Exists only when the [configuration](https://my.home-assistant.io/redirect/integration/?domain=oref_alert) "Add 'All Alerts' attributes" is turned on.
 
-## Alert's Attributes
+## Alert's Fields
 
 Alerts and updates inside attributes have the following fields:
 1. `alertDate`: e.g. `2025-06-30 15:00:00` (Israel timezone).
