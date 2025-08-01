@@ -1,0 +1,26 @@
+blueprint:
+  name: Counting down seconds to shelter
+  description: Automation for counting down the amount of seconds left for getting into a shelter
+  domain: automation
+  source_url: https://github.com/amitfin/oref_alert/blob/main/blueprints/time_to_shelter.yaml
+  author: amitfin
+  input:
+    speaker:
+      name: Speaker
+      selector:
+        entity:
+          filter:
+            domain: media_player
+triggers:
+  - trigger: state
+    entity_id: sensor.oref_alert_time_to_shelter
+actions:
+  - variables:
+      time_to_shelter: "{{ states('sensor.oref_alert_time_to_shelter') | int(-1) }}"
+  - condition: "{{ time_to_shelter >= 0 and time_to_shelter % 5 == 0}}"
+  - action: tts.google_translate_say
+    data:
+      entity_id: !input speaker
+      language: iw
+      message: "{{ time_to_shelter }}"
+mode: queued

@@ -1,0 +1,14 @@
+blueprint:
+  name: Ending Update Binary Sensor
+  description: Creates a binary_sensor for Oref Alert ending update
+  domain: template
+  source_url: https://github.com/amitfin/oref_alert/blob/main/blueprints/ending_sensor.yaml
+  author: amitfin
+  input: {}
+binary_sensor:
+  state: >-
+    {{
+      is_state('binary_sensor.oref_alert', 'off') and
+      state_attr('binary_sensor.oref_alert', 'selected_areas_updates') and
+      state_attr('binary_sensor.oref_alert', 'selected_areas_updates')[0]['title'] is search('האירוע הסתיים') }}
+    }}
