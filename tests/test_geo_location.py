@@ -34,7 +34,7 @@ from custom_components.oref_alert.const import (
     OREF_ALERT_UNIQUE_ID,
 )
 
-from .utils import mock_urls
+from .utils import mock_urls, refresh_coordinator
 
 if TYPE_CHECKING:
     from freezegun.api import FrozenDateTimeFactory
@@ -109,8 +109,9 @@ async def test_add_remove(
     config_id = await async_setup(hass)
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 0
     mock_urls(aioclient_mock, None, "multi_alerts_history.json")
-    freezer.tick(11)
+    freezer.tick()
     async_fire_time_changed(hass)
+    await refresh_coordinator(hass, config_id)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert {
         state.entity_id for state in hass.states.async_all(Platform.GEO_LOCATION)
@@ -120,13 +121,14 @@ async def test_add_remove(
         for entry in er.async_entries_for_config_entry(er.async_get(hass), config_id)
     )
     mock_urls(aioclient_mock, None, None)
-    freezer.tick(11)
+    freezer.tick(2)
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 0
     mock_urls(aioclient_mock, None, "single_alert_history.json")
-    freezer.tick(11)
+    freezer.tick()
     async_fire_time_changed(hass)
+    await refresh_coordinator(hass, config_id)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert {
         state.entity_id for state in hass.states.async_all(Platform.GEO_LOCATION)
@@ -173,8 +175,9 @@ async def test_attributes_update(
     assert state.attributes["category"] == 1
     assert len(events) == 1
     mock_urls(aioclient_mock, None, "single_alert_history_update.json")
-    freezer.tick(10)
+    freezer.tick(2)
     async_fire_time_changed(hass)
+    await refresh_coordinator(hass, config_id)
     await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(ENTITY_ID)
     assert state is not None

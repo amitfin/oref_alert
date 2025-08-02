@@ -6,7 +6,7 @@
   ],
   "config_flow": true,
   "documentation": "https://github.com/amitfin/oref_alert",
-  "iot_class": "cloud_polling",
+  "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/amitfin/oref_alert/issues",
   "loggers": [
     "paho"

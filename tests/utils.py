@@ -2,13 +2,24 @@
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import load_fixture
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
 from custom_components.oref_alert.areas_checker import CITIES_MIX_URL
 from custom_components.oref_alert.coordinator import OREF_ALERTS_URL, OREF_HISTORY_URL
+
+if TYPE_CHECKING:
+    from custom_components.oref_alert import OrefAlertConfigEntry
+
+
+async def refresh_coordinator(hass: HomeAssistant, config_id: str) -> None:
+    """Refresh coordinator data."""
+    config: OrefAlertConfigEntry | None = hass.config_entries.async_get_entry(config_id)
+    assert config is not None
+    await config.runtime_data.coordinator.async_refresh()
 
 
 def mock_urls(

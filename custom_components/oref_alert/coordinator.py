@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 from functools import cmp_to_key
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
 import homeassistant.util.dt as dt_util
+from homeassistant.core import callback
+from homeassistant.helpers import event as event_helper
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -33,6 +35,9 @@ from .const import (
 from .metadata.areas import AREAS
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from datetime import datetime
+
     from homeassistant.core import HomeAssistant
 
     from . import OrefAlertConfigEntry
@@ -104,7 +109,6 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             hass,
             LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(seconds=10),
         )
         self._active_duration = config_entry.options.get(
             CONF_ALERT_ACTIVE_DURATION, DEFAULT_ALERT_ACTIVE_DURATION
@@ -359,3 +363,57 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         if area[0] == "'":
             area = f"{area[1:]}'"
         return area
+
+
+class OrefAlertCoordinatorUpdater:
+    """Refresh coordinator if there are active alerts / updates."""
+
+    def __init__(
+        self, hass: HomeAssistant, coordinator: OrefAlertDataUpdateCoordinator
+    ) -> None:
+        """Initialize the updater."""
+        self._hass: HomeAssistant = hass
+        self._coordinator: OrefAlertDataUpdateCoordinator = coordinator
+        self._previous_active: bool = False
+        self._last_update: datetime = dt_util.now()
+        self._stop: bool = False
+        self._unsub_update: Callable[[], None] | None = None
+
+    def _sub(self) -> None:
+        """Subscribe an update."""
+        if self._stop:
+            return
+        self._unsub_update = event_helper.async_track_point_in_time(
+            self._hass,
+            self._async_update,
+            dt_util.now() + timedelta(seconds=2),
+        )
+
+    @callback
+    async def _async_update(self, *_: Any) -> None:
+        """Refresh coordinator if needed."""
+        self._unsub_update = None
+        update = False
+        if self._coordinator.data.active_alerts or self._coordinator.data.updates:
+            self._previous_active = True
+            update = True
+        elif self._previous_active:
+            self._previous_active = False
+            update = True
+        elif dt_util.now() - self._last_update > timedelta(hours=1):
+            update = True
+        if update:
+            self._last_update = dt_util.now()
+            await self._coordinator.async_refresh()
+        self._sub()
+
+    def start(self) -> None:
+        """Start the updater."""
+        self._sub()
+
+    def stop(self) -> None:
+        """Stop the updater."""
+        self._stop = True
+        if self._unsub_update is not None:
+            self._unsub_update()
+            self._unsub_update = None

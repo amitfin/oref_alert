@@ -29,6 +29,7 @@ from custom_components.oref_alert.coordinator import (
     OREF_ALERTS_URL,
     OREF_HISTORY_URL,
     OrefAlertCoordinatorData,
+    OrefAlertCoordinatorUpdater,
     OrefAlertDataUpdateCoordinator,
 )
 from custom_components.oref_alert.ttl_deque import TTLDeque
@@ -218,9 +219,10 @@ async def test_updates(
 
     coordinator = create_coordinator(hass)
     coordinator.async_add_listener(update)
-    for _ in range(10):
-        freezer.tick(timedelta(seconds=5))
+    for _ in range(5):
+        freezer.tick()
         async_fire_time_changed(hass)
+        await coordinator.async_refresh()
         await hass.async_block_till_done(wait_background_tasks=True)
     assert updates == 5
     assert aioclient_mock.call_count == 10
@@ -343,7 +345,8 @@ async def test_real_time_timestamp(
     for _ in range(9):
         # Timestamp should stay the same for the first 2 minutes.
         assert coordinator.data.items[0]["alertDate"] == "2023-10-07 06:30:00"
-        freezer.tick(timedelta(seconds=15))
+        freezer.tick(15)
+        await coordinator.async_refresh()
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
     assert coordinator.data.items[0]["alertDate"] == "2023-10-07 06:32:15"
@@ -419,8 +422,9 @@ async def test_synthetic_alert(
             "title": "test",
         }
     )
-    freezer.tick(timedelta(seconds=39))
+    freezer.tick(39)
     async_fire_time_changed(hass)
+    await coordinator.async_refresh()
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(coordinator.data.alerts) == 2
     for index, area in enumerate(areas):
@@ -430,8 +434,9 @@ async def test_synthetic_alert(
         ] == synthetic_alert_time.strftime("%Y-%m-%d %H:%M:%S")
         assert coordinator.data.alerts[index]["category"] == 4
         assert coordinator.data.alerts[index]["title"] == "test"
-    freezer.tick(timedelta(seconds=11))
+    freezer.tick(2)
     async_fire_time_changed(hass)
+    await coordinator.async_refresh()
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(coordinator.data.alerts) == 0
     await coordinator.async_shutdown()
@@ -473,7 +478,8 @@ async def test_http_cache(
     aioclient_mock.clear_requests()
     aioclient_mock.get(OREF_ALERTS_URL, status=HTTPStatus.NOT_MODIFIED)
     aioclient_mock.get(OREF_HISTORY_URL, status=HTTPStatus.NOT_MODIFIED)
-    freezer.tick(timedelta(seconds=10))
+    freezer.tick()
+    await coordinator.async_refresh()
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(coordinator.data.alerts) == 2
@@ -481,7 +487,8 @@ async def test_http_cache(
     aioclient_mock.clear_requests()
     aioclient_mock.get(OREF_ALERTS_URL, text="")
     aioclient_mock.get(OREF_HISTORY_URL, status=HTTPStatus.NOT_MODIFIED)
-    freezer.tick(timedelta(seconds=10))
+    freezer.tick()
+    await coordinator.async_refresh()
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(coordinator.data.alerts) == 1
@@ -533,8 +540,9 @@ async def test_disable_all_alerts(
     coordinator.async_add_listener(lambda: None)
     await coordinator.async_config_entry_first_refresh()
     assert len(coordinator.data.alerts) == 1
-    freezer.tick(timedelta(seconds=601))
+    freezer.tick(601)
     async_fire_time_changed(hass)
+    await coordinator.async_refresh()
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(coordinator.data.alerts) == 0
     await coordinator.async_shutdown()
@@ -596,4 +604,78 @@ async def test_channels(
     coordinator.async_add_listener(lambda: None)
     await coordinator.async_config_entry_first_refresh()
     assert len(coordinator.data.alerts) == expected
+    await coordinator.async_shutdown()
+
+
+async def test_updater_active(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test the updater is refreshing the coordinator."""
+    mock_urls(aioclient_mock, "single_alert_real_time.json", None)
+    coordinator = create_coordinator(hass)
+    await coordinator.async_refresh()
+    updater = OrefAlertCoordinatorUpdater(hass, coordinator)
+    updater.start()
+    assert aioclient_mock.call_count == 2
+
+    for i in range(2, 10):
+        freezer.tick(timedelta(minutes=20))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done(wait_background_tasks=True)
+        assert aioclient_mock.call_count == i * 2
+
+    updater.stop()
+    await coordinator.async_shutdown()
+
+
+async def test_updater_previous_active(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test the updater is refreshing after active (to turn off the states)."""
+    mock_urls(aioclient_mock, "single_alert_real_time.json", None)
+    coordinator = create_coordinator(hass)
+    await coordinator.async_refresh()
+    updater = OrefAlertCoordinatorUpdater(hass, coordinator)
+    updater.start()
+
+    mock_urls(aioclient_mock, None, None)
+
+    for i in range(1, 10):
+        freezer.tick(2)
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done(wait_background_tasks=True)
+        assert aioclient_mock.call_count == min(i * 2, 4)
+
+    updater.stop()
+    await coordinator.async_shutdown()
+
+
+async def test_updater_every_hour(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test the updater is refreshing the coordinator at least once per hour."""
+    coordinator = create_coordinator(hass)
+    await coordinator.async_refresh()
+    updater = OrefAlertCoordinatorUpdater(hass, coordinator)
+    updater.start()
+    assert aioclient_mock.call_count == 2
+
+    for _ in range(3):
+        freezer.tick(timedelta(minutes=20))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done(wait_background_tasks=True)
+        assert aioclient_mock.call_count == 2
+
+    freezer.tick(2)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert aioclient_mock.call_count == 4
+
+    updater.stop()
     await coordinator.async_shutdown()

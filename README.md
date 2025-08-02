@@ -82,8 +82,8 @@ Alerts and updates inside attributes have the following fields:
 3. `data`: a single area name, e.g. `תל אביב - מרכז העיר`.
 4. `category`: an integer of the category as listed [here](https://www.oref.org.il/alerts/alertCategories.json). Categories 13 and 14 are used for updates.
 5. `channel`: the receiving channel. Below is the ordered list of options. When the same alert is coming on multiple channels, only the higher channel will be used. The fields of the alerts are normalized and have the same format regardless of the channel.
-    1. `website-history`: the history file of the official website (polling).
-    2. `website`: the real-time file of the official website (polling).
+    1. `website-history`: the history file of the official website.
+    2. `website`: the real-time file of the official website.
     3. `mobile`: the mobile notification channel of the official app.
     4. `tzevaadom`: the notification channel of [tzevaadom.co.il](https://www.tzevaadom.co.il/).
     5. `synthetic`: synthetic alert for testing purposes generated via the [synthetic-alert action](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.synthetic_alert).

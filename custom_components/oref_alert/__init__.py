@@ -61,7 +61,7 @@ from .const import (
     TITLE,
     AlertField,
 )
-from .coordinator import OrefAlertDataUpdateCoordinator
+from .coordinator import OrefAlertCoordinatorUpdater, OrefAlertDataUpdateCoordinator
 from .metadata.areas import AREAS
 
 PLATFORMS = (Platform.BINARY_SENSOR, Platform.SENSOR, Platform.GEO_LOCATION)
@@ -120,6 +120,7 @@ class OrefAlertRuntimeData:
     """Oref Alert runtime data dataclass."""
 
     coordinator: OrefAlertDataUpdateCoordinator
+    updater: OrefAlertCoordinatorUpdater
     areas_checker: AreasChecker
     unload_template_extensions: Callable[[], None]
     pushy: PushyNotifications
@@ -243,6 +244,7 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
         get_config_entry().runtime_data.coordinator.add_synthetic_alert(
             service_call.data
         )
+        await get_config_entry().runtime_data.coordinator.async_refresh()
 
     async_register_admin_service(
         hass,
@@ -301,9 +303,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
 
     pushy = PushyNotifications(hass, entry)
     tzevaadom = TzevaAdomNotifications(hass, entry)
+    coordinator = OrefAlertDataUpdateCoordinator(
+        hass, entry, [pushy.alerts, tzevaadom.alerts]
+    )
 
     entry.runtime_data = OrefAlertRuntimeData(
-        OrefAlertDataUpdateCoordinator(hass, entry, [pushy.alerts, tzevaadom.alerts]),
+        coordinator,
+        OrefAlertCoordinatorUpdater(hass, coordinator),
         AreasChecker(hass),
         await inject_template_extensions(hass),
         pushy,
@@ -315,6 +321,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     OrefAlertUpdateEventManager(hass, entry)
+
+    entry.runtime_data.updater.start()
 
     await asyncio.gather(
         entry.runtime_data.pushy.start(), entry.runtime_data.tzevaadom.start()
@@ -335,6 +343,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) -
     if not getattr(entry, "runtime_data", None):
         return True
     entry.runtime_data.areas_checker.stop()
+    entry.runtime_data.updater.stop()
     await asyncio.gather(
         entry.runtime_data.pushy.stop(), entry.runtime_data.tzevaadom.stop()
     )

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import datetime
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, STATE_UNKNOWN, Platform
@@ -92,7 +91,7 @@ async def test_time_to_shelter_state(
     assert state.attributes[ATTR_DISPLAY] == f"00:{time_to_shelter:02}"
 
     for _ in range(100):
-        freezer.tick(datetime.timedelta(seconds=1))
+        freezer.tick()
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
         time_to_shelter -= 1
@@ -133,7 +132,7 @@ async def test_time_to_shelter_not_going_back(
     assert state.state == "90"
 
     mock_urls(aioclient_mock, None, "history_same_as_real_time.json")
-    freezer.tick(datetime.timedelta(seconds=10))
+    freezer.tick(10)
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(TIME_TO_SHELTER_ENTITY_ID)
@@ -186,7 +185,7 @@ async def test_alert_end_time_state(
             state.attributes[ATTR_DISPLAY]
             == f"{alert_end_time // 60:02}:{alert_end_time % 60:02}"
         )
-        freezer.tick(datetime.timedelta(seconds=60))
+        freezer.tick(60)
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
         alert_end_time -= 60

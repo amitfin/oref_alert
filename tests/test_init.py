@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import TYPE_CHECKING
 
 import pytest
@@ -19,7 +18,6 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
-    async_fire_time_changed,
 )
 
 from custom_components.oref_alert.const import (
@@ -42,7 +40,6 @@ from custom_components.oref_alert.const import (
 )
 
 if TYPE_CHECKING:
-    from freezegun.api import FrozenDateTimeFactory
     from homeassistant.core import HomeAssistant
 
 DEFAULT_OPTIONS = {
@@ -189,9 +186,7 @@ async def test_edit_sensor_actions(hass: HomeAssistant) -> None:
     ],
     ids=("str", "list"),
 )
-async def test_synthetic_alert_action(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory, areas: str | list
-) -> None:
+async def test_synthetic_alert_action(hass: HomeAssistant, areas: str | list) -> None:
     """Test synthetic_alert custom action."""
     config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
     config_entry.add_to_hass(hass)
@@ -203,8 +198,6 @@ async def test_synthetic_alert_action(
         {CONF_AREA: areas, CONF_DURATION: 20},
         blocking=True,
     )
-    freezer.tick(timedelta(seconds=10))
-    async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(ENTITY_ID)
     assert state is not None
