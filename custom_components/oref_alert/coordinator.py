@@ -381,13 +381,12 @@ class OrefAlertCoordinatorUpdater:
 
     def _sub(self) -> None:
         """Subscribe an update."""
-        if self._stop:
-            return
-        self._unsub_update = event_helper.async_track_point_in_time(
-            self._hass,
-            self._async_update,
-            dt_util.now() + timedelta(seconds=2),
-        )
+        if not self._stop:
+            self._unsub_update = event_helper.async_track_point_in_time(
+                self._hass,
+                self._async_update,
+                dt_util.now() + timedelta(seconds=2),
+            )
 
     @callback
     async def _async_update(self, *_: Any) -> None:
