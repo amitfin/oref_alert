@@ -373,7 +373,7 @@ class OrefAlertCoordinatorUpdater:
         """Initialize the updater."""
         self._hass: HomeAssistant = hass
         self._coordinator: OrefAlertDataUpdateCoordinator = coordinator
-        self._active: datetime = datetime.min  # noqa: DTZ901
+        self._active: datetime = dt_util.now() - timedelta(days=1)
         self._update: datetime = dt_util.now()
         self._stop: bool = False
         self._unsub_update: Callable[[], None] | None = None
