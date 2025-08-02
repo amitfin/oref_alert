@@ -635,7 +635,7 @@ async def test_updater_previous_active(
     aioclient_mock: AiohttpClientMocker,
     freezer: FrozenDateTimeFactory,
 ) -> None:
-    """Test the updater is refreshing after active (to turn off the states)."""
+    """Test the updater is refreshing after active."""
     mock_urls(aioclient_mock, "single_alert_real_time.json", None)
     coordinator = create_coordinator(hass)
     await coordinator.async_refresh()
@@ -644,11 +644,12 @@ async def test_updater_previous_active(
 
     mock_urls(aioclient_mock, None, None)
 
+    # The 1st iteration sets the timestamp, and then we have 3 more rounds.
     for i in range(1, 10):
-        freezer.tick(2)
+        freezer.tick(timedelta(minutes=6))
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
-        assert aioclient_mock.call_count == min(i * 2, 4)
+        assert aioclient_mock.call_count == min(i * 2, 8)
 
     updater.stop()
     await coordinator.async_shutdown()

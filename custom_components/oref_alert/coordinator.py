@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
 from functools import cmp_to_key
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
@@ -36,7 +36,6 @@ from .metadata.areas import AREAS
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from datetime import datetime
 
     from homeassistant.core import HomeAssistant
 
@@ -374,8 +373,8 @@ class OrefAlertCoordinatorUpdater:
         """Initialize the updater."""
         self._hass: HomeAssistant = hass
         self._coordinator: OrefAlertDataUpdateCoordinator = coordinator
-        self._previous_active: bool = False
-        self._last_update: datetime = dt_util.now()
+        self._active: datetime = datetime.min  # noqa: DTZ901
+        self._update: datetime = dt_util.now()
         self._stop: bool = False
         self._unsub_update: Callable[[], None] | None = None
 
@@ -392,17 +391,17 @@ class OrefAlertCoordinatorUpdater:
     async def _async_update(self, *_: Any) -> None:
         """Refresh coordinator if needed."""
         self._unsub_update = None
+        now = dt_util.now()
         update = False
         if self._coordinator.data.active_alerts or self._coordinator.data.updates:
-            self._previous_active = True
+            self._active = now
             update = True
-        elif self._previous_active:
-            self._previous_active = False
-            update = True
-        elif dt_util.now() - self._last_update > timedelta(hours=1):
+        elif now - self._active < timedelta(
+            minutes=20
+        ) or now - self._update > timedelta(hours=1):
             update = True
         if update:
-            self._last_update = dt_util.now()
+            self._update = now
             await self._coordinator.async_refresh()
         self._sub()
 
