@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 import homeassistant.util.dt as dt_util
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor.const import SensorDeviceClass
-from homeassistant.const import UnitOfTime
+from homeassistant.const import Platform, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import event as event_helper
 from homeassistant.util import slugify
@@ -194,6 +194,7 @@ class TimeToShelterSensor(OrefAlertTimerSensor):
                 + f"_{name.lower().replace(' ', '_')}_"
                 + TIME_TO_SHELTER_ID_SUFFIX
             )
+        self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
 
     def oref_value_seconds(self) -> int | None:
         """Return the remaining seconds to shelter."""
@@ -247,6 +248,7 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
                 + f"_{name.lower().replace(' ', '_')}_"
                 + END_TIME_ID_SUFFIX
             )
+        self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
 
     def oref_value_seconds(self) -> int | None:
         """Return the remaining seconds till the end of the alert."""

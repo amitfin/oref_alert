@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 import homeassistant.util.dt as dt_util
 from homeassistant.components import binary_sensor
+from homeassistant.const import Platform
 from homeassistant.util import slugify
 
 from .entity import OrefAlertCoordinatorEntity
@@ -143,6 +144,7 @@ class AlertSensor(AlertAreaSensorBase):
             self._attr_unique_id = slugify(
                 f"{OREF_ALERT_UNIQUE_ID}_{name.lower().replace(' ', '_')}"
             )
+        self.entity_id = f"{Platform.BINARY_SENSOR}.{self._attr_unique_id}"
 
     def _default_to_device_class_name(self) -> bool:
         """Do not use device class name for binary sensors."""
@@ -222,6 +224,7 @@ class AlertSensorAllAreas(AlertSensorBase):
         """Initialize object with defaults."""
         super().__init__(config_entry)
         self._attr_unique_id = f"{OREF_ALERT_UNIQUE_ID}_{ALL_AREAS_ID_SUFFIX}"
+        self.entity_id = f"{Platform.BINARY_SENSOR}.{self._attr_unique_id}"
 
     @property
     def is_on(self) -> bool:
