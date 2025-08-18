@@ -7,7 +7,7 @@ import contextlib
 import enum
 import secrets
 from datetime import datetime
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 import aiohttp
 from aiohttp import ClientWebSocketResponse, ClientWSTimeout, WSMsgType
@@ -17,10 +17,14 @@ from .categories import (
     tzevaadom_threat_id_to_history_category,
 )
 from .const import (
+    AREA_FIELD,
+    CATEGORY_FIELD,
+    CHANNEL_FIELD,
     CONF_ALERT_ACTIVE_DURATION,
+    DATE_FIELD,
     IST,
     LOGGER,
-    AlertField,
+    TITLE_FIELD,
     AlertSource,
 )
 from .metadata.areas import AREAS
@@ -84,7 +88,7 @@ class TzevaAdomNotifications:
         self._http_client = async_get_clientsession(hass)
         self._ws: ClientWebSocketResponse | None = None
         self._stop = asyncio.Event()
-        self._task: asyncio.Task | None = None
+        self._task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
         """Start the WebSocket listener."""
@@ -112,8 +116,8 @@ class TzevaAdomNotifications:
                     WS_URL,
                     origin=ORIGIN_HEADER,
                     timeout=ClientWSTimeout(
-                        ws_receive=WS_IDLE_TIMEOUT,  # type: ignore  # noqa: PGH003
-                        ws_close=WS_CLOSE_TIMEOUT,  # type: ignore  # noqa: PGH003
+                        ws_receive=WS_IDLE_TIMEOUT,  # pyright: ignore[reportCallIssue]
+                        ws_close=WS_CLOSE_TIMEOUT,  # pyright: ignore[reportCallIssue]
                     ),
                 ) as self._ws:
                     while True:
@@ -149,7 +153,7 @@ class TzevaAdomNotifications:
                 self._stop.wait(), timeout=secrets.SystemRandom().uniform(5, 15)
             )
 
-    def _parse_message(self, message: dict) -> dict | None:
+    def _parse_message(self, message: dict[str, Any]) -> dict[str, str] | None:
         """Parse the message and return parsed/converted fields."""
         if message["type"] == MessageType.ALERT:
             if (
@@ -163,8 +167,8 @@ class TzevaAdomNotifications:
             ):
                 return None
             fields = {
-                AlertField.TITLE: THREAT_TITLES[int(message["data"]["threat"])],
-                AlertField.CATEGORY: category,
+                TITLE_FIELD: THREAT_TITLES[int(message["data"]["threat"])],
+                CATEGORY_FIELD: category,
                 "areas": message["data"]["cities"],
                 "id": f"{MessageType.ALERT}_{message['data']['notificationId']}",
             }
@@ -179,8 +183,8 @@ class TzevaAdomNotifications:
                 return None
             fields = {
                 # We use the official title for pre-alerts.
-                AlertField.TITLE: PRE_ALERT_TITLE,
-                AlertField.CATEGORY: 14,  # 14 is pre-alert and 13 is post-alert.
+                TITLE_FIELD: PRE_ALERT_TITLE,
+                CATEGORY_FIELD: 14,  # 14 is pre-alert and 13 is post-alert.
                 "areas": areas,
                 "id": (
                     f"{MessageType.SYSTEM_MESSAGE}_{message['data']['notificationId']}"
@@ -191,13 +195,13 @@ class TzevaAdomNotifications:
             LOGGER.warning("Tzevaadom unknown message type: %s", message["type"])
             return None
 
-        fields[AlertField.DATE] = datetime.fromtimestamp(
+        fields[DATE_FIELD] = datetime.fromtimestamp(
             message["data"]["time"], tz=IST
         ).strftime("%Y-%m-%d %H:%M:%S")
 
         return fields
 
-    async def _on_message(self, message: dict) -> None:
+    async def _on_message(self, message: dict[str, Any]) -> None:
         """Handle incoming WebSocket messages."""
         try:
             LOGGER.debug("WS message: %s", message)
@@ -219,11 +223,11 @@ class TzevaAdomNotifications:
                     continue
                 self.alerts.add(
                     {
-                        AlertField.DATE: fields[AlertField.DATE],
-                        AlertField.TITLE: fields[AlertField.TITLE],
-                        AlertField.AREA: name,
-                        AlertField.CATEGORY: fields[AlertField.CATEGORY],
-                        AlertField.CHANNEL: AlertSource.TZEVAADOM,
+                        DATE_FIELD: fields[DATE_FIELD],
+                        TITLE_FIELD: fields[TITLE_FIELD],
+                        AREA_FIELD: name,
+                        CATEGORY_FIELD: fields[CATEGORY_FIELD],
+                        CHANNEL_FIELD: AlertSource.TZEVAADOM,
                     }
                 )
                 new_alert = True

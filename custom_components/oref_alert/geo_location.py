@@ -24,14 +24,18 @@ from .categories import (
     category_to_icon,
 )
 from .const import (
+    AREA_FIELD,
     ATTR_AREA,
     ATTR_EMOJI,
     ATTR_HOME_DISTANCE,
+    CATEGORY_FIELD,
+    CHANNEL_FIELD,
+    DATE_FIELD,
     DOMAIN,
     IST,
     LOCATION_ID_SUFFIX,
     OREF_ALERT_UNIQUE_ID,
-    AlertField,
+    TITLE_FIELD,
 )
 from .entity import OrefAlertEntity
 from .metadata.area_info import AREA_INFO
@@ -67,8 +71,8 @@ class OrefAlertLocationEvent(OrefAlertEntity, GeolocationEvent):
             ATTR_HOME_DISTANCE,
             CONF_FRIENDLY_NAME,
             CONF_UNIT_OF_MEASUREMENT,
-            AlertField.CATEGORY,
-            AlertField.TITLE,
+            CATEGORY_FIELD,
+            TITLE_FIELD,
         }
     )
 
@@ -77,7 +81,7 @@ class OrefAlertLocationEvent(OrefAlertEntity, GeolocationEvent):
         hass: HomeAssistant,
         config_entry: OrefAlertConfigEntry,
         area: str,
-        attributes: dict,
+        attributes: dict[str, Any],
     ) -> None:
         """Initialize entity."""
         super().__init__(config_entry)
@@ -110,12 +114,12 @@ class OrefAlertLocationEvent(OrefAlertEntity, GeolocationEvent):
         """Remove this entity."""
         self.hass.async_create_task(self.async_remove(force_remove=True))
 
-    def async_update(self, attributes: dict) -> bool:
+    def async_update(self, attributes: dict[str, Any]) -> bool:
         """Update the extra attributes when needed."""
         if not attributes or attributes == self._alert_attributes:
             return False
         significant_update = False
-        for attribute in [AlertField.TITLE, AlertField.CATEGORY]:
+        for attribute in [TITLE_FIELD, CATEGORY_FIELD]:
             if attributes.get(attribute) != self._alert_attributes.get(attribute):
                 significant_update = True
         self._alert_attributes = attributes
@@ -143,25 +147,21 @@ class OrefAlertLocationEventManager:
         self._coordinator.async_add_listener(self._async_update)
         self._async_update()
 
-    def _alert_attributes(self, area: str) -> dict:
+    def _alert_attributes(self, area: str) -> dict[str, Any]:
         """Return alert's attributes."""
-        attributes = {}
+        attributes: dict[str, Any] = {}
         for alert in self._coordinator.data.active_alerts:
-            if alert[AlertField.AREA] == area:
+            if alert[AREA_FIELD] == area:
                 attributes = {
                     key: value
                     for key, value in alert.items()
-                    if key not in {AlertField.AREA, AlertField.DATE}
+                    if key not in {AREA_FIELD, DATE_FIELD}
                 }
                 attributes[ATTR_DATE] = dt_util.parse_datetime(
-                    alert[AlertField.DATE], raise_on_error=True
+                    alert[DATE_FIELD], raise_on_error=True
                 ).replace(tzinfo=IST)
-                attributes[ATTR_ICON] = category_to_icon(
-                    attributes[AlertField.CATEGORY]
-                )
-                attributes[ATTR_EMOJI] = category_to_emoji(
-                    attributes[AlertField.CATEGORY]
-                )
+                attributes[ATTR_ICON] = category_to_icon(alert[CATEGORY_FIELD])
+                attributes[ATTR_EMOJI] = category_to_emoji(alert[CATEGORY_FIELD])
                 break
         return attributes
 
@@ -169,9 +169,7 @@ class OrefAlertLocationEventManager:
     async def _cleanup_entities(self) -> None:
         """Remove entities."""
         await asyncio.sleep(10)  # Wait for a stable state.
-        active = {
-            alert[AlertField.AREA] for alert in self._coordinator.data.active_alerts
-        }
+        active = {alert[AREA_FIELD] for alert in self._coordinator.data.active_alerts}
         areas_to_delete = set(self._location_events.keys()) - active
         for area in areas_to_delete:
             if (entity := self._location_events.pop(area, None)) is not None:
@@ -188,20 +186,18 @@ class OrefAlertLocationEventManager:
                     ATTR_HOME_DISTANCE: event.distance,
                     ATTR_LATITUDE: event.latitude,
                     ATTR_LONGITUDE: event.longitude,
-                    AlertField.CATEGORY: attributes.get(AlertField.CATEGORY),
-                    AlertField.TITLE: attributes.get(AlertField.TITLE),
+                    CATEGORY_FIELD: attributes.get(CATEGORY_FIELD),
+                    TITLE_FIELD: attributes.get(TITLE_FIELD),
                     ATTR_ICON: attributes.get(ATTR_ICON),
                     ATTR_EMOJI: attributes.get(ATTR_EMOJI),
-                    AlertField.CHANNEL: attributes.get(AlertField.CHANNEL),
+                    CHANNEL_FIELD: attributes.get(CHANNEL_FIELD),
                 },
             )
 
     @callback
     def _async_update(self) -> None:
         """Add and/or remove entities according to the new active alerts list."""
-        active = {
-            alert[AlertField.AREA] for alert in self._coordinator.data.active_alerts
-        }
+        active = {alert[AREA_FIELD] for alert in self._coordinator.data.active_alerts}
         exists = set(self._location_events.keys())
 
         updated = {

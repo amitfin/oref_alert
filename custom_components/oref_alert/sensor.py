@@ -15,6 +15,7 @@ from homeassistant.helpers import event as event_helper
 from homeassistant.util import slugify
 
 from .const import (
+    AREA_FIELD,
     ATTR_ALERT,
     ATTR_AREA,
     ATTR_DISPLAY,
@@ -22,11 +23,12 @@ from .const import (
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_SENSORS,
+    DATE_FIELD,
     END_TIME_ID_SUFFIX,
     IST,
     OREF_ALERT_UNIQUE_ID,
     TIME_TO_SHELTER_ID_SUFFIX,
-    AlertField,
+    AlertType,
 )
 from .entity import OrefAlertCoordinatorEntity
 from .metadata import ALL_AREAS_ALIASES
@@ -81,11 +83,11 @@ class OrefAlertTimerSensor(OrefAlertCoordinatorEntity, SensorEntity):
         super().__init__(config_entry)
         self._active_duration: int = config_entry.options[CONF_ALERT_ACTIVE_DURATION]
         self._area: str = area
-        self._alert: dict[str, Any] | None = None
+        self._alert: AlertType | None = None
         self._alert_timestamp: float | None = None
         self._unsub_update: Callable[[], None] | None = None
 
-    def _get_alert(self) -> dict[str, Any] | None:
+    def _get_alert(self) -> AlertType | None:
         """Return the latest active alert in the area."""
         if self._alert_timestamp is not None:
             if (
@@ -96,15 +98,13 @@ class OrefAlertTimerSensor(OrefAlertCoordinatorEntity, SensorEntity):
             self._alert_timestamp = None
         for alert in self.coordinator.data.active_alerts:
             if (
-                alert[AlertField.AREA] == self._area
-                or alert[AlertField.AREA] in ALL_AREAS_ALIASES
+                alert[AREA_FIELD] == self._area
+                or alert[AREA_FIELD] in ALL_AREAS_ALIASES
             ):
                 if not self.coordinator.is_synthetic_alert(alert):
                     self._alert = alert
                     self._alert_timestamp = (
-                        dt_util.parse_datetime(
-                            alert[AlertField.DATE], raise_on_error=True
-                        )
+                        dt_util.parse_datetime(alert[DATE_FIELD], raise_on_error=True)
                         .replace(tzinfo=IST)
                         .timestamp()
                     )

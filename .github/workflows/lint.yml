@@ -33,3 +33,6 @@ jobs:
 
       - name: Format
         run: python3 -m ruff format . --check
+
+      - name: mypy
+        run: python3 -m mypy --strict custom_components/oref_alert

@@ -34,6 +34,7 @@ if TYPE_CHECKING:
         ServiceCall,
         ServiceResponse,
     )
+    from homeassistant.helpers.typing import ConfigType
 
     from .binary_sensor import AlertSensor
 
@@ -45,6 +46,7 @@ from .config_flow import AREAS_CONFIG
 from .const import (
     ADD_AREAS,
     ADD_SENSOR_ACTION,
+    CATEGORY_FIELD,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_ALERT_MAX_AGE_DEPRECATED,
     CONF_AREA,
@@ -59,7 +61,7 @@ from .const import (
     SYNTHETIC_ALERT_ACTION,
     TIME_TO_SHELTER_ID_SUFFIX,
     TITLE,
-    AlertField,
+    TITLE_FIELD,
 )
 from .coordinator import OrefAlertCoordinatorUpdater, OrefAlertDataUpdateCoordinator
 from .metadata.areas import AREAS
@@ -108,8 +110,8 @@ SYNTHETIC_ALERT_SCHEMA = vol.Schema(
             cv.ensure_list, [vol.All(cv.string, vol.In(AREAS))]
         ),
         vol.Required(CONF_DURATION, default=10): cv.positive_int,
-        vol.Required(AlertField.CATEGORY.value, default=1): cv.positive_int,
-        vol.Optional(AlertField.TITLE.value): cv.string,
+        vol.Required(CATEGORY_FIELD, default=1): cv.positive_int,
+        vol.Optional(TITLE_FIELD): cv.string,
     },
     extra=vol.ALLOW_EXTRA,
 )
@@ -130,7 +132,7 @@ class OrefAlertRuntimeData:
 type OrefAlertConfigEntry = ConfigEntry[OrefAlertRuntimeData]
 
 
-async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
+async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
     """Set up custom actions."""
 
     def get_config_entry() -> OrefAlertConfigEntry:

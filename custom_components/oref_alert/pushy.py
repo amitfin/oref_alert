@@ -20,12 +20,16 @@ from paho.mqtt.enums import CallbackAPIVersion
 
 from .categories import pushy_thread_id_to_history_category
 from .const import (
+    AREA_FIELD,
+    CATEGORY_FIELD,
+    CHANNEL_FIELD,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_SENSORS,
+    DATE_FIELD,
     DOMAIN,
     LOGGER,
-    AlertField,
+    TITLE_FIELD,
     AlertSource,
 )
 from .metadata.area_info import AREA_INFO
@@ -88,7 +92,7 @@ class PushyNotifications:
         self._hass = hass
         self._config_entry = config_entry
         self._http_client = async_get_clientsession(hass)
-        self._credentials: dict = {}
+        self._credentials: dict[str, str] = {}
         self._mqtt: MQTTClient | None = None
         self.alerts: TTLDeque = TTLDeque(
             config_entry.options[CONF_ALERT_ACTIVE_DURATION]
@@ -146,7 +150,7 @@ class PushyNotifications:
         )
         return
 
-    async def _validate(self, credentials: dict) -> bool:
+    async def _validate(self, credentials: dict[str, str]) -> bool:
         """Validate that the configuration is working properly."""
         device_id = await get_device_id(self._hass)
         try:
@@ -264,7 +268,7 @@ class PushyNotifications:
             self._mqtt.subscribe(self._credentials.get(TOKEN_KEY, ""), MQTT_QOS)
             LOGGER.debug("MQTT subscribe is done.")
         else:
-            LOGGER.warning(f"MQTT connection failed: {reason_code.getName()}.")
+            LOGGER.warning(f"MQTT connection failed: {reason_code.getName()}.")  # type: ignore[no-untyped-call]
 
     def on_message(self, message: MQTTMessage) -> None:
         """MQTT message processing."""
@@ -287,11 +291,11 @@ class PushyNotifications:
                 ]:
                     self.alerts.add(
                         {
-                            AlertField.DATE: alert_date,
-                            AlertField.TITLE: content[AlertField.TITLE],
-                            AlertField.AREA: area,
-                            AlertField.CATEGORY: category,
-                            AlertField.CHANNEL: AlertSource.MOBILE,
+                            DATE_FIELD: alert_date,
+                            TITLE_FIELD: content[TITLE_FIELD],
+                            AREA_FIELD: area,
+                            CATEGORY_FIELD: category,
+                            CHANNEL_FIELD: AlertSource.MOBILE,
                         }
                     )
                     new_alert = True

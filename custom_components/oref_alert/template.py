@@ -143,7 +143,9 @@ async def inject_template_extensions(hass: HomeAssistant) -> Callable[[], None]:
 
         patch_environment(self, params.arguments.get("limited", False))
 
-    def fix_cached_environments(fix_function: Callable) -> None:
+    def fix_cached_environments(
+        fix_function: Callable[[TemplateEnvironment, bool], None],
+    ) -> None:
         """Patch the 3 existing instances of TemplateEnvironment."""
         template = Template("", hass)
         for limited, strict in ((False, False), (True, False), (False, True)):

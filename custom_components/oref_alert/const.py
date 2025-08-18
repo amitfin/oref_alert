@@ -3,7 +3,7 @@
 import enum
 import logging
 import zoneinfo
-from typing import Final
+from typing import Final, TypedDict
 
 DOMAIN: Final = "oref_alert"
 TITLE: Final = "Oref Alert"
@@ -54,15 +54,21 @@ DISTANCE_TEMPLATE_FUNCTION: Final = "oref_distance"
 DISTANCE_TEST_TEMPLATE_FUNCTION: Final = "oref_test_distance"
 FIND_AREA_TEMPLATE_FUNCTION: Final = "oref_find_area"
 
+AREA_FIELD: Final = "data"
+CATEGORY_FIELD: Final = "category"
+CHANNEL_FIELD: Final = "channel"
+DATE_FIELD: Final = "alertDate"
+TITLE_FIELD: Final = "title"
 
-class AlertField(str, enum.Enum):
-    """Enum for alert fields."""
 
-    AREA = "data"
-    CATEGORY = "category"
-    CHANNEL = "channel"
-    DATE = "alertDate"
-    TITLE = "title"
+class AlertType(TypedDict):
+    """Type for area info."""
+
+    data: str
+    category: int
+    channel: str
+    alertDate: str
+    title: str
 
 
 class AlertSource(str, enum.Enum):

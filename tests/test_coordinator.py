@@ -172,7 +172,7 @@ def test_coordinator_data(
 ) -> None:
     """Test the coordinator data class."""
     freezer.move_to("2025-04-26 03:30:00+03:00")
-    coordinator_data = OrefAlertCoordinatorData(items, 10)
+    coordinator_data = OrefAlertCoordinatorData(items, 10)  # pyright: ignore[reportArgumentType]
     assert coordinator_data.items == items
     assert coordinator_data.alerts == alerts
     assert coordinator_data.active_alerts == active_alerts

@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 from .area_utils import expand_areas_and_groups
 from .const import (
     ALL_AREAS_ID_SUFFIX,
+    AREA_FIELD,
     ATTR_COUNTRY_ACTIVE_ALERTS,
     ATTR_COUNTRY_ALERTS,
     ATTR_COUNTRY_UPDATES,
@@ -30,9 +31,10 @@ from .const import (
     CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREAS,
     CONF_SENSORS,
+    DATE_FIELD,
     IST,
     OREF_ALERT_UNIQUE_ID,
-    AlertField,
+    AlertType,
 )
 
 if TYPE_CHECKING:
@@ -108,11 +110,10 @@ class AlertAreaSensorBase(AlertSensorBase):
             **self._common_attributes,
         }
 
-    def is_selected_area(self, alert: dict[str, str]) -> bool:
+    def is_selected_area(self, alert: AlertType) -> bool:
         """Check is the alert is among the selected areas."""
         return (
-            alert[AlertField.AREA] in self._areas
-            or alert[AlertField.AREA] in ALL_AREAS_ALIASES
+            alert[AREA_FIELD] in self._areas or alert[AREA_FIELD] in ALL_AREAS_ALIASES
         )
 
 
@@ -161,9 +162,7 @@ class AlertSensor(AlertAreaSensorBase):
             if self.is_selected_area(alert):
                 if not self.coordinator.is_synthetic_alert(alert):
                     self._is_on_timestamp = (
-                        dt_util.parse_datetime(
-                            alert[AlertField.DATE], raise_on_error=True
-                        )
+                        dt_util.parse_datetime(alert[DATE_FIELD], raise_on_error=True)
                         .replace(tzinfo=IST)
                         .timestamp()
                     )

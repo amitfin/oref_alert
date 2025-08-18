@@ -39,4 +39,4 @@ class OrefAlertCoordinatorEntity(
     def __init__(self, config_entry: OrefAlertConfigEntry) -> None:
         """Initialize the entity with a coordinator."""
         OrefAlertEntity.__init__(self, config_entry)
-        CoordinatorEntity.__init__(self, config_entry.runtime_data.coordinator)  # type: ignore  # noqa: PGH003
+        CoordinatorEntity.__init__(self, config_entry.runtime_data.coordinator)  # pyright: ignore[reportArgumentType]
