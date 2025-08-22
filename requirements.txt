@@ -1,5 +1,5 @@
 pytest-homeassistant-custom-component
-ruff==0.12.9
+ruff==0.12.10
 mypy==1.17.1
 shapely==2.0.7
 paho-mqtt
