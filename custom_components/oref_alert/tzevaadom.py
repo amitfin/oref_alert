@@ -196,7 +196,7 @@ class TzevaAdomNotifications:
             return None
 
         fields[DATE_FIELD] = datetime.fromtimestamp(
-            message["data"]["time"], tz=IST
+            int(message["data"]["time"]), tz=IST
         ).strftime("%Y-%m-%d %H:%M:%S")
 
         return fields
