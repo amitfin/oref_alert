@@ -170,10 +170,19 @@ async def test_area_name_validity(
         (WSMsgType.PING, "WS system message (PING), ignoring.", None),
         (WSMsgType.PONG, "WS system message (PONG), ignoring.", None),
         (WSMsgType.ERROR, "WS system message (ERROR), ignoring.", None),
+        (WSMsgType.CLOSING, " ", None),
         (WSMsgType.TEXT, "Error processing WS message", None),
         (WSMsgType.TEXT, "Tzevaadom unknown message type: test", '{"type": "test"}'),
     ],
-    ids=("binary", "ping", "pong", "error", "invalid", "unknown internal type"),
+    ids=(
+        "binary",
+        "ping",
+        "pong",
+        "error",
+        "closing",
+        "invalid",
+        "unknown internal type",
+    ),
 )
 async def test_other_messages(
     hass: HomeAssistant,

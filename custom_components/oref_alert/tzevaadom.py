@@ -105,7 +105,7 @@ class TzevaAdomNotifications:
 
     async def _listen(self) -> None:
         """Listen for WebSocket messages."""
-        while not self._stop.is_set():
+        while True:
             try:
                 async with self._http_client.ws_connect(
                     WS_URL,
@@ -120,7 +120,11 @@ class TzevaAdomNotifications:
                         match message.type:
                             case aiohttp.WSMsgType.TEXT:
                                 await self._on_message(message.json())
-                            case aiohttp.WSMsgType.CLOSING:
+                            case (
+                                aiohttp.WSMsgType.CLOSING
+                                | aiohttp.WSMsgType.CLOSE
+                                | aiohttp.WSMsgType.CLOSED
+                            ):
                                 break
                             case _:
                                 LOGGER.debug(
@@ -130,8 +134,10 @@ class TzevaAdomNotifications:
 
             except:  # noqa: E722
                 LOGGER.exception("Error in WS listener")
-                await self._delay()
+            if self._stop.is_set():
+                break
             await self._close()
+            await self._delay()
 
     async def _delay(self) -> None:
         """Delay for a short period before reconnecting."""
