@@ -40,13 +40,8 @@ if TYPE_CHECKING:
 
 WS_URL: Final = "wss://ws.tzevaadom.co.il/socket?platform=WEB"
 ORIGIN_HEADER: Final = "https://www.tzevaadom.co.il"
-WS_IDLE_TIMEOUT: Final = 10 * 60
+WS_IDLE_TIMEOUT: Final = 3.5 * 60
 WS_CLOSE_TIMEOUT: Final = 3.0
-WS_SYSTEM_MESSAGES: Final = [
-    aiohttp.WSMsgType.BINARY,
-    aiohttp.WSMsgType.PING,
-    aiohttp.WSMsgType.PONG,
-]
 
 THREAT_TITLES = {
     0: "ירי רקטות וטילים",
@@ -122,24 +117,16 @@ class TzevaAdomNotifications:
                 ) as self._ws:
                     while True:
                         message = await self._ws.receive()
-                        if message.type == aiohttp.WSMsgType.TEXT:
-                            await self._on_message(message.json())
-                        elif message.type in WS_SYSTEM_MESSAGES:
-                            LOGGER.debug(
-                                "WS system message (%s), ignoring.",
-                                WSMsgType(message.type).name,
-                            )
-                        else:
-                            if message.type != aiohttp.WSMsgType.CLOSING:
+                        match message.type:
+                            case aiohttp.WSMsgType.TEXT:
+                                await self._on_message(message.json())
+                            case aiohttp.WSMsgType.CLOSING:
+                                break
+                            case _:
                                 LOGGER.debug(
-                                    "Unexpected WS message (%s): %s",
-                                    WSMsgType(message.type).name
-                                    if isinstance(message.type, int)
-                                    else "None",
-                                    message.data,
+                                    "WS system message (%s), ignoring.",
+                                    WSMsgType(message.type).name,
                                 )
-                                await self._delay()
-                            break
 
             except:  # noqa: E722
                 LOGGER.exception("Error in WS listener")
@@ -150,7 +137,7 @@ class TzevaAdomNotifications:
         """Delay for a short period before reconnecting."""
         with contextlib.suppress(Exception):
             await asyncio.wait_for(
-                self._stop.wait(), timeout=secrets.SystemRandom().uniform(5, 15)
+                self._stop.wait(), timeout=secrets.SystemRandom().uniform(5, 8)
             )
 
     def _parse_message(self, message: dict[str, Any]) -> dict[str, str] | None:

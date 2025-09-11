@@ -406,7 +406,7 @@ class OrefAlertCoordinatorUpdater:
             update = True
         elif now - self._active < timedelta(
             minutes=20
-        ) or now - self._update > timedelta(hours=1):
+        ) or now - self._update > timedelta(seconds=20):
             update = True
         if update:
             self._update = now

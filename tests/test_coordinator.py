@@ -643,24 +643,28 @@ async def test_updater_previous_active(
     updater.start()
 
     mock_urls(aioclient_mock, None, None)
+    freezer.tick(timedelta(minutes=11))  # Set the active timestamp.
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
 
-    # The 1st iteration sets the timestamp, and then we have 3 more rounds.
-    for i in range(1, 10):
-        freezer.tick(timedelta(minutes=6))
+    # 19:53 leaves 4 additional rounds of updates till 20:00.
+    freezer.tick(timedelta(minutes=19, seconds=53))
+    for i in range(2, 10):
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
-        assert aioclient_mock.call_count == min(i * 2, 8)
+        assert aioclient_mock.call_count == min(i * 2, 10)
+        freezer.tick(timedelta(seconds=2))
 
     updater.stop()
     await coordinator.async_shutdown()
 
 
-async def test_updater_every_hour(
+async def test_updater_every_20_seconds(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
     freezer: FrozenDateTimeFactory,
 ) -> None:
-    """Test the updater is refreshing the coordinator at least once per hour."""
+    """Test the updater is refreshing the coordinator at least once every 20 seconds."""
     coordinator = create_coordinator(hass)
     await coordinator.async_refresh()
     updater = OrefAlertCoordinatorUpdater(hass, coordinator)
@@ -668,12 +672,12 @@ async def test_updater_every_hour(
     assert aioclient_mock.call_count == 2
 
     for _ in range(3):
-        freezer.tick(timedelta(minutes=20))
+        freezer.tick(timedelta(seconds=6))
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
         assert aioclient_mock.call_count == 2
 
-    freezer.tick(2)
+    freezer.tick(3)
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert aioclient_mock.call_count == 4

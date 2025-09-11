@@ -169,7 +169,7 @@ async def test_area_name_validity(
         (WSMsgType.BINARY, "WS system message (BINARY), ignoring.", None),
         (WSMsgType.PING, "WS system message (PING), ignoring.", None),
         (WSMsgType.PONG, "WS system message (PONG), ignoring.", None),
-        (WSMsgType.ERROR, "Unexpected WS message (ERROR): {}", None),
+        (WSMsgType.ERROR, "WS system message (ERROR), ignoring.", None),
         (WSMsgType.TEXT, "Error processing WS message", None),
         (WSMsgType.TEXT, "Tzevaadom unknown message type: test", '{"type": "test"}'),
     ],
