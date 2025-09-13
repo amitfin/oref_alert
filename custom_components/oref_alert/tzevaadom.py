@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Final
 
 import aiohttp
-from aiohttp import ClientWebSocketResponse, ClientWSTimeout, WSMsgType
+from aiohttp import ClientWebSocketResponse, WSMsgType
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .categories import (
@@ -40,8 +40,7 @@ if TYPE_CHECKING:
 
 WS_URL: Final = "wss://ws.tzevaadom.co.il/socket?platform=WEB"
 ORIGIN_HEADER: Final = "https://www.tzevaadom.co.il"
-WS_IDLE_TIMEOUT: Final = 3.5 * 60
-WS_CLOSE_TIMEOUT: Final = 3.0
+WS_HEARTBEAT: Final = 45
 
 THREAT_TITLES = {
     0: "ירי רקטות וטילים",
@@ -110,10 +109,7 @@ class TzevaAdomNotifications:
                 async with self._http_client.ws_connect(
                     WS_URL,
                     origin=ORIGIN_HEADER,
-                    timeout=ClientWSTimeout(
-                        ws_receive=WS_IDLE_TIMEOUT,  # pyright: ignore[reportCallIssue]
-                        ws_close=WS_CLOSE_TIMEOUT,  # pyright: ignore[reportCallIssue]
-                    ),
+                    heartbeat=WS_HEARTBEAT,
                 ) as self._ws:
                     while True:
                         message = await self._ws.receive()
@@ -124,6 +120,7 @@ class TzevaAdomNotifications:
                                 aiohttp.WSMsgType.CLOSING
                                 | aiohttp.WSMsgType.CLOSE
                                 | aiohttp.WSMsgType.CLOSED
+                                | aiohttp.WSMsgType.ERROR
                             ):
                                 break
                             case _:
