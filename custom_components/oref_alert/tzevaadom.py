@@ -122,6 +122,9 @@ class TzevaAdomNotifications:
                                 | aiohttp.WSMsgType.CLOSED
                                 | aiohttp.WSMsgType.ERROR
                             ):
+                                LOGGER.debug(
+                                    "WS '%s' message", WSMsgType(message.type).name
+                                )
                                 break
                             case _:
                                 LOGGER.debug(
