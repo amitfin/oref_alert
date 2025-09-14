@@ -123,12 +123,13 @@ class TzevaAdomNotifications:
                                 | aiohttp.WSMsgType.ERROR
                             ):
                                 LOGGER.debug(
-                                    "WS '%s' message", WSMsgType(message.type).name
+                                    "WS system message '%s' => closing",
+                                    WSMsgType(message.type).name,
                                 )
                                 break
                             case _:
                                 LOGGER.debug(
-                                    "WS system message (%s), ignoring.",
+                                    "WS system message '%s' => ignoring",
                                     WSMsgType(message.type).name,
                                 )
 
