@@ -174,7 +174,7 @@ class PushyNotifications:
                 },
             )
             return False
-        LOGGER.debug("Pushy credentials are validate.")
+        LOGGER.debug("Pushy credentials are valid.")
         return True
 
     async def _subscribe(self) -> bool:
