@@ -378,3 +378,25 @@ async def test_message_no_throw(
     listener.on_message(message)
     await cleanup_test(hass, config)
     assert "Failed to process MQTT message." in caplog.text
+
+
+async def test_message_test(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    mqtt_mock: MqttMockPahoClient,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test that a test message is silently ignored."""
+    config = await setup_test(
+        hass,
+        aioclient_mock,
+        data={"pushy_credentials": DEFAULT_CREDENTIALS},
+    )
+    listener: PushyNotifications = mqtt_mock.user_data_set.call_args.args[0]
+    message: MQTTMessage = MQTTMessage()
+    message.payload = json.dumps(
+        {"alertTitle": "22345678-1e64-4db5-a367", "test": True}
+    ).encode("utf-8")
+    listener.on_message(message)
+    await cleanup_test(hass, config)
+    assert "ERROR    custom_components.oref_alert:pushy.py:" not in caplog.text
