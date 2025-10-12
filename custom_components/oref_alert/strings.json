@@ -63,6 +63,9 @@
                             "alert": "Alert",
                             "end": "End"
                         }
+                    },
+                    "record": {
+                        "name": "Record"
                     }
                 }
             }
