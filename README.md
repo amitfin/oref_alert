@@ -8,10 +8,10 @@
 
 ![Project Maintenance](https://img.shields.io/badge/maintainer-Amit%20Finkelstein-blue.svg?style=for-the-badge)
 
-***Hebrew video of the installation, configuration and usage can be found [here](https://youtu.be/q6QNV7vwkiM). A blog post with Russian instructions can be found [here](https://homeusmart.blogspot.com/2023/10/haidf.html).***
-
-The integration provides `binary_sensor.oref_alert` which turns on when an alert is reported by the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud Haoref). The sensor monitors the alerts in the user selected areas. An alert is considered active for a certain period of time as configured by the user (10 minutes by default).
+The integration is used to monitor the emergency messages coming from the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud Haoref). Its main usage is via the entity `event.oref_alert`. This entity receives the relevant messages based on HA's home location (coordinate). There are 3 types of events: `pre-alert`, `alert`, and `end`.
 The integration is installed and configured via the user interface. There is no YAML or templates involved.
+
+A demo video (in Hebrew) can be found [here](https://youtu.be/fajCOxFZFWc).
 
 ## Install
 
@@ -34,23 +34,33 @@ Once the component is installed, it's possible to control additional parameters 
 [![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=oref_alert)
 
 There are 3 configuration fields:
-1. **Selected areas**: list of areas to monitor. It's also possible to select a district (מחוז) and all-areas (כל האזורים) for cities with sub-areas.
-2. **Active duration of an alert**: this is the alert's active time period (in minutes). The default is 10 minutes.
+1. **Selected area**: by default the integration finds the area based on HA's home location. There is no need to change this default. Note: it's highly discouraged to select more than a single area. `event.oref_alert` doesn't support more than a single area, and will not be created when choosing multiple areas. It's possible to create additional `event` entities by creating additional sensors (check below for more information). However, `event` entities are created only when a single area is selected.
+2. **Active duration of an alert**: this field doesn't impact `event.oref_alert` but it's used by other entities as explained below. It's the alert's active time period (in minutes). The default is 10 minutes.
 3. **Add 'All Alerts' attributes**: when it's off (the default) the attributes `Country alerts` and `Selected areas alerts` are not added to the binary sensors. These attributes hold the list of all alerts over the last 24-hours which can be long and cause performance issues on weaker systems. Both attributes are not used often and are not part of any example below.
 
 <kbd><img src="https://github.com/user-attachments/assets/960168bd-d7ad-47f6-88e7-26d216f705a9" width="400"></kbd>
 
-## All Areas Sensor
+## Record's Attribute
 
-`binary_sensor.oref_alert_all_areas` is an additional sensor monitoring any active alert in the country. The sensor is `on` when there is one or more active alerts in Israel.
+`event.oref_alert` has `record` attribute which holds additional information about the message. This record has the following fields:
+1. `alertDate`: e.g. `2025-06-30 15:00:00` (Israel timezone).
+2. `title`: e.g. `ירי רקטות וטילים`. Always in Hebrew.
+3. `data`: a single area name, e.g. `תל אביב - מרכז העיר`.
+4. `category`: an integer of the category as listed [here](https://www.oref.org.il/alerts/alertCategories.json). Categories 14 and 13 are used for `pre-alert` and `end`, respectively.
+5. `channel`: the receiving channel. Below is the ordered list of options. When the same alert is coming on multiple channels, only the higher channel will be used. The fields of the messages are normalized and have the same format regardless of the channel.
+    1. `website-history`: the history file of the official website.
+    2. `website`: the real-time file of the official website.
+    3. `mobile`: the mobile notification channel of the official app.
+    4. `tzevaadom`: the notification channel of [tzevaadom.co.il](https://www.tzevaadom.co.il/).
+    5. `synthetic`: synthetic alert for testing purposes generated via the [synthetic-alert action](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.synthetic_alert).
 
 ## Additional Sensors
 
-It's possible to create additional sensors using the action `oref_alert.add_sensor`. The action can be accessed via this My button:
+It's possible to create additional entities using the action `oref_alert.add_sensor`. The action can be accessed via this My button:
 
 [![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.add_sensor)
 
-The selected areas of an additional sensor can be different (non overlapping) than the primary sensor.
+The selected areas of an additional sensor can be different (non overlapping) than the primary entity.
 
 The action `oref_alert.remove_sensor` can be used for deleting an additional sensor. The action can be accessed via this My button:
 
@@ -60,11 +70,17 @@ The action `oref_alert.edit_sensor` can be used for editing an additional sensor
 
 [![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.edit_sensor)
 
-Note: additional sensors created before v2.2.0 use a different implementation. It's better to delete such entities and to create new sensors using the new functionality (old sensors are not broken and can be used).
+## Binary Sensor
+
+`binary_sensor.oref_alert` is a legacy entity. The sensor is `on` when there is an active alert in the home's area. An alert is consider active according to the specified duration in the configuration (10 minutes by default).
+
+## All Areas Sensor
+
+`binary_sensor.oref_alert_all_areas` is an additional legacy sensor monitoring any active alert in the country. The sensor is `on` when there is one or more active alerts in Israel.
 
 ## Additional Attributes
 
-All sensors have the following attributes:
+Binary sensors have the following attributes:
 1. `Areas`: the list of areas provided by the user.
 2. `Alert active duration`: as configured by the user.
 3. `Selected areas active alerts`: when the sensor is `on`, the alerts are listed here.
@@ -73,20 +89,6 @@ All sensors have the following attributes:
 6. `Country active alerts`: all active alerts in Israel.
 7. `Country updates`: all updates in Israel.
 8. `Country alerts`: all alerts in Israel. Exists only when the [configuration](https://my.home-assistant.io/redirect/integration/?domain=oref_alert) "Add 'All Alerts' attributes" is turned on.
-
-## Alert's Fields
-
-Alerts and updates inside attributes have the following fields:
-1. `alertDate`: e.g. `2025-06-30 15:00:00` (Israel timezone).
-2. `title`: e.g. `ירי רקטות וטילים`. Always in Hebrew.
-3. `data`: a single area name, e.g. `תל אביב - מרכז העיר`.
-4. `category`: an integer of the category as listed [here](https://www.oref.org.il/alerts/alertCategories.json). Categories 13 and 14 are used for updates.
-5. `channel`: the receiving channel. Below is the ordered list of options. When the same alert is coming on multiple channels, only the higher channel will be used. The fields of the alerts are normalized and have the same format regardless of the channel.
-    1. `website-history`: the history file of the official website.
-    2. `website`: the real-time file of the official website.
-    3. `mobile`: the mobile notification channel of the official app.
-    4. `tzevaadom`: the notification channel of [tzevaadom.co.il](https://www.tzevaadom.co.il/).
-    5. `synthetic`: synthetic alert for testing purposes generated via the [synthetic-alert action](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.synthetic_alert).
 
 ## Time To Shelter Sensors
 
@@ -107,26 +109,6 @@ The integration creates an additional set of sensors which monitor the time to t
 4. `Display`: a user-friendly string of the time in the format of "mm:ss".
 
 *Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the action `oref_alert.add_sensor`.*
-
-## Updates Processing
-
-Updates can be sent a few minutes before the alert. They can also be sent for indicating that it's safe to get out of the shelter. However, these updates are less structured so their parsing is not fully reliable and can get broken if the text (or category) is changed. Nevertheless, this data is valuable. Below you can see how it can be done (currently). Note that it can get broken, so keep monitoring for changes and change your settings accordingly:
-
-[![Open your Home Assistant instance and show your helper entities.](https://my.home-assistant.io/badges/helpers.svg)](https://my.home-assistant.io/redirect/helpers/)
-
-→ Click `+ CREATE HELPER` button → `Template` → `Template a binary sensor`:
-
-### Preemptive Update Binary Sensor
-
-<kbd><img src="https://github.com/user-attachments/assets/5413ca09-8f69-4808-ac6e-066c7be5768e" width="400"/></kbd>
-
-`{{ is_state('binary_sensor.oref_alert', 'off') and state_attr('binary_sensor.oref_alert', 'selected_areas_updates') and state_attr('binary_sensor.oref_alert', 'selected_areas_updates')[0]['title'] is search('בדקות הקרובות') }}`
-
-### Ending Update Binary Sensor
-
-<kbd><img src="https://github.com/user-attachments/assets/c6628c85-868b-4fa0-a0e9-01e85cfb7d95" width="400"/></kbd>
-
-`{{ is_state('binary_sensor.oref_alert', 'off') and state_attr('binary_sensor.oref_alert', 'selected_areas_updates') and state_attr('binary_sensor.oref_alert', 'selected_areas_updates')[0]['title'] is search('האירוע הסתיים') }}`
 
 ## Geo Location Entities
 
@@ -157,7 +139,7 @@ This will create a map presenting all active alerts in Israel:
 
 (Below you can find a another explanation on how to add a textual element for the data.)
 
-## Events
+## Home Assistant Events
 
 A new event is fired on HA bus for any new alert. Here is an example of such an event:
 
@@ -281,7 +263,7 @@ Returns area by coordinate (lat, lon). The coordinate can be anywhere inside the
 
 ## Usages
 
-The basic usage is to trigger an automation rule when the binary sensor is turning `on`. Some ideas for the `actions` section can be: play a song (can be less stressful when choosing the right song and setting the volume properly), open the lights and TV in the shelter, etc'. It's also possible to trigger an alert when the sensor is turning `off` for getting an indication when it's safe to get out of the shelter.
+The basic usage is to trigger an automation rule when `event.oref_alert` is triggered. Some ideas for the `actions` section can be: play a song (can be less stressful when choosing the right song and setting the volume properly), open the lights and TV in the shelter, etc'. It's also possible to trigger an alert when the sensor is turning `off` for getting an indication when it's safe to get out of the shelter.
 
 Below are a few more examples:
 
@@ -318,7 +300,6 @@ entities:
 ```
 
 <kbd>![image](https://github.com/user-attachments/assets/bede82e5-022a-41d8-abd7-502821c7d558)</kbd>
-
 
 ### Presenting Active Alerts in Israel
 
@@ -383,7 +364,6 @@ mode: queued
 
 <img width="400" src="https://github.com/user-attachments/assets/ab12abf4-042e-4099-a1ef-e26db57b653a">
 
-
 It's possible to get only alerts which are close to home (in the example below it's 10km from home). To do that, the `current` variable should be defined as:
 
 ```
@@ -415,39 +395,6 @@ mode: queued
 ```
 
 <img width="400" src="https://github.com/user-attachments/assets/3262dd19-0f65-44f4-8983-270da96200e5">
-
-#### Updates
-
-Here is an automation rule for getting mobile notifications for updates:
-
-```
-alias: Oref Alert Updates
-id: oref_alert_updates
-mode: parallel
-triggers:
-  - trigger: state
-    entity_id: binary_sensor.oref_alert
-    attribute: selected_areas_updates
-actions:
-  - variables:
-      title: הודעה מפיקוד העורף לאזורך
-      previous_length: "{{ trigger.from_state.attributes.selected_areas_updates | length }}"
-      previous_message: "{{ trigger.from_state.attributes.selected_areas_updates[0]['title'] if previous_length > 0 else None }}"
-      length: "{{ trigger.to_state.attributes.selected_areas_updates | length }}"
-      message: "{{ trigger.to_state.attributes.selected_areas_updates[0]['title'] if length > 0 else None }}"
-  - condition: "{{ message and message != previous_message }}"
-  - action: notify.mobile_app_amits_iphone
-    data:
-      title: "{{ title }}"
-      message: "{{ message }}"
-  - action: tts.google_translate_say
-    data:
-      entity_id: media_player.shelter_speaker
-      language: iw
-      message: "{{ title }}: {{ message }}"
-```
-
-<img width="400" src="https://github.com/user-attachments/assets/62a4aab5-39e8-4f5b-bb98-33f55d43ca51">
 
 #### Custom Sound
 
