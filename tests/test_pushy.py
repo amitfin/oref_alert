@@ -42,7 +42,8 @@ from custom_components.oref_alert.pushy import (
     get_device_id,
 )
 
-from .utils import load_json_fixture
+from .utils import PUSHY_DEFAULT_CREDENTIALS as DEFAULT_CREDENTIALS
+from .utils import load_json_fixture, mock_pushy_urls
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -58,7 +59,6 @@ if TYPE_CHECKING:
     )
 
 DEFAULT_OPTIONS = {CONF_AREAS: ["קריית אונו"], CONF_ALERT_ACTIVE_DURATION: 10}
-DEFAULT_CREDENTIALS = {"token": "user", "auth": "password"}
 ENTITY_ID = f"{Platform.BINARY_SENSOR}.{OREF_ALERT_UNIQUE_ID}"
 
 
@@ -71,23 +71,12 @@ def mqtt_mock() -> Generator[MqttMockPahoClient]:
         yield mock_instance
 
 
-def mock_api_calls(aioclient_mock: AiohttpClientMocker) -> None:
-    """Mock relevant URLs of APIs."""
-    aioclient_mock.post(f"{API_ENDPOINT}/register", json=DEFAULT_CREDENTIALS)
-    if aioclient_mock:
-        for uri in ("auth", "subscribe", "unsubscribe"):
-            aioclient_mock.post(f"{API_ENDPOINT}/devices/{uri}", json={"success": True})
-
-
 async def setup_test(
     hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker | None = None,
     data: dict | None = None,
     options: dict | None = None,
 ) -> ConfigEntry:
     """Set up steps for a test case."""
-    if aioclient_mock:
-        mock_api_calls(aioclient_mock)
     config_entry = MockConfigEntry(
         domain=DOMAIN, data=(data or {}), options={**DEFAULT_OPTIONS, **(options or {})}
     )
@@ -115,7 +104,7 @@ async def test_registration_params(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test registration parameters."""
-    config = await setup_test(hass, aioclient_mock)
+    config = await setup_test(hass)
     await cleanup_test(hass, config)
     for method, url, data, _headers in aioclient_mock.mock_calls:
         if method == "POST" and url == URL(f"{API_ENDPOINT}/register"):
@@ -132,19 +121,18 @@ async def test_registration_persistency(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test registration persistency."""
-    config = await setup_test(hass, aioclient_mock)
+    mock_pushy_urls(aioclient_mock)
+    config = await setup_test(hass)
     assert config.data["pushy_credentials"] == DEFAULT_CREDENTIALS
     await cleanup_test(hass, config)
 
 
 async def test_registration_invalid_content(
     hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test registration invalid content."""
-    aioclient_mock.post(f"{API_ENDPOINT}/register", json={})
-    config = await setup_test(hass, aioclient_mock)
+    config = await setup_test(hass)
     assert "pushy_credentials" not in config.data
     await cleanup_test(hass, config)
     assert "Pushy registration reply is invalid: {}" in caplog.text
@@ -167,8 +155,10 @@ async def test_subscribe_unsubscribe(
     if debug:
         LOGGER.setLevel(logging.DEBUG)
 
+    mock_pushy_urls(aioclient_mock)
+
     config = await setup_test(
-        hass, aioclient_mock, options={CONF_SENSORS: {"Oref Alert Test": ["פתח תקווה"]}}
+        hass, options={CONF_SENSORS: {"Oref Alert Test": ["פתח תקווה"]}}
     )
     await cleanup_test(hass, config)
 
@@ -198,7 +188,8 @@ async def test_selective_unsubscribe(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test selective unsubscribe."""
-    config = await setup_test(hass, aioclient_mock, options={CONF_AREAS: ["פתח תקווה"]})
+    mock_pushy_urls(aioclient_mock)
+    config = await setup_test(hass, options={CONF_AREAS: ["פתח תקווה"]})
     hass.config_entries.async_update_entry(
         config,
         options={**config.options, CONF_AREAS: []},
@@ -241,10 +232,14 @@ async def test_validation_failure(
             response.exc = ClientError
         return response
 
-    aioclient_mock.post(f"{API_ENDPOINT}/devices/auth", side_effect=validate)
+    mock_pushy_urls(
+        aioclient_mock,
+        lambda: aioclient_mock.post(
+            f"{API_ENDPOINT}/devices/auth", side_effect=validate
+        ),
+    )
     config = await setup_test(
         hass,
-        aioclient_mock,
         data={"pushy_credentials": {**DEFAULT_CREDENTIALS, "auth": "bad"}},
     )
     await cleanup_test(hass, config)
@@ -257,10 +252,13 @@ async def test_subscribe_failure(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test subscribe failure."""
-    aioclient_mock.post(f"{API_ENDPOINT}/devices/subscribe", json={"success": False})
-    config = await setup_test(
-        hass, aioclient_mock, data={"pushy_credentials": DEFAULT_CREDENTIALS}
+    mock_pushy_urls(
+        aioclient_mock,
+        lambda: aioclient_mock.post(
+            f"{API_ENDPOINT}/devices/subscribe", json={"success": False}
+        ),
     )
+    config = await setup_test(hass, data={"pushy_credentials": DEFAULT_CREDENTIALS})
     assert "pushy_topics" not in config.data
     await cleanup_test(hass, config)
     assert (
@@ -275,22 +273,18 @@ async def test_unsubscribe_failure(
 ) -> None:
     """Test unsubscribe failure."""
     aioclient_mock.post(f"{API_ENDPOINT}/devices/unsubscribe", exc=ClientError)
-    config = await setup_test(
-        hass, aioclient_mock, data={"pushy_credentials": DEFAULT_CREDENTIALS}
-    )
+    config = await setup_test(hass, data={"pushy_credentials": DEFAULT_CREDENTIALS})
     await cleanup_test(hass, config)
 
 
 async def test_mqtt_parameters(
     hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
     freezer: FrozenDateTimeFactory,  # noqa: ARG001
     mqtt_mock: MqttMockPahoClient,
 ) -> None:
     """Test MQTT parameters."""
     config = await setup_test(
         hass,
-        aioclient_mock,
         data={"pushy_credentials": DEFAULT_CREDENTIALS},
     )
     mqtt_mock.username_pw_set.assert_called_with("user", "password")
@@ -304,14 +298,12 @@ async def test_mqtt_parameters(
 
 async def test_on_connect(
     hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
     mqtt_mock: MqttMockPahoClient,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test on_connect callback."""
     config = await setup_test(
         hass,
-        aioclient_mock,
         data={"pushy_credentials": DEFAULT_CREDENTIALS},
     )
     listener: PushyNotifications = mqtt_mock.user_data_set.call_args.args[0]
@@ -328,7 +320,6 @@ async def test_on_connect(
 
 async def test_simple_message(
     hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
     mqtt_mock: MqttMockPahoClient,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
@@ -338,7 +329,6 @@ async def test_simple_message(
     async_fire_time_changed(hass)
     config = await setup_test(
         hass,
-        aioclient_mock,
         data={"pushy_credentials": DEFAULT_CREDENTIALS},
     )
     state = hass.states.get(ENTITY_ID)
@@ -363,14 +353,12 @@ async def test_simple_message(
 
 async def test_message_no_throw(
     hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
     mqtt_mock: MqttMockPahoClient,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that message processing never throws an exception."""
     config = await setup_test(
         hass,
-        aioclient_mock,
         data={"pushy_credentials": DEFAULT_CREDENTIALS},
     )
     listener: PushyNotifications = mqtt_mock.user_data_set.call_args.args[0]
@@ -382,14 +370,12 @@ async def test_message_no_throw(
 
 async def test_message_test(
     hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
     mqtt_mock: MqttMockPahoClient,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that a test message is silently ignored."""
     config = await setup_test(
         hass,
-        aioclient_mock,
         data={"pushy_credentials": DEFAULT_CREDENTIALS},
     )
     listener: PushyNotifications = mqtt_mock.user_data_set.call_args.args[0]
