@@ -172,13 +172,13 @@ class TzevaAdomNotifications:
                 TZEVAADOM_ID_TO_AREA[city_id]
                 for city_id in message["data"].get("citiesIds") or []
             ]
-            # Filter out empty areas and ensure the message is a pre-alert.
+            # Filter out empty areas and ensure the message is a pre_alert.
             if not areas or message["data"].get("instructionType") != 0:
                 return None
             fields = {
                 # We use the official title for pre-alerts.
                 TITLE_FIELD: PRE_ALERT_TITLE,
-                CATEGORY_FIELD: 14,  # 14 is pre-alert and 13 is post-alert.
+                CATEGORY_FIELD: 14,  # 14 is pre_alert and 13 is post-alert.
                 "areas": areas,
                 "id": (
                     f"{MessageType.SYSTEM_MESSAGE}_{message['data']['notificationId']}"

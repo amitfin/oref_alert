@@ -53,6 +53,19 @@
             "named_end_time": {
                 "name": "{name} End Time"
             }
+        },
+        "event": {
+            "alert": {
+                "state_attributes": {
+                    "event_type": {
+                        "state": {
+                            "pre_alert": "Pre Alert",
+                            "alert": "Alert",
+                            "end": "End"
+                        }
+                    }
+                }
+            }
         }
     },
     "exceptions": {

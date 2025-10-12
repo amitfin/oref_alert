@@ -18,6 +18,8 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.entity_platform import async_get_platforms
 from homeassistant.helpers.service import async_register_admin_service
 
+from custom_components.oref_alert.event import RecordsSchemaLoader
+
 from .areas_checker import AreasChecker
 from .metadata.areas_and_groups import AREAS_AND_GROUPS
 from .pushy import PushyNotifications
@@ -66,7 +68,12 @@ from .const import (
 from .coordinator import OrefAlertCoordinatorUpdater, OrefAlertDataUpdateCoordinator
 from .metadata.areas import AREAS
 
-PLATFORMS = (Platform.BINARY_SENSOR, Platform.SENSOR, Platform.GEO_LOCATION)
+PLATFORMS = (
+    Platform.EVENT,
+    Platform.BINARY_SENSOR,
+    Platform.SENSOR,
+    Platform.GEO_LOCATION,
+)
 
 ADD_SENSOR_SCHEMA = vol.Schema(
     {
@@ -127,6 +134,7 @@ class OrefAlertRuntimeData:
     unload_template_extensions: Callable[[], None]
     pushy: PushyNotifications
     tzevaadom: TzevaAdomNotifications
+    records_schema: RecordsSchemaLoader
 
 
 type OrefAlertConfigEntry = ConfigEntry[OrefAlertRuntimeData]
@@ -308,6 +316,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
     coordinator = OrefAlertDataUpdateCoordinator(
         hass, entry, [pushy.alerts, tzevaadom.alerts]
     )
+    records_schema = RecordsSchemaLoader(hass)
+    await records_schema.load()
 
     entry.runtime_data = OrefAlertRuntimeData(
         coordinator,
@@ -316,6 +326,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
         await inject_template_extensions(hass),
         pushy,
         tzevaadom,
+        records_schema,
     )
 
     await entry.runtime_data.coordinator.async_config_entry_first_refresh()
@@ -346,6 +357,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) -
         return True
     entry.runtime_data.areas_checker.stop()
     entry.runtime_data.updater.stop()
+    entry.runtime_data.records_schema.stop()
     await asyncio.gather(
         entry.runtime_data.pushy.stop(), entry.runtime_data.tzevaadom.stop()
     )

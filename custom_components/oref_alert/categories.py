@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from typing import Final
+
 # Based on the content of: https://www.oref.org.il/alerts/alertCategories.json
 
 # Each category contains: (icon, emoji, is_alert)
-CATEGORY_METADATA = {
+CATEGORY_METADATA: Final = {
     1: ("rocket-launch", "🚀", True),  # missilealert
     2: ("airplane-alert", "✈️", True),  # uav
     3: ("chemical-weapon", "☢️", True),  # nonconventional
@@ -36,15 +38,17 @@ CATEGORY_METADATA = {
     28: ("alert-circle-check", "✅", False),  # flashdrill
 }
 
-DEFAULT_CATEGORY = CATEGORY_METADATA[4]
-UPDATE_CATEGORIES = {13, 14}
-FIRST_DRILL_CATEGORY = 15
+DEFAULT_CATEGORY: Final = CATEGORY_METADATA[4]
+PRE_ALERT_CATEGORY: Final = 14
+END_ALERT_CATEGORY: Final = 13
+UPDATE_CATEGORIES: Final = {PRE_ALERT_CATEGORY, END_ALERT_CATEGORY}
+FIRST_DRILL_CATEGORY: Final = 15
 
 # Reverse engineered mapping from real-time to history categories.
 # Look for '"aircraftIntrusion"' in the code of https://www.oref.org.il/
 # The first category-to-icon mapping is for real-time categories,
 # and the following mapping is for history categories.
-REAL_TIME_TO_HISTORY_CATEGORY = {
+REAL_TIME_TO_HISTORY_CATEGORY: Final = {
     1: 1,  # missile
     2: 4,  # info
     3: 7,  # earthquake
@@ -58,7 +62,7 @@ REAL_TIME_TO_HISTORY_CATEGORY = {
 
 # Reverse engineered mapping from Pushy "threatId" to history categories.
 # Look for 'HazardousMaterials("1")' in the decompile code of the Android APK.
-PUSHY_THREAD_ID_TO_HISTORY_CATEGORY = {
+PUSHY_THREAD_ID_TO_HISTORY_CATEGORY: Final = {
     0: 1,  # Missiles
     1: 12,  # HazardousMaterials
     2: 10,  # TerroristInfiltration
@@ -73,7 +77,7 @@ PUSHY_THREAD_ID_TO_HISTORY_CATEGORY = {
 }
 
 # Based on information provided by Tzeva Adom team.
-TZEVAADOM_THREAT_ID_TO_HISTORY_CATEGORY = {
+TZEVAADOM_THREAT_ID_TO_HISTORY_CATEGORY: Final = {
     0: 1,  # ירי טילים
     1: 12,  # אירוע חומרים מסוכנים
     2: 10,  # חשש לחדירת מחבלים

@@ -16,10 +16,12 @@
 # See here for more info: https://docs.pytest.org/en/latest/fixture.html (note that
 # pytest includes fixtures OOB which you can use as defined on this page)
 
+from asyncio import Event
 from collections.abc import Generator
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
+from aiohttp import WSMessage, WSMsgType
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
 from .utils import mock_urls
@@ -43,4 +45,24 @@ def _auto_aioclient_mock(aioclient_mock: AiohttpClientMocker) -> None:
 def _disable_asyncio_sleep() -> Generator[None]:
     """Disable sleep for all tests."""
     with patch("asyncio.sleep"):
+        yield
+
+
+@pytest.fixture(autouse=True)
+def _mock_ws() -> Generator[None]:
+    """Mock WebSocket connection."""
+    ws_closed = Event()
+
+    async def mock_receive() -> WSMessage:
+        await ws_closed.wait()
+        return WSMessage(type=WSMsgType.CLOSED, data="{}", extra=None)
+
+    ws = AsyncMock()
+    ws.receive = mock_receive
+    ws.close = AsyncMock(side_effect=lambda: ws_closed.set())
+
+    with patch(
+        "aiohttp.ClientSession.ws_connect",
+        new=lambda *_, **__: AsyncMock(__aenter__=AsyncMock(return_value=ws)),
+    ) as _:
         yield

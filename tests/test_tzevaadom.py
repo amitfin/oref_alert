@@ -45,12 +45,9 @@ def mock_ws(messages: list[WSMessage]) -> Generator[AsyncMock]:
     ws = AsyncMock()
     ws.receive = AsyncMock(side_effect=messages)
     ws.close = AsyncMock(side_effect=lambda: ws_closed.set())
-    ws.wait_closed = lambda: ws_closed.wait()
+    ws.wait_closed = ws_closed.wait
 
-    with (
-        patch("aiohttp.ClientSession.ws_connect") as connect,
-        patch("secrets.SystemRandom.uniform", return_value=0),
-    ):
+    with patch("aiohttp.ClientSession.ws_connect") as connect:
         connect.side_effect = [AsyncMock(__aenter__=AsyncMock(return_value=ws))]
         yield ws
 
