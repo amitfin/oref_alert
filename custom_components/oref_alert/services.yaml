@@ -2953,8 +2953,6 @@ synthetic_alert:
             label: ירי רקטות וטילים
           - value: '2'
             label: חדירת כלי טייס עוין
-          - value: '4'
-            label: התרעה כללית
           - value: '7'
             label: רעידת אדמה
           - value: '9'
@@ -2963,8 +2961,10 @@ synthetic_alert:
             label: חדירת מחבלים
           - value: '11'
             label: צונאמי
+          - value: '14'
+            label: הנחיה מקדימה
           - value: '13'
-            label: עדכון
+            label: האירוע הסתיים
     title:
       required: true
       default: התרעה סינטטית לצורכי בדיקות
