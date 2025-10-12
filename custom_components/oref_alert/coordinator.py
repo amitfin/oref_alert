@@ -80,14 +80,14 @@ class OrefAlertCoordinatorData:
         self.alerts: list[AlertType] = list(
             filter(lambda alert: _is_alert(alert), items)
         )
-        active_alerts: list[AlertType] = OrefAlertDataUpdateCoordinator.recent_alerts(
-            items, active_duration
+        self.active_items: list[AlertType] = (
+            OrefAlertDataUpdateCoordinator.recent_alerts(items, active_duration)
         )
         self.active_alerts: list[AlertType] = list(
-            filter(lambda alert: _is_alert(alert), active_alerts)
+            filter(lambda alert: _is_alert(alert), self.active_items)
         )
         self.updates: list[AlertType] = list(
-            filter(lambda alert: _is_update(alert), active_alerts)
+            filter(lambda alert: _is_update(alert), self.active_items)
         )
 
 

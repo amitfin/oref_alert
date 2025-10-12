@@ -71,6 +71,12 @@ def mqtt_mock() -> Generator[MqttMockPahoClient]:
         yield mock_instance
 
 
+@pytest.fixture(autouse=True)
+def _auto_aioclient_mock(aioclient_mock: AiohttpClientMocker) -> None:
+    """Mock aiohttp for relevant URLs."""
+    mock_pushy_urls(aioclient_mock)
+
+
 async def setup_test(
     hass: HomeAssistant,
     data: dict | None = None,
@@ -117,11 +123,8 @@ async def test_registration_params(
         raise AssertionError(msg)
 
 
-async def test_registration_persistency(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
-) -> None:
+async def test_registration_persistency(hass: HomeAssistant) -> None:
     """Test registration persistency."""
-    mock_pushy_urls(aioclient_mock)
     config = await setup_test(hass)
     assert config.data["pushy_credentials"] == DEFAULT_CREDENTIALS
     await cleanup_test(hass, config)
@@ -129,13 +132,30 @@ async def test_registration_persistency(
 
 async def test_registration_invalid_content(
     hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test registration invalid content."""
+    mock_pushy_urls(aioclient_mock, valid_credentials=False)
     config = await setup_test(hass)
     assert "pushy_credentials" not in config.data
     await cleanup_test(hass, config)
     assert "Pushy registration reply is invalid: {}" in caplog.text
+
+
+async def test_registration_exception(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test registration throwing exception."""
+    mock_pushy_urls(
+        aioclient_mock,
+        lambda: aioclient_mock.post(f"{API_ENDPOINT}/register", exc=Exception()),
+    )
+    config = await setup_test(hass)
+    await cleanup_test(hass, config)
+    assert f"'{API_ENDPOINT}/register' failed" in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -154,8 +174,6 @@ async def test_subscribe_unsubscribe(
     """Test subscribe/unsubscribe calls."""
     if debug:
         LOGGER.setLevel(logging.DEBUG)
-
-    mock_pushy_urls(aioclient_mock)
 
     config = await setup_test(
         hass, options={CONF_SENSORS: {"Oref Alert Test": ["פתח תקווה"]}}
@@ -188,7 +206,6 @@ async def test_selective_unsubscribe(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test selective unsubscribe."""
-    mock_pushy_urls(aioclient_mock)
     config = await setup_test(hass, options={CONF_AREAS: ["פתח תקווה"]})
     hass.config_entries.async_update_entry(
         config,
@@ -272,7 +289,12 @@ async def test_unsubscribe_failure(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test unsubscribe failure."""
-    aioclient_mock.post(f"{API_ENDPOINT}/devices/unsubscribe", exc=ClientError)
+    mock_pushy_urls(
+        aioclient_mock,
+        lambda: aioclient_mock.post(
+            f"{API_ENDPOINT}/devices/unsubscribe", exc=ClientError
+        ),
+    )
     config = await setup_test(hass, data={"pushy_credentials": DEFAULT_CREDENTIALS})
     await cleanup_test(hass, config)
 

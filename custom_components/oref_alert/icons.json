@@ -18,6 +18,11 @@
       "timer": {
         "default": "mdi:timer-sand"
       }
+    },
+    "event": {
+      "alert": {
+        "default": "mdi:bullhorn-variant-outline"
+      }
     }
   },
   "services": {

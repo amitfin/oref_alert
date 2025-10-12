@@ -53,6 +53,19 @@
             "named_end_time": {
                 "name": "{name} סיום התמגנות"
             }
+        },
+        "event": {
+            "alert": {
+                "state_attributes": {
+                    "event_type": {
+                        "state": {
+                            "pre_alert": "הנחיה מקדימה",
+                            "alert": "אזעקה",
+                            "end": "האירוע הסתיים"
+                        }
+                    }
+                }
+            }
         }
     },
     "exceptions": {
