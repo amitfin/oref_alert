@@ -11,7 +11,7 @@
 The integration is used to monitor the emergency messages coming from the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud Haoref). Its main usage is via the entity `event.oref_alert`. This entity receives the relevant messages based on HA's home location (coordinate). There are 3 types of events: `pre-alert`, `alert`, and `end`.
 The integration is installed and configured via the user interface. There is no YAML or templates involved.
 
-A demo video (in Hebrew) can be found [here](https://youtu.be/fajCOxFZFWc).
+A demo video (in Hebrew) can be found [here](https://youtu.be/xzxSxtSQIR8).
 
 ## Install
 
@@ -53,6 +53,50 @@ There are 3 configuration fields:
     3. `mobile`: the mobile notification channel of the official app.
     4. `tzevaadom`: the notification channel of [tzevaadom.co.il](https://www.tzevaadom.co.il/).
     5. `synthetic`: synthetic alert for testing purposes generated via the [synthetic-alert action](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.synthetic_alert).
+
+## Automation
+
+Here is a typical automation:
+
+```yaml
+triggers:
+  - trigger: state
+    entity_id: event.oref_alert
+actions:
+  - choose:
+      - conditions:
+          - condition: state
+            entity_id: event.oref_alert
+            attribute: event_type
+            state: pre_alert
+        sequence:
+          - ...
+      - conditions:
+          - condition: state
+            entity_id: event.oref_alert
+            attribute: event_type
+            state: alert
+        sequence:
+          - ...
+      - conditions:
+          - condition: state
+            entity_id: event.oref_alert
+            attribute: event_type
+            state: end
+        sequence:
+          - ...
+```
+
+Note that the following trigger is wrong and should ***not be used***:
+
+```yaml
+trigger: state
+entity_id: event.oref_alert
+attribute: event_type
+to: pre_alert
+```
+
+The reason is that `pre_alert` can follow a `pre_alert` if the 1st instance was not followed by `alert` (happens when the threat is eliminated early on). In such a case, the 2nd instance won't trigger the above condition since there is no change. It doesn't happen to the original automation since the state of `event.oref_alert` holds the timestamp so there is a change to `event.oref_alert` as a whole.
 
 ## Additional Sensors
 
