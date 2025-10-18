@@ -9,6 +9,7 @@ from homeassistant.components.event import ATTR_EVENT_TYPE, ATTR_EVENT_TYPES
 from homeassistant.const import ATTR_FRIENDLY_NAME, CONF_NAME, STATE_UNKNOWN
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
+    async_fire_time_changed,
 )
 
 from custom_components.oref_alert.const import (
@@ -23,11 +24,16 @@ from custom_components.oref_alert.const import (
     SYNTHETIC_ALERT_ACTION,
 )
 
+from .utils import mock_urls
+
 if TYPE_CHECKING:
     from freezegun.api import FrozenDateTimeFactory
     from homeassistant.core import Event, HomeAssistant
+    from pytest_homeassistant_custom_component.test_util.aiohttp import (
+        AiohttpClientMocker,
+    )
 
-AREA = "חולון"
+AREA = "תל אביב - מרכז העיר"
 DEFAULT_OPTIONS = {
     CONF_AREAS: [AREA],
     CONF_ALERT_ACTIVE_DURATION: 10,
@@ -103,8 +109,43 @@ async def test_event(
 async def test_dedup(
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
+    aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test identical event dedup logic."""
+    events: list[str] = []
+
+    async def event_listener(event: Event) -> None:
+        if event.data.get("entity_id") == "event.oref_alert" and (
+            new_state := event.data.get("new_state")
+        ):
+            events.append(new_state.attributes.get(ATTR_EVENT_TYPE))
+
+    hass.bus.async_listen("state_changed", event_listener)
+
+    mock_urls(aioclient_mock, "single_alert_real_time.json", None)
+
+    config_id = await async_setup(hass)
+
+    assert events == [None, "alert"]
+
+    freezer.tick(10)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert events == [None, "alert"]
+
+    freezer.tick(10 * 60)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert events == [None, "alert", "alert"]
+
+    await async_shutdown(hass, config_id)
+
+
+async def test_synthetic_dedup(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test synthetic dedup logic."""
     events: list[str] = []
 
     async def event_listener(event: Event) -> None:
@@ -128,17 +169,11 @@ async def test_dedup(
     await hass.async_block_till_done()
     assert events == [None, "alert"]
 
-    freezer.tick(9 * 60)
-    await hass.services.async_call(
-        DOMAIN,
-        SYNTHETIC_ALERT_ACTION,
-        {CONF_AREA: AREA, CATEGORY_FIELD: 1, CONF_DURATION: 100},
-        blocking=True,
-    )
-    await hass.async_block_till_done()
+    freezer.tick(10)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert events == [None, "alert"]
 
-    freezer.tick(2 * 60)
     await hass.services.async_call(
         DOMAIN,
         SYNTHETIC_ALERT_ACTION,
@@ -147,16 +182,6 @@ async def test_dedup(
     )
     await hass.async_block_till_done()
     assert events == [None, "alert", "alert"]
-
-    freezer.tick()
-    await hass.services.async_call(
-        DOMAIN,
-        SYNTHETIC_ALERT_ACTION,
-        {CONF_AREA: AREA, CATEGORY_FIELD: 13, CONF_DURATION: 100},
-        blocking=True,
-    )
-    await hass.async_block_till_done()
-    assert events == [None, "alert", "alert", "end"]
 
     await async_shutdown(hass, config_id)
 

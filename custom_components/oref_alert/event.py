@@ -17,10 +17,13 @@ from homeassistant.util import slugify
 from .const import (
     AREA_FIELD,
     ATTR_RECORD,
+    CHANNEL_FIELD,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_SENSORS,
+    DATE_FIELD,
     OREF_ALERT_UNIQUE_ID,
+    AlertSource,
     AlertType,
 )
 from .entity import OrefAlertCoordinatorEntity
@@ -113,6 +116,7 @@ class AlertEvent(OrefAlertCoordinatorEntity, EventEntity):
             minutes=config_entry.options[CONF_ALERT_ACTIVE_DURATION]
         )
         self._event_triggered = dt_util.utcnow() - self._active_duration
+        self._synthetic_timestamp: str | None = None
         if not name:
             self.use_device_name = True
             self._attr_unique_id = OREF_ALERT_UNIQUE_ID
@@ -127,18 +131,25 @@ class AlertEvent(OrefAlertCoordinatorEntity, EventEntity):
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         event_type, record = self._get_record()
-        if not event_type:
+        if not event_type or not record:
             return
 
-        # We only trigger for a different event, or if enough time has passed.
-        if (
-            event_type == self.state_attributes.get(ATTR_EVENT_TYPE)
-            and dt_util.utcnow() - self._event_triggered < self._active_duration
-        ):
-            return
+        # We always trigger for a different type of event
+        if event_type == self.state_attributes.get(ATTR_EVENT_TYPE):
+            # For non-synthetic events, we trigger only if enough time has passed
+            if record[CHANNEL_FIELD] != AlertSource.SYNTHETIC:
+                if dt_util.utcnow() - self._event_triggered < self._active_duration:
+                    return
+            # For synthetic events, we trigger only if the timestamp is different
+            elif record[DATE_FIELD] == self._synthetic_timestamp:
+                return
+
+        if record[CHANNEL_FIELD] != AlertSource.SYNTHETIC:
+            self._event_triggered = dt_util.utcnow()
+        else:
+            self._synthetic_timestamp = record[DATE_FIELD]
 
         self._trigger_event(event_type, {ATTR_RECORD: record})
-        self._event_triggered = dt_util.utcnow()
         self.async_write_ha_state()
 
     def _get_record(self) -> tuple[str, AlertType] | tuple[None, None]:

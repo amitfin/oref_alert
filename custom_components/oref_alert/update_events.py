@@ -54,7 +54,6 @@ class OrefAlertUpdateEventManager:
             config_entry.runtime_data.coordinator
         )
         self._coordinator.async_add_listener(self._async_update)
-        self._async_update()
 
     @callback
     def _async_update(self) -> None:
