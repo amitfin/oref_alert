@@ -307,28 +307,9 @@ Returns area by coordinate (lat, lon). The coordinate can be anywhere inside the
 
 ## Usages
 
-The basic usage is to trigger an automation rule when `event.oref_alert` is triggered. Some ideas for the `actions` section can be: play a song (can be less stressful when choosing the right song and setting the volume properly), open the lights and TV in the shelter, etc'. It's also possible to trigger an alert when the sensor is turning `off` for getting an indication when it's safe to get out of the shelter.
+The basic usage is to trigger an automation rule when `event.oref_alert` is triggered. Some ideas for the `actions` section can be: play a song (can be less stressful when choosing the right song and setting the volume properly), open the lights and TV in the shelter, etc'.
 
 Below are a few more examples:
-
-### Coloring State Icons
-
-```
-type: entities
-entities:
-  - entity: binary_sensor.oref_alert
-    card_mod:
-      style: |
-        :host {
-          --state-binary_sensor-on-color: red;
-          --state-binary_sensor-off-color: green;
-          }
-```
-
-<kbd>![image](https://github.com/amitfin/oref_alert/assets/19599059/9f6d08f0-8269-499a-9c2d-1fe263257457)</kbd>
-
-
-Note that it depends on the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.
 
 ### Displaying Countdown Timers
 
