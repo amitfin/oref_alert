@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from homeassistant.config_entries import ConfigEntryDisabler
+from homeassistant.config_entries import ConfigEntryDisabler, ConfigEntryState
 from homeassistant.const import (
     CONF_ENTITY_ID,
     CONF_NAME,
@@ -38,9 +38,13 @@ from custom_components.oref_alert.const import (
     REMOVE_SENSOR_ACTION,
     SYNTHETIC_ALERT_ACTION,
 )
+from custom_components.oref_alert.event import RECORDS_SCHEMA_URL
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
+    from pytest_homeassistant_custom_component.test_util.aiohttp import (
+        AiohttpClientMocker,
+    )
 
 DEFAULT_OPTIONS = {
     CONF_AREAS: [],
@@ -87,6 +91,30 @@ async def test_config_update(hass: HomeAssistant) -> None:
     attributes = state.attributes
     assert attributes is not None
     assert attributes[CONF_ALERT_ACTIVE_DURATION] == 5
+    assert await hass.config_entries.async_remove(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+
+async def test_config_retry(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test config retry on setup failure."""
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(RECORDS_SCHEMA_URL, status=500)
+    config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
+    config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert config_entry.state is ConfigEntryState.SETUP_RETRY
+    assert "Error loading oref_alert config entry. Will retry later." in caplog.text
+    assert (
+        "Config entry 'Mock Title' for oref_alert integration not ready yet"
+        in caplog.text
+    )
+
     assert await hass.config_entries.async_remove(config_entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
 

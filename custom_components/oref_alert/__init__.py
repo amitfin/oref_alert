@@ -58,6 +58,7 @@ from .const import (
     DOMAIN,
     EDIT_SENSOR_ACTION,
     END_TIME_ID_SUFFIX,
+    LOGGER,
     REMOVE_AREAS,
     REMOVE_SENSOR_ACTION,
     SYNTHETIC_ALERT_ACTION,
@@ -316,8 +317,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
     coordinator = OrefAlertDataUpdateCoordinator(
         hass, entry, [pushy.alerts, tzevaadom.alerts]
     )
-    records_schema = RecordsSchemaLoader(hass)
-    await records_schema.load()
 
     entry.runtime_data = OrefAlertRuntimeData(
         coordinator,
@@ -326,20 +325,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
         await inject_template_extensions(hass),
         pushy,
         tzevaadom,
-        records_schema,
+        RecordsSchemaLoader(hass),
     )
-
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     OrefAlertUpdateEventManager(hass, entry)
 
-    await entry.runtime_data.coordinator.async_config_entry_first_refresh()
+    try:
+        await entry.runtime_data.records_schema.load()
+
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+        await entry.runtime_data.coordinator.async_config_entry_first_refresh()
+
+        await asyncio.gather(
+            entry.runtime_data.pushy.start(), entry.runtime_data.tzevaadom.start()
+        )
+    except Exception as exc:
+        LOGGER.exception(f"Error loading {DOMAIN} config entry. Will retry later.")
+        raise ConfigEntryNotReady from exc
 
     entry.runtime_data.updater.start()
-
-    await asyncio.gather(
-        entry.runtime_data.pushy.start(), entry.runtime_data.tzevaadom.start()
-    )
 
     return True
 
