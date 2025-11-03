@@ -9,7 +9,7 @@ from collections import deque
 from contextlib import contextmanager
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from aiohttp import WSMessage, WSMsgType
