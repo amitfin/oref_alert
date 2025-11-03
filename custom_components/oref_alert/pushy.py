@@ -209,7 +209,7 @@ class PushyNotifications:
                     "devices/subscribe", {**self._credentials, TOPICS_KEY: added}
                 )
             except:  # noqa: E722
-                LOGGER.exception(f"'{API_ENDPOINT}/subscribe' failed")
+                LOGGER.exception(f"'{API_ENDPOINT}/devices/subscribe' failed")
                 return True
             LOGGER.debug("Pushy subscribe is done: %s", added)
 
@@ -232,7 +232,7 @@ class PushyNotifications:
                 "devices/unsubscribe", {**self._credentials, TOPICS_KEY: topics}
             )
         except:  # noqa: E722
-            LOGGER.exception(f"'{API_ENDPOINT}/unsubscribe' failed")
+            LOGGER.exception(f"'{API_ENDPOINT}/devices/unsubscribe' failed")
             return
         LOGGER.debug("Pushy unsubscribe is done: %s", topics)
 

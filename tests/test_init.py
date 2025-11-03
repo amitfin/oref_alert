@@ -95,6 +95,11 @@ async def test_config_update(hass: HomeAssistant) -> None:
     await hass.async_block_till_done(wait_background_tasks=True)
 
 
+@pytest.mark.parametrize(
+    "allowed_errors",
+    [["Error loading oref_alert config entry. Will retry later."]],
+    indirect=True,
+)
 async def test_config_retry(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
@@ -260,6 +265,7 @@ async def test_sensor_name_migration(hass: HomeAssistant) -> None:
         domain=DOMAIN,
         options={
             CONF_AREAS: [],
+            CONF_ALERT_ACTIVE_DURATION: 10,
             CONF_SENSORS: {"Oref Alert Test": []},
         },
     )

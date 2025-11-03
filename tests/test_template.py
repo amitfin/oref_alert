@@ -129,6 +129,11 @@ def test_custom_templates(
     assert Template(template_str, hass).async_render() == expected
 
 
+@pytest.mark.parametrize(
+    "allowed_errors",
+    [["Template variable error:"]],
+    indirect=True,
+)
 def test_limited_environment(hass: HomeAssistant, load_oref_integration: None) -> None:  # noqa: ARG001
     """Test limited environment."""
     statement = "{{ oref_find_area(32.072, 34.879) == 'פתח תקווה' }}"
@@ -146,6 +151,11 @@ def test_limited_environment(hass: HomeAssistant, load_oref_integration: None) -
         Template(statement, hass).async_render(limited=True, log_fn=lambda _1, _2: None)
 
 
+@pytest.mark.parametrize(
+    "allowed_errors",
+    [["Template variable error:"]],
+    indirect=True,
+)
 async def test_unload(hass: HomeAssistant) -> None:
     """Test no template extensions after unload."""
     statement = "{{ oref_areas() | length > 0 }}"

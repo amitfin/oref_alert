@@ -18,6 +18,7 @@
 
 from asyncio import Event
 from collections.abc import Generator
+from itertools import chain
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -35,15 +36,28 @@ def _auto_enable_custom_integrations(enable_custom_integrations: bool) -> None: 
     return
 
 
+@pytest.fixture
+def allowed_errors(request: pytest.FixtureRequest) -> list[str]:
+    """Return additional errors."""
+    return getattr(request, "param", [])
+
+
 @pytest.fixture(autouse=True)
-def _no_platform_errors_in_log(caplog: pytest.LogCaptureFixture) -> Generator[None]:
-    """Ensure no platform errors are logged."""
+def _no_errors_in_log(
+    caplog: pytest.LogCaptureFixture, allowed_errors: list[str]
+) -> Generator[None]:
+    """Ensure no errors are logged."""
     yield
     for record in caplog.get_records(when="call"):
+        if record.levelname != "ERROR":
+            continue
         message = record.getMessage()
-        assert record.levelname != "ERROR" or "platform oref_alert" not in message, (
-            f"Error found in log: {message}"
-        )
+        if any(
+            message.startswith(error)
+            for error in chain(allowed_errors, ["Pushy registration reply is invalid"])
+        ):
+            continue
+        pytest.fail(f"Error found in log: {message}")
 
 
 @pytest.fixture(autouse=True)

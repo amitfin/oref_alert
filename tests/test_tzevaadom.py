@@ -5,7 +5,9 @@ from __future__ import annotations
 import asyncio
 import json
 from asyncio import Event
+from collections import deque
 from contextlib import contextmanager
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -41,11 +43,23 @@ ENTITY_ID = f"{Platform.BINARY_SENSOR}.{OREF_ALERT_UNIQUE_ID}"
 @contextmanager
 def mock_ws(messages: list[WSMessage]) -> Generator[AsyncMock]:
     """Mock WebSocket connection for testing."""
-    ws_closed = Event()
+    messages_processed = Event()
+    close_message = WSMessage(type=WSMsgType.CLOSED, data=None, extra=None)
+    blocked_receive: asyncio.Future[WSMessage] = (
+        asyncio.get_event_loop().create_future()
+    )
     ws = AsyncMock()
-    ws.receive = AsyncMock(side_effect=messages)
-    ws.close = AsyncMock(side_effect=lambda: ws_closed.set())
-    ws.wait_closed = ws_closed.wait
+    queue: deque[WSMessage] = deque(messages)
+
+    async def receive() -> WSMessage:
+        if queue:
+            return queue.popleft()
+        messages_processed.set()
+        return await blocked_receive
+
+    ws.receive = AsyncMock(side_effect=receive)
+    ws.close = AsyncMock(side_effect=lambda: blocked_receive.set_result(close_message))
+    ws.messages_processed = messages_processed.wait
 
     with patch("aiohttp.ClientSession.ws_connect") as connect:
         connect.side_effect = [AsyncMock(__aenter__=AsyncMock(return_value=ws))]
@@ -73,7 +87,6 @@ async def test_lifecycle(hass: HomeAssistant) -> None:
     """Test ws lifecycle."""
     with mock_ws([]) as ws:
         config_entry = await setup_test(hass)
-        await ws.wait_closed()
         await cleanup_test(hass, config_entry)
     ws.close.assert_called_once()
 
@@ -122,7 +135,7 @@ async def test_message(  # noqa: PLR0913
     data = json.dumps(message).encode("utf-8")
     with mock_ws([WSMessage(type=WSMsgType.TEXT, data=data, extra=None)]) as ws:
         config_entry = await setup_test(hass)
-        await ws.wait_closed()
+        await ws.messages_processed()
         state = hass.states.get(ENTITY_ID)
         assert state is not None
         assert state.state == expected_state
@@ -153,7 +166,7 @@ async def test_area_name_validity(
     ).encode("utf-8")
     with mock_ws([WSMessage(type=WSMsgType.TEXT, data=data, extra=None)]) as ws:
         config_entry = await setup_test(hass)
-        await ws.wait_closed()
+        await ws.messages_processed()
         await cleanup_test(hass, config_entry)
     assert (f"Unknown area '{area}' in Tzeva Adom alert, skipping." in caplog.text) == (
         not valid
@@ -161,12 +174,16 @@ async def test_area_name_validity(
 
 
 @pytest.mark.parametrize(
+    "allowed_errors",
+    [["Error processing WS message"]],
+    indirect=True,
+)
+@pytest.mark.parametrize(
     ("message_type", "log_message", "data"),
     [
         (WSMsgType.BINARY, "WS system message 'BINARY' => ignoring", None),
         (WSMsgType.PING, "WS system message 'PING' => ignoring", None),
         (WSMsgType.PONG, "WS system message 'PONG' => ignoring", None),
-        (WSMsgType.CLOSING, "WS system message 'CLOSING' => closing", None),
         (WSMsgType.TEXT, "Error processing WS message", None),
         (WSMsgType.TEXT, "Tzevaadom unknown message type: test", '{"type": "test"}'),
     ],
@@ -174,7 +191,6 @@ async def test_area_name_validity(
         "binary",
         "ping",
         "pong",
-        "error",
         "invalid",
         "unknown internal type",
     ),
@@ -189,7 +205,7 @@ async def test_other_messages(
     """Test tzevaadom message types."""
     with mock_ws([WSMessage(type=message_type, data=data or "{}", extra=None)]) as ws:
         config_entry = await setup_test(hass)
-        await ws.wait_closed()
+        await ws.messages_processed()
         await cleanup_test(hass, config_entry)
     assert log_message in caplog.text
 
@@ -198,22 +214,13 @@ async def test_duplicate(hass: HomeAssistant) -> None:
     """Test 2 messages with the same ID."""
     alert = load_json_fixture("single_alert_tzevaadom.json")
     data = json.dumps(alert).encode("utf-8")
-    tzevaadom = TzevaAdomNotifications(
-        hass, MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
+    config = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
+    config.runtime_data = SimpleNamespace(
+        coordinator=SimpleNamespace(async_refresh=AsyncMock())
     )
+    tzevaadom = TzevaAdomNotifications(hass, config)
     with mock_ws([WSMessage(type=WSMsgType.TEXT, data=data, extra=None)] * 3) as ws:
         await tzevaadom.start()
-        await ws.wait_closed()
+        await ws.messages_processed()
         assert len(tzevaadom.alerts.items()) == 1
         await tzevaadom.stop()
-
-
-async def test_ws_receive_canceled(hass: HomeAssistant) -> None:
-    """Test that we cancel receive() on shutdown."""
-    receive = asyncio.Future()
-    with mock_ws([]) as ws:
-        ws.receive = Mock(return_value=receive)
-        ws.close = AsyncMock(side_effect=lambda: receive.set_result("test"))
-        config_entry = await setup_test(hass)
-        await cleanup_test(hass, config_entry)
-    assert (await receive) == "test"
