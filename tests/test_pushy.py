@@ -174,6 +174,8 @@ async def test_subscribe_unsubscribe(
     """Test subscribe/unsubscribe calls."""
     if debug:
         LOGGER.setLevel(logging.DEBUG)
+    else:
+        LOGGER.setLevel(logging.INFO)
 
     config = await setup_test(
         hass, options={CONF_SENSORS: {"Oref Alert Test": ["פתח תקווה"]}}

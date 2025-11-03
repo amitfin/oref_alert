@@ -26,6 +26,7 @@
     "homeassistant",
     "ioref",
     "KEEPALIVE",
+    "levelname",
     "migun",
     "MIGUN",
     "mqtt",

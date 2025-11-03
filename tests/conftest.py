@@ -36,6 +36,17 @@ def _auto_enable_custom_integrations(enable_custom_integrations: bool) -> None: 
 
 
 @pytest.fixture(autouse=True)
+def _no_platform_errors_in_log(caplog: pytest.LogCaptureFixture) -> Generator[None]:
+    """Ensure no platform errors are logged."""
+    yield
+    for record in caplog.get_records(when="call"):
+        message = record.getMessage()
+        assert record.levelname != "ERROR" or "platform oref_alert" not in message, (
+            f"Error found in log: {message}"
+        )
+
+
+@pytest.fixture(autouse=True)
 def _auto_aioclient_mock(aioclient_mock: AiohttpClientMocker) -> None:
     """Mock aiohttp with empty result relevant URLs."""
     mock_urls(aioclient_mock, None, None)

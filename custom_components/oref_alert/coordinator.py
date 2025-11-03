@@ -131,6 +131,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         self._channels: list[TTLDeque] = channels
         self._channels_change: list[datetime | None] = []
         self._synthetic_alerts: list[tuple[float, AlertType]] = []
+        self.data = OrefAlertCoordinatorData([], self._active_duration)
 
     async def _async_update_data(self) -> OrefAlertCoordinatorData:
         """Request the data from Oref servers.."""
