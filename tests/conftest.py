@@ -18,16 +18,21 @@
 
 import logging
 from asyncio import Event
-from collections.abc import Generator
 from itertools import chain
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from aiohttp import WSMessage, WSMsgType
-from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
 from .utils import mock_urls
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from pytest_homeassistant_custom_component.test_util.aiohttp import (
+        AiohttpClientMocker,
+    )
 
 
 # This fixture enables loading custom integrations in all tests.

@@ -1,16 +1,21 @@
 """The tests for the areas_checker file."""
 
 from datetime import timedelta
+from typing import TYPE_CHECKING
 
 import pytest
-from freezegun.api import FrozenDateTimeFactory
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
-from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
 from custom_components.oref_alert.areas_checker import CITIES_MIX_URL, AreasChecker
 from custom_components.oref_alert.const import DOMAIN
+
+if TYPE_CHECKING:
+    from freezegun.api import FrozenDateTimeFactory
+    from homeassistant.core import HomeAssistant
+    from pytest_homeassistant_custom_component.test_util.aiohttp import (
+        AiohttpClientMocker,
+    )
 
 
 async def _areas_check(

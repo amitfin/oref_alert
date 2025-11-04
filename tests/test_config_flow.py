@@ -1,7 +1,8 @@
 """The tests for the config_flow file."""
 
+from typing import TYPE_CHECKING
+
 from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -14,6 +15,9 @@ from custom_components.oref_alert.const import (
     DOMAIN,
     TITLE,
 )
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
 
 DEFAULT_OPTIONS = {
     CONF_AREAS: [],

@@ -2,19 +2,16 @@
 
 from datetime import timedelta
 from http import HTTPStatus
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import homeassistant.util.dt as dt_util
 import pytest
-from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
 )
-from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
 from custom_components.oref_alert.const import (
     CONF_ALERT_ACTIVE_DURATION,
@@ -35,6 +32,13 @@ from custom_components.oref_alert.coordinator import (
 from custom_components.oref_alert.ttl_deque import TTLDeque
 
 from .utils import load_json_fixture, mock_urls
+
+if TYPE_CHECKING:
+    from freezegun.api import FrozenDateTimeFactory
+    from homeassistant.core import HomeAssistant
+    from pytest_homeassistant_custom_component.test_util.aiohttp import (
+        AiohttpClientMocker,
+    )
 
 
 @pytest.mark.parametrize(

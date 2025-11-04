@@ -1,10 +1,8 @@
 """Test custom templates."""
 
-from collections.abc import AsyncGenerator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
-from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.template import Template
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -16,6 +14,11 @@ from custom_components.oref_alert.const import (
 )
 from custom_components.oref_alert.metadata.areas import AREAS
 from custom_components.oref_alert.metadata.areas_and_groups import AREAS_AND_GROUPS
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
+    from homeassistant.core import HomeAssistant
 
 
 async def async_setup(hass: HomeAssistant) -> str:
