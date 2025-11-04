@@ -96,7 +96,7 @@ async def test_config_update(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.parametrize(
-    "allowed_errors",
+    "allowed_logs",
     [["Error loading oref_alert config entry. Will retry later."]],
     indirect=True,
 )

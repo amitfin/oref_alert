@@ -24,6 +24,16 @@ async def _areas_check(
     checker.stop()
 
 
+@pytest.mark.parametrize(
+    "allowed_logs",
+    [
+        [
+            "The following Oref Alert areas were removed:",
+            "The following Oref Alert areas were added:",
+        ]
+    ],
+    indirect=True,
+)
 async def test_areas_check_failure(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,

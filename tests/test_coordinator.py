@@ -230,7 +230,7 @@ async def test_updates(
 
 
 @pytest.mark.parametrize(
-    "allowed_errors",
+    "allowed_logs",
     [["Failed to fetch", "Unexpected error fetching oref_alert"]],
     indirect=True,
 )
@@ -392,7 +392,7 @@ async def test_area_name_typo(
 
 
 @pytest.mark.parametrize(
-    "allowed_errors",
+    "allowed_logs",
     [["Failed to fetch", "Unexpected error fetching oref_alert"]],
     indirect=True,
 )

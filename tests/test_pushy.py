@@ -144,7 +144,7 @@ async def test_registration_invalid_content(
 
 
 @pytest.mark.parametrize(
-    "allowed_errors",
+    "allowed_logs",
     [[f"'{API_ENDPOINT}/register' failed"]],
     indirect=True,
 )
@@ -271,7 +271,7 @@ async def test_validation_failure(
 
 
 @pytest.mark.parametrize(
-    "allowed_errors",
+    "allowed_logs",
     [[f"'{API_ENDPOINT}/devices/subscribe' failed"]],
     indirect=True,
 )
@@ -298,7 +298,7 @@ async def test_subscribe_failure(
 
 
 @pytest.mark.parametrize(
-    "allowed_errors",
+    "allowed_logs",
     [[f"'{API_ENDPOINT}/devices/unsubscribe' failed"]],
     indirect=True,
 )
@@ -335,6 +335,11 @@ async def test_mqtt_parameters(
     mqtt_mock.disconnect.assert_called()
 
 
+@pytest.mark.parametrize(
+    "allowed_logs",
+    [["MQTT connection failed: Server unavailable."]],
+    indirect=True,
+)
 async def test_on_connect(
     hass: HomeAssistant,
     mqtt_mock: MqttMockPahoClient,
@@ -391,7 +396,7 @@ async def test_simple_message(
 
 
 @pytest.mark.parametrize(
-    "allowed_errors",
+    "allowed_logs",
     [["Failed to process MQTT message."]],
     indirect=True,
 )

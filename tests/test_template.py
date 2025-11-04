@@ -130,7 +130,7 @@ def test_custom_templates(
 
 
 @pytest.mark.parametrize(
-    "allowed_errors",
+    "allowed_logs",
     [["Template variable error:"]],
     indirect=True,
 )
@@ -152,7 +152,7 @@ def test_limited_environment(hass: HomeAssistant, load_oref_integration: None) -
 
 
 @pytest.mark.parametrize(
-    "allowed_errors",
+    "allowed_logs",
     [["Template variable error:"]],
     indirect=True,
 )

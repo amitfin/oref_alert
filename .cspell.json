@@ -2,6 +2,7 @@
   "version": "0.2",
   "language": "en",
   "words": [
+    "addfinalizer",
     "Adom",
     "aioclient",
     "aiofiles",
@@ -27,6 +28,7 @@
     "ioref",
     "KEEPALIVE",
     "levelname",
+    "levelno",
     "migun",
     "MIGUN",
     "mqtt",

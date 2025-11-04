@@ -211,7 +211,7 @@ async def test_state_no_caching_for_synthetic(
 
 
 @pytest.mark.parametrize(
-    "allowed_errors",
+    "allowed_logs",
     [["Alert has an unrecognized area"]],
     indirect=True,
 )
