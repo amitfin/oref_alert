@@ -143,11 +143,7 @@ async def test_registration_invalid_content(
     assert "Pushy registration reply is invalid: {}" in caplog.text
 
 
-@pytest.mark.parametrize(
-    "allowed_logs",
-    [[f"'{API_ENDPOINT}/register' failed"]],
-    indirect=True,
-)
+@pytest.mark.allowed_logs([f"'{API_ENDPOINT}/register' failed"])
 async def test_registration_exception(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
@@ -270,11 +266,7 @@ async def test_validation_failure(
     assert config.data["pushy_credentials"] == DEFAULT_CREDENTIALS
 
 
-@pytest.mark.parametrize(
-    "allowed_logs",
-    [[f"'{API_ENDPOINT}/devices/subscribe' failed"]],
-    indirect=True,
-)
+@pytest.mark.allowed_logs([f"'{API_ENDPOINT}/devices/subscribe' failed"])
 async def test_subscribe_failure(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
@@ -297,11 +289,7 @@ async def test_subscribe_failure(
     ) in caplog.text
 
 
-@pytest.mark.parametrize(
-    "allowed_logs",
-    [[f"'{API_ENDPOINT}/devices/unsubscribe' failed"]],
-    indirect=True,
-)
+@pytest.mark.allowed_logs([f"'{API_ENDPOINT}/devices/unsubscribe' failed"])
 async def test_unsubscribe_failure(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
@@ -335,11 +323,7 @@ async def test_mqtt_parameters(
     mqtt_mock.disconnect.assert_called()
 
 
-@pytest.mark.parametrize(
-    "allowed_logs",
-    [["MQTT connection failed: Server unavailable."]],
-    indirect=True,
-)
+@pytest.mark.allowed_logs(["MQTT connection failed: Server unavailable."])
 async def test_on_connect(
     hass: HomeAssistant,
     mqtt_mock: MqttMockPahoClient,
@@ -395,11 +379,7 @@ async def test_simple_message(
     await cleanup_test(hass, config)
 
 
-@pytest.mark.parametrize(
-    "allowed_logs",
-    [["Failed to process MQTT message."]],
-    indirect=True,
-)
+@pytest.mark.allowed_logs(["Failed to process MQTT message."])
 async def test_message_no_throw(
     hass: HomeAssistant,
     mqtt_mock: MqttMockPahoClient,

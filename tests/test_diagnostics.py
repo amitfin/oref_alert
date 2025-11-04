@@ -15,11 +15,7 @@ from custom_components.oref_alert.const import (
 )
 
 
-@pytest.mark.parametrize(
-    "allowed_logs",
-    [["zlib_ng and isal are not available"]],
-    indirect=True,
-)
+@pytest.mark.allowed_logs(["zlib_ng and isal are not available"])
 async def test_diagnostics(
     hass: HomeAssistant,
     hass_client: ClientSessionGenerator,

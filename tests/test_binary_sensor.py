@@ -210,11 +210,7 @@ async def test_state_no_caching_for_synthetic(
     await async_shutdown(hass, config_id)
 
 
-@pytest.mark.parametrize(
-    "allowed_logs",
-    [["Alert has an unrecognized area"]],
-    indirect=True,
-)
+@pytest.mark.allowed_logs(["Alert has an unrecognized area"])
 async def test_unrecognized_area(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,

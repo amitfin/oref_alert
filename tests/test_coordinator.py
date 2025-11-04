@@ -229,11 +229,7 @@ async def test_updates(
     await coordinator.async_shutdown()
 
 
-@pytest.mark.parametrize(
-    "allowed_logs",
-    [["Failed to fetch", "Unexpected error fetching oref_alert"]],
-    indirect=True,
-)
+@pytest.mark.allowed_logs(["Failed to fetch", "Unexpected error fetching oref_alert"])
 async def test_server_down_during_init(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
@@ -391,11 +387,7 @@ async def test_area_name_typo(
     assert coordinator.data.alerts[0]["data"] == "ביר הדאג\u0027"
 
 
-@pytest.mark.parametrize(
-    "allowed_logs",
-    [["Failed to fetch", "Unexpected error fetching oref_alert"]],
-    indirect=True,
-)
+@pytest.mark.allowed_logs(["Failed to fetch", "Unexpected error fetching oref_alert"])
 async def test_json_parsing_error(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,

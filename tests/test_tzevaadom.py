@@ -91,11 +91,7 @@ async def test_lifecycle(hass: HomeAssistant) -> None:
     ws.close.assert_called_once()
 
 
-@pytest.mark.parametrize(
-    "allowed_logs",
-    [["Unknown area 'dummy'"]],
-    indirect=True,
-)
+@pytest.mark.allowed_logs(["Unknown area 'dummy'"])
 @pytest.mark.parametrize(
     ("alert", "overrides", "expected_state", "expected_updates"),
     [
@@ -178,10 +174,8 @@ async def test_area_name_validity(
     )
 
 
-@pytest.mark.parametrize(
-    "allowed_logs",
-    [["Error processing WS message", "Tzevaadom unknown message type: test"]],
-    indirect=True,
+@pytest.mark.allowed_logs(
+    ["Error processing WS message", "Tzevaadom unknown message type: test"]
 )
 @pytest.mark.parametrize(
     ("message_type", "log_message", "data"),

@@ -95,11 +95,7 @@ async def test_config_update(hass: HomeAssistant) -> None:
     await hass.async_block_till_done(wait_background_tasks=True)
 
 
-@pytest.mark.parametrize(
-    "allowed_logs",
-    [["Error loading oref_alert config entry. Will retry later."]],
-    indirect=True,
-)
+@pytest.mark.allowed_logs(["Error loading oref_alert config entry. Will retry later."])
 async def test_config_retry(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
