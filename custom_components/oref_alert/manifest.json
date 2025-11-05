@@ -14,7 +14,7 @@
   "requirements": [
     "aiofiles",
     "paho-mqtt",
-    "shapely==2.0.7"
+    "shapely==2.1.2"
   ],
   "version": "1.0.0"
 }
