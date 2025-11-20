@@ -2,15 +2,15 @@
 """Generate the metadata files."""
 
 import argparse
+import asyncio
 import json
-import subprocess
 import sys
-import time
 import zipfile
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
+import aiohttp
 import requests
 import yaml
 
@@ -71,8 +71,9 @@ class OrefMetadata:
         self.proxy = None
         self._read_args()
 
-    def _fetch_data(self) -> None:
+    async def _fetch_data(self) -> None:
         """Fetch all required data."""
+        self._http_client = aiohttp.ClientSession()
         self._root_directory = Path(__file__).parent.parent
         self._output_directory = self._root_directory / RELATIVE_OUTPUT_DIRECTORY
         self._cities_mix: list[Any] = self._fix_areas(
@@ -100,9 +101,10 @@ class OrefMetadata:
         self._segments_data = self._get_segments_data()
         self._segments = self._get_segments_to_area()
         self._area_info = self._get_area_info()
-        self._area_to_polygon = self._get_area_to_polygon()
+        self._area_to_polygon = await self._get_area_to_polygon()
         self._tzeva_cities = self._get_tzevaadom_data()
         self._tzevaadom_id_to_area = self._get_tzevaadom_id_to_area()
+        await self._http_client.close()
 
     def _read_args(self) -> None:
         """Read program arguments."""
@@ -119,6 +121,15 @@ class OrefMetadata:
         )
         result.raise_for_status()
         return result.json()
+
+    async def _async_fetch_url_json(self, url: str) -> Any:
+        """Fetch URL and return JSON reply."""
+        async with self._http_client.get(
+            url,
+            proxy=self.proxy if self.proxy else None,
+        ) as response:
+            response.raise_for_status()
+            return await response.json()
 
     def _fix_areas(self, data: Any) -> Any:
         """Fix spelling error and remove irrelevant items."""
@@ -268,32 +279,32 @@ class OrefMetadata:
                 areas[area] = ALL_AREAS[area]
         return areas
 
-    def _get_area_to_polygon(self) -> dict[str, list[list[float]]]:
+    async def _get_area_to_polygon(self) -> dict[str, list[list[float]]]:
         """Get area polygons."""
-        result = {}
-        for i, area in enumerate(self._areas_no_group):
-            print(  # noqa: T201
-                f"\r{i * 100 // len(self._areas_no_group)}%",
-                end="" if i < len(self._areas_no_group) - 1 else "\r",
+        return dict(
+            await asyncio.gather(
+                *[
+                    self._get_polygon(area)
+                    for area in self._areas_no_group
+                    if area not in ALL_AREAS_ALIASES
+                ]
             )
-            if area in ALL_AREAS_ALIASES:
-                continue
-            for _ in range(10):
-                with suppress(Exception):
-                    data = self._fetch_url_json(
-                        f"{POLYGON_URL}{self._area_info[area]['segment']}"
-                    )
-                    if (
-                        data["segmentId"]
-                        and int(data["segmentId"]) == self._area_info[area]["segment"]
-                    ):
-                        result[area] = data["polygonPointList"][0]
-                        break
-                time.sleep(0.1)
-            else:
-                msg = f"Failed to fetch polygon for area {area}"
-                raise RuntimeError(msg)
-        return result
+        )
+
+    async def _get_polygon(self, area: str) -> tuple[str, list[list[float]]]:
+        """Get area's polygon."""
+        for _ in range(10):
+            with suppress(Exception):
+                data = await self._async_fetch_url_json(
+                    f"{POLYGON_URL}{self._area_info[area]['segment']}"
+                )
+                if (
+                    data["segmentId"]
+                    and int(data["segmentId"]) == self._area_info[area]["segment"]
+                ):
+                    return area, data["polygonPointList"][0]
+        msg = f"Failed to fetch polygon for area {area}"
+        raise RuntimeError(msg)
 
     def _get_tzevaadom_id_to_area(self) -> dict[int, str]:
         """Get tzevaadom area id to its name."""
@@ -306,9 +317,9 @@ class OrefMetadata:
         areas.update(TZEVAADOM_ALL_AREAS)
         return dict(sorted(areas.items()))
 
-    def generate(self) -> None:
+    async def generate(self) -> None:
         """Generate the output files."""
-        self._fetch_data()
+        await self._fetch_data()
         for file_name, variable_name, variable_data in (
             (
                 AREAS_AND_GROUPS_OUTPUT,
@@ -412,8 +423,14 @@ class OrefMetadata:
                 ensure_ascii=False,
             )
 
-        subprocess.run(["ruff", "format", self._output_directory], check=False)  # noqa: S603, S607
+        await (
+            await asyncio.create_subprocess_exec(
+                "ruff",
+                "format",
+                str(self._output_directory),
+            )
+        ).wait()
 
 
 if __name__ == "__main__":
-    OrefMetadata().generate()
+    asyncio.run(OrefMetadata().generate())
