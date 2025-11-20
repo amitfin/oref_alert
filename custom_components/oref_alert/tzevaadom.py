@@ -171,6 +171,7 @@ class TzevaAdomNotifications:
             areas = [
                 TZEVAADOM_ID_TO_AREA[city_id]
                 for city_id in message["data"].get("citiesIds") or []
+                if city_id in TZEVAADOM_ID_TO_AREA
             ]
             # Filter out empty areas and ensure the message is a pre_alert.
             if not areas or message["data"].get("instructionType") != 0:

@@ -1,3 +1,3 @@
 """Metadata from Oref backend."""
 
-ALL_AREAS_ALIASES = {"ברחבי הארץ", "כל הארץ"}
+ALL_AREAS_ALIASES = {"כל הארץ"}

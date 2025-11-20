@@ -79,14 +79,14 @@ async def test_entity(
     )
     state = hass.states.get(ENTITY_ID)
     assert state is not None
-    assert state.state == "80.6"
+    assert state.state == "80.7"
     assert state.name == "בארי"
     assert state.attributes[CONF_SOURCE] == DOMAIN
-    assert state.attributes[ATTR_LATITUDE] == 31.4245
-    assert state.attributes[ATTR_LONGITUDE] == 34.4926
+    assert state.attributes[ATTR_LATITUDE] == 31.42381
+    assert state.attributes[ATTR_LONGITUDE] == 34.4914
     assert state.attributes[CONF_UNIT_OF_MEASUREMENT] == UnitOfLength.KILOMETERS
     assert state.attributes[CONF_FRIENDLY_NAME] == "בארי"
-    assert state.attributes[ATTR_HOME_DISTANCE] == 80.6
+    assert state.attributes[ATTR_HOME_DISTANCE] == 80.7
     assert state.attributes[ATTR_DATE] == dt_util.parse_datetime(
         "2023-10-07 06:30:00+03:00"
     )
@@ -234,9 +234,9 @@ async def test_bus_event(
     assert len(events) == 1
     assert events[0].data == {
         "area": "בארי",
-        "home_distance": 80.6,
-        "latitude": 31.4245,
-        "longitude": 34.4926,
+        "home_distance": 80.7,
+        "latitude": 31.423811318545116,
+        "longitude": 34.491396100227774,
         "category": 1,
         "title": "ירי רקטות וטילים",
         "icon": "mdi:rocket-launch",

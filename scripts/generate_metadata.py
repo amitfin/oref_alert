@@ -5,7 +5,9 @@ import argparse
 import json
 import subprocess
 import sys
+import time
 import zipfile
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +16,10 @@ import yaml
 
 sys.path.insert(0, str((Path(__file__).parent / "..").resolve()))
 
-from custom_components.oref_alert.areas_checker import AREAS_TO_IGNORE
+from custom_components.oref_alert.areas_checker import (
+    CITIES_MIX_URL,
+    DEPRECATION_SUFFIX,
+)
 from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
 from custom_components.oref_alert.pushy import TEST_SEGMENTS
 from custom_components.oref_alert.tzevaadom import TZEVAADOM_SPELLING_FIX
@@ -32,17 +37,14 @@ SEGMENT_TO_AREA_OUTPUT = "segment_to_area.py"
 TZEVAADOM_ID_TO_AREA_OUTPUT = "tzevaadom_id_to_area.py"
 SERVICES_YAML = "custom_components/oref_alert/services.yaml"
 TEST_AREAS_FIXTURE = "tests/fixtures/GetCitiesMix.json"
-CITIES_MIX_URL = "https://alerts-history.oref.org.il/Shared/Ajax/GetCitiesMix.aspx"
 DISTRICTS_URL = "https://alerts-history.oref.org.il/Shared/Ajax/GetDistricts.aspx"
 SEGMENTS_URL = "https://dist-android.meser-hadash.org.il/smart-dist/services/anonymous/segments/android?instance=1544803905&locale=iw_IL"
-TZEVAADOM_VERSIONS_URL = "https://api.tzevaadom.co.il/lists-versions"
-TZEVAADOM_CITIES_URL = "https://www.tzevaadom.co.il/static/cities.json?v="
-TZEVAADOM_POLYGONS_URL = "https://www.tzevaadom.co.il/static/polygons.json?v="
+POLYGON_URL = "https://services.meser-hadash.org.il/smart-dist/services/anonymous/polygon/id/android?instance=1544803905&id="
+TZEVAADOM_CITIES_URL = "https://www.tzevaadom.co.il/static/cities.json"
 CITY_ALL_AREAS_SUFFIX = " - כל האזורים"
 DISTRICT_PREFIX = "מחוז "
 
 ALL_AREAS = {
-    "ברחבי הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": 0},
     "כל הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": 0},
 }
 assert set(ALL_AREAS.keys()) == ALL_AREAS_ALIASES
@@ -68,6 +70,9 @@ class OrefMetadata:
         """Initialize the object."""
         self.proxy = None
         self._read_args()
+
+    def _fetch_data(self) -> None:
+        """Fetch all required data."""
         self._root_directory = Path(__file__).parent.parent
         self._output_directory = self._root_directory / RELATIVE_OUTPUT_DIRECTORY
         self._cities_mix: list[Any] = self._fix_areas(
@@ -92,10 +97,11 @@ class OrefMetadata:
         )
         self._areas_and_groups.sort()
         assert len(self._areas_and_groups) == len(set(self._areas_and_groups))
-        self._segments = self._get_segments_data()
-        self._tzeva_cities, self._tzeva_polygons = self._get_tzevaadom_data()
-        self._area_to_polygon = self._get_area_to_polygon()
+        self._segments_data = self._get_segments_data()
+        self._segments = self._get_segments_to_area()
         self._area_info = self._get_area_info()
+        self._area_to_polygon = self._get_area_to_polygon()
+        self._tzeva_cities = self._get_tzevaadom_data()
         self._tzevaadom_id_to_area = self._get_tzevaadom_id_to_area()
 
     def _read_args(self) -> None:
@@ -106,16 +112,23 @@ class OrefMetadata:
 
     def _fetch_url_json(self, url: str) -> Any:
         """Fetch URL and return JSON reply."""
-        return requests.get(
+        result = requests.get(
             url,
             proxies={"https": self.proxy} if self.proxy else None,
             timeout=15,
-        ).json()
+        )
+        result.raise_for_status()
+        return result.json()
 
     def _fix_areas(self, data: Any) -> Any:
         """Fix spelling error and remove irrelevant items."""
-        remove_areas = AREAS_TO_IGNORE.union(set(SPELLING_FIX.keys()))
-        return [area for area in data if area["label_he"] not in remove_areas] + [
+        remove_areas = set(SPELLING_FIX.keys())
+        return [
+            area
+            for area in data
+            if area["label_he"] not in remove_areas
+            and not area["label_he"].endswith(DEPRECATION_SUFFIX)
+        ] + [
             {**area, "label_he": new}
             for area in data
             for old, new in SPELLING_FIX.items()
@@ -166,7 +179,8 @@ class OrefMetadata:
         return list(
             filter(
                 lambda area: area["value"] is not None
-                and area["label"] not in ["כל הארץ", "ברחבי הארץ"],
+                and area["label"] not in ALL_AREAS_ALIASES
+                and not area["label"].endswith(DEPRECATION_SUFFIX),
                 districts,
             )
         )
@@ -198,8 +212,8 @@ class OrefMetadata:
             )
         )
 
-    def _get_segments_data(self) -> dict[int, str]:
-        """Get segments data as a sorted dict of segment to area."""
+    def _get_segments_data(self) -> dict[int, dict[str, Any]]:
+        """Get segments data as a sorted dict of segment to its data."""
         segments = self._fetch_url_json(SEGMENTS_URL)["segments"]
         unknown_test_segments = TEST_SEGMENTS - segments.keys()
         assert not unknown_test_segments, (
@@ -208,23 +222,21 @@ class OrefMetadata:
         return dict(
             sorted(
                 {
-                    data["id"]: data["name"]
+                    data["id"]: data
                     for data in segments.values()
                     if data["name"] in self._areas_no_group
                 }.items()
             )
         )
 
-    def _get_tzevaadom_data(self) -> tuple[Any, Any]:
+    def _get_segments_to_area(self) -> dict[int, str]:
+        """Get segments to area dict."""
+        return {segment: data["name"] for segment, data in self._segments_data.items()}
+
+    def _get_tzevaadom_data(self) -> dict[str, dict[str, Any]]:
         """Get tzevaadom metadata content."""
-        versions = self._fetch_url_json(TZEVAADOM_VERSIONS_URL)
-        return (
-            self._tzevaadom_spelling_fix(
-                self._fetch_url_json(f"{TZEVAADOM_CITIES_URL}{versions['cities']}")[
-                    "cities"
-                ]
-            ),
-            self._fetch_url_json(f"{TZEVAADOM_POLYGONS_URL}{versions['polygons']}"),
+        return self._tzevaadom_spelling_fix(
+            self._fetch_url_json(TZEVAADOM_CITIES_URL)["cities"]
         )
 
     def _tzevaadom_spelling_fix(self, data: Any) -> Any:
@@ -233,53 +245,70 @@ class OrefMetadata:
             data[new] = data.pop(old)
 
         # The lists should be identical with the exception of "all areas" aliases.
-        assert set(data.keys()).union(set(ALL_AREAS.keys())) == set(
-            self._areas_no_group
-        )
-        assert not set(data.keys()).intersection(set(ALL_AREAS.keys()))
+        # This check is disabled until tzevaadom updates their data.
+        # assert set(data.keys()).union(set(ALL_AREAS.keys())) == set(
+        #     self._areas_no_group
+        # )  # noqa: ERA001, RUF100
+        # assert not set(data.keys()).intersection(set(ALL_AREAS.keys())) noqa: ERA001
 
         return data
 
-    def _get_area_to_polygon(self) -> dict[str, list[list[float]]]:
-        """Get area polygons from tzevaadom."""
-        city_list = list(
-            set(self._tzeva_cities.keys()).intersection(set(self._areas_no_group))
-        )
-        city_list.sort()
-        return {
-            city: self._tzeva_polygons[str(self._tzeva_cities[city]["id"])]
-            for city in city_list
-            if str(self._tzeva_cities[city]["id"]) in self._tzeva_polygons
-        }
-
-    def _get_area_info(self) -> dict[str, list[list[float]]]:
-        """Get area additional information from tzevaadom."""
+    def _get_area_info(self) -> dict[str, dict[str, Any]]:
+        """Get area additional information of an area."""
+        area_to_data = {area["name"]: area for area in self._segments_data.values()}
         areas = {}
-
-        area_to_segment = {area: segment for segment, area in self._segments.items()}
-
         for area in self._areas_no_group:
-            if area in self._tzeva_cities:
+            if area in area_to_data:
                 areas[area] = {
-                    "lat": self._tzeva_cities[area]["lat"],
-                    "lon": self._tzeva_cities[area]["lng"],
-                    "segment": area_to_segment[area],
+                    "lat": float(area_to_data[area]["centerY"]),
+                    "lon": float(area_to_data[area]["centerX"]),
+                    "segment": area_to_data[area]["id"],
                 }
             else:
                 areas[area] = ALL_AREAS[area]
         return areas
 
+    def _get_area_to_polygon(self) -> dict[str, list[list[float]]]:
+        """Get area polygons."""
+        result = {}
+        for i, area in enumerate(self._areas_no_group):
+            print(  # noqa: T201
+                f"\r{i * 100 // len(self._areas_no_group)}%",
+                end="" if i < len(self._areas_no_group) - 1 else "\r",
+            )
+            if area in ALL_AREAS_ALIASES:
+                continue
+            for _ in range(10):
+                with suppress(Exception):
+                    data = self._fetch_url_json(
+                        f"{POLYGON_URL}{self._area_info[area]['segment']}"
+                    )
+                    if (
+                        data["segmentId"]
+                        and int(data["segmentId"]) == self._area_info[area]["segment"]
+                    ):
+                        result[area] = data["polygonPointList"][0]
+                        break
+                time.sleep(0.1)
+            else:
+                msg = f"Failed to fetch polygon for area {area}"
+                raise RuntimeError(msg)
+        return result
+
     def _get_tzevaadom_id_to_area(self) -> dict[int, str]:
         """Get tzevaadom area id to its name."""
         areas = {}
         for area, data in self._tzeva_cities.items():
-            assert area in self._areas_no_group
-            areas[data["id"]] = area
+            # assert area in self._areas_no_group
+            # The assert is disabled until tzevaadom updates their data.
+            if area in self._areas_no_group:
+                areas[data["id"]] = area
         areas.update(TZEVAADOM_ALL_AREAS)
         return dict(sorted(areas.items()))
 
     def generate(self) -> None:
         """Generate the output files."""
+        self._fetch_data()
         for file_name, variable_name, variable_data in (
             (
                 AREAS_AND_GROUPS_OUTPUT,

@@ -51,15 +51,15 @@ async def load_oref_integration(hass: HomeAssistant) -> AsyncGenerator[None]:
 @pytest.mark.parametrize(
     ("template_str", "expected"),
     [
-        ("{{ oref_district('פתח תקווה') }}", "דן"),
-        ("{{ 'פתח תקווה' | oref_district }}", "דן"),
+        ("{{ oref_district('פתח תקווה') }}", "ירקון"),
+        ("{{ 'פתח תקווה' | oref_district }}", "ירקון"),
         ("{{ 'test' | oref_district }}", "test"),
         ("{{ oref_areas() }}", list(AREAS)),
         ("{{ oref_areas(True) }}", AREAS_AND_GROUPS),
-        ("{{ oref_coordinate('פתח תקווה') }}", (32.084, 34.8878)),
+        ("{{ oref_coordinate('פתח תקווה') }}", (32.09429109811987, 34.8780320360819)),
         (
             "{{ 'תל אביב - מרכז העיר' | oref_coordinate }}",
-            (32.0798, 34.7772),
+            (32.079882706693276, 34.781624113487126),
         ),
         ("{{ 'test' | oref_coordinate }}", None),
         ("{{ oref_shelter('פתח תקווה') }}", 90),
@@ -69,18 +69,18 @@ async def load_oref_integration(hass: HomeAssistant) -> AsyncGenerator[None]:
         ("{{ 2 | oref_icon }}", "mdi:airplane-alert"),
         ("{{ oref_emoji(1) }}", "🚀"),
         ("{{ 2 | oref_emoji }}", "✈️"),
-        ("{{ oref_distance('פתח תקווה') }}", 1.5687380000000002),
-        ("{{ 'תל אביב - מרכז העיר' | oref_distance }}", 9.650307),
+        ("{{ oref_distance('פתח תקווה') }}", 2.47351),
+        ("{{ 'תל אביב - מרכז העיר' | oref_distance }}", 9.23522),
         (
             "{{ 'תל אביב - מרכז העיר' | oref_distance(31.78, 35.23) }}",
-            54.208731,
+            53.884525,
         ),
         ("{{ oref_distance('test') }}", None),
         (
             "{{ oref_test_distance('תל אביב - מרכז העיר', 10) }}",
             True,
         ),
-        ("{{ 'פתח תקווה' is oref_test_distance 2 }}", True),
+        ("{{ 'פתח תקווה' is oref_test_distance 3 }}", True),
         (
             "{{ ['פתח תקווה', 'תל אביב - מרכז העיר'] | "
             "select('oref_test_distance', 5, 32.072, 34.879) | list }}",

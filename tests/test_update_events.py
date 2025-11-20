@@ -70,9 +70,9 @@ async def test_event(
     assert len(events) == 1
     assert events[0].data == {
         "area": "פתח תקווה",
-        "home_distance": 1.6,
-        "latitude": 32.084,
-        "longitude": 34.8878,
+        "home_distance": 2.5,
+        "latitude": 32.09429109811987,
+        "longitude": 34.8780320360819,
         "category": 14,
         "title": "ניתן לצאת מהמרחב המוגן",
         "icon": "mdi:flash-alert",

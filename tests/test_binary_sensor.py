@@ -347,7 +347,7 @@ async def test_updates_attribute(  # noqa: PLR0913
     ("real_time_file", "history_file", "alias"),
     [
         (None, "single_all_areas_alert_history.json", "כל הארץ"),
-        ("single_all_areas_alert_real_time.json", None, "ברחבי הארץ"),
+        ("single_all_areas_alert_real_time.json", None, "כל הארץ"),
     ],
     ids=["website-history", "real_time"],
 )
