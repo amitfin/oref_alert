@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any
 
 import aiohttp
-import requests
 import yaml
 
 sys.path.insert(0, str((Path(__file__).parent / "..").resolve()))
@@ -77,7 +76,7 @@ class OrefMetadata:
         self._root_directory = Path(__file__).parent.parent
         self._output_directory = self._root_directory / RELATIVE_OUTPUT_DIRECTORY
         self._cities_mix: list[Any] = self._fix_areas(
-            self._fetch_url_json(CITIES_MIX_URL)
+            await self._fetch_url_json(CITIES_MIX_URL)
         )
         self._backend_areas: list[str] = self._get_areas()
         self._areas_no_group = list(
@@ -88,7 +87,7 @@ class OrefMetadata:
         )
         self._city_to_areas: dict[str, list[str]] = self._city_to_areas_map()
         self._area_to_migun_time: dict[str, int] = self._area_to_migun_time_map()
-        self._districts = self._get_districts()
+        self._districts = await self._get_districts()
         self._district_to_areas = self._district_to_areas_map()
         self._area_to_district = self._area_to_district_map()
         self._areas_and_groups = (
@@ -98,13 +97,12 @@ class OrefMetadata:
         )
         self._areas_and_groups.sort()
         assert len(self._areas_and_groups) == len(set(self._areas_and_groups))
-        self._segments_data = self._get_segments_data()
+        self._segments_data = await self._get_segments_data()
         self._segments = self._get_segments_to_area()
         self._area_info = self._get_area_info()
         self._area_to_polygon = await self._get_area_to_polygon()
-        self._tzeva_cities = self._get_tzevaadom_data()
+        self._tzeva_cities = await self._get_tzevaadom_data()
         self._tzevaadom_id_to_area = self._get_tzevaadom_id_to_area()
-        await self._http_client.close()
 
     def _read_args(self) -> None:
         """Read program arguments."""
@@ -112,17 +110,7 @@ class OrefMetadata:
         parser.add_argument("--proxy")
         parser.parse_args(namespace=self)
 
-    def _fetch_url_json(self, url: str) -> Any:
-        """Fetch URL and return JSON reply."""
-        result = requests.get(
-            url,
-            proxies={"https": self.proxy} if self.proxy else None,
-            timeout=15,
-        )
-        result.raise_for_status()
-        return result.json()
-
-    async def _async_fetch_url_json(self, url: str) -> Any:
+    async def _fetch_url_json(self, url: str) -> Any:
         """Fetch URL and return JSON reply."""
         async with self._http_client.get(
             url,
@@ -184,9 +172,9 @@ class OrefMetadata:
         }
         return {area: migun_time[area] for area in sorted(migun_time.keys())}
 
-    def _get_districts(self) -> list:
+    async def _get_districts(self) -> list:
         """Return the list of districts."""
-        districts = self._fetch_url_json(DISTRICTS_URL)
+        districts = await self._fetch_url_json(DISTRICTS_URL)
         return list(
             filter(
                 lambda area: area["value"] is not None
@@ -223,9 +211,9 @@ class OrefMetadata:
             )
         )
 
-    def _get_segments_data(self) -> dict[int, dict[str, Any]]:
+    async def _get_segments_data(self) -> dict[int, dict[str, Any]]:
         """Get segments data as a sorted dict of segment to its data."""
-        segments = self._fetch_url_json(SEGMENTS_URL)["segments"]
+        segments = (await self._fetch_url_json(SEGMENTS_URL))["segments"]
         unknown_test_segments = TEST_SEGMENTS - segments.keys()
         assert not unknown_test_segments, (
             f"Unknown test segments: {unknown_test_segments}"
@@ -244,10 +232,10 @@ class OrefMetadata:
         """Get segments to area dict."""
         return {segment: data["name"] for segment, data in self._segments_data.items()}
 
-    def _get_tzevaadom_data(self) -> dict[str, dict[str, Any]]:
+    async def _get_tzevaadom_data(self) -> dict[str, dict[str, Any]]:
         """Get tzevaadom metadata content."""
         return self._tzevaadom_spelling_fix(
-            self._fetch_url_json(TZEVAADOM_CITIES_URL)["cities"]
+            (await self._fetch_url_json(TZEVAADOM_CITIES_URL))["cities"]
         )
 
     def _tzevaadom_spelling_fix(self, data: Any) -> Any:
@@ -295,7 +283,7 @@ class OrefMetadata:
         """Get area's polygon."""
         for _ in range(10):
             with suppress(Exception):
-                data = await self._async_fetch_url_json(
+                data = await self._fetch_url_json(
                     f"{POLYGON_URL}{self._area_info[area]['segment']}"
                 )
                 if (
@@ -415,7 +403,7 @@ class OrefMetadata:
                     for label_he in sorted(
                         {
                             area["label_he"]
-                            for area in self._fetch_url_json(CITIES_MIX_URL)
+                            for area in (await self._fetch_url_json(CITIES_MIX_URL))
                         }
                     )
                 ],
@@ -430,6 +418,8 @@ class OrefMetadata:
                 str(self._output_directory),
             )
         ).wait()
+
+        await self._http_client.close()
 
 
 if __name__ == "__main__":
