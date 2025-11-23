@@ -243,12 +243,11 @@ class OrefMetadata:
         for old, new in TZEVAADOM_SPELLING_FIX.items():
             data[new] = data.pop(old)
 
-        # The lists should be identical with the exception of "all areas" aliases.
-        # This check is disabled until tzevaadom updates their data.
-        # assert set(data.keys()).union(set(ALL_AREAS.keys())) == set(
-        #     self._areas_no_group
-        # )  # noqa: ERA001, RUF100
-        # assert not set(data.keys()).intersection(set(ALL_AREAS.keys())) noqa: ERA001
+        # The lists should be identical with the exception of "all areas" aliases..
+        assert set(data.keys()).union(set(ALL_AREAS.keys())) == set(
+            self._areas_no_group
+        )  # noqa: ERA001, RUF100
+        assert not set(data.keys()).intersection(set(ALL_AREAS.keys()))
 
         return data
 
@@ -298,10 +297,8 @@ class OrefMetadata:
         """Get tzevaadom area id to its name."""
         areas = {}
         for area, data in self._tzeva_cities.items():
-            # assert area in self._areas_no_group
-            # The assert is disabled until tzevaadom updates their data.
-            if area in self._areas_no_group:
-                areas[data["id"]] = area
+            assert area in self._areas_no_group
+            areas[data["id"]] = area
         areas.update(TZEVAADOM_ALL_AREAS)
         return dict(sorted(areas.items()))
 
