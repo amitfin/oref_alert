@@ -48,7 +48,7 @@ async def test_areas_check_failure(
         lambda event, repairs=repairs: repairs.append(event),
     )
     aioclient_mock.clear_requests()
-    aioclient_mock.get(CITIES_MIX_URL, text='[{"label_he": "test"}]')
+    aioclient_mock.get(CITIES_MIX_URL, text='[{"label": "test"}]')
     await _areas_check(hass, freezer)
     assert "The following Oref Alert areas were removed:" in caplog.text
     assert "The following Oref Alert areas were added:" in caplog.text

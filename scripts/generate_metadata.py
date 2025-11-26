@@ -119,24 +119,24 @@ class OrefMetadata:
             response.raise_for_status()
             return await response.json()
 
-    def _fix_areas(self, data: Any) -> Any:
-        """Fix spelling error and remove irrelevant items."""
-        remove_areas = set(SPELLING_FIX.keys())
-        return [
-            area
-            for area in data
-            if area["label_he"] not in remove_areas
-            and not area["label_he"].endswith(DEPRECATION_SUFFIX)
-        ] + [
-            {**area, "label_he": new}
-            for area in data
-            for old, new in SPELLING_FIX.items()
-            if area["label_he"] == old
-        ]
+    def _fix_areas(self, data: list[dict[str, Any]]) -> Any:
+        """Fix spelling error and remove irrelevant and duplicated items."""
+        fix_areas = set(SPELLING_FIX.keys())
+        data.sort(key=lambda area: area["label"], reverse=True)
+        areas = set()
+        result = []
+        for area in data:
+            if area["label"] in fix_areas:
+                area["label"] = area["label"] = SPELLING_FIX[area["label"]]
+            if area["label"] in areas or area["label"].endswith(DEPRECATION_SUFFIX):
+                continue
+            areas.add(area["label"])
+            result.append(area)
+        return result
 
     def _get_areas(self) -> list[str]:
         """Return the list of areas."""
-        areas = list({area["label_he"] for area in self._cities_mix})
+        areas = list({area["label"] for area in self._cities_mix})
         areas.sort()
         return areas
 
@@ -168,21 +168,26 @@ class OrefMetadata:
     def _area_to_migun_time_map(self) -> dict[str, int]:
         """Build a mpa between a city and the migun time."""
         migun_time = {
-            area["label_he"]: int(area["migun_time"]) for area in self._cities_mix
+            area["label"]: int(area["migun_time"]) for area in self._cities_mix
         }
         return {area: migun_time[area] for area in sorted(migun_time.keys())}
 
     async def _get_districts(self) -> list:
         """Return the list of districts."""
         districts = await self._fetch_url_json(DISTRICTS_URL)
-        return list(
-            filter(
-                lambda area: area["value"] is not None
+        districts.sort(key=lambda area: int(area["id"]), reverse=True)
+        areas = set()
+        result = []
+        for area in districts:
+            if (
+                area["value"] is not None
+                and area["label"] not in areas
                 and area["label"] not in ALL_AREAS_ALIASES
-                and not area["label"].endswith(DEPRECATION_SUFFIX),
-                districts,
-            )
-        )
+                and not area["label"].endswith(DEPRECATION_SUFFIX)
+            ):
+                areas.add(area["label"])
+                result.append(area)
+        return result
 
     def _district_to_areas_map(self) -> dict[str, list[str]]:
         """Build the map between districts and their areas."""
@@ -194,10 +199,10 @@ class OrefMetadata:
             for area in self._districts:
                 if (
                     area["areaname"] == district
-                    and area["label_he"] in self._areas_no_group
+                    and area["label"] in self._areas_no_group
                 ):
-                    assert area["label_he"] not in self._city_to_areas
-                    district_areas.append(area["label_he"])
+                    assert area["label"] not in self._city_to_areas
+                    district_areas.append(area["label"])
             district_areas = list(set(district_areas))
             district_areas.sort()
             district_to_areas[DISTRICT_PREFIX + district] = district_areas
@@ -207,7 +212,7 @@ class OrefMetadata:
         """Build the map between areas and their districts."""
         return dict(
             sorted(
-                {area["label_he"]: area["areaname"] for area in self._districts}.items()
+                {area["label"]: area["areaname"] for area in self._districts}.items()
             )
         )
 
@@ -396,10 +401,10 @@ class OrefMetadata:
         ) as fixture:
             json.dump(
                 [
-                    {"label_he": label_he}
-                    for label_he in sorted(
+                    {"label": label}
+                    for label in sorted(
                         {
-                            area["label_he"]
+                            area["label"]
                             for area in (await self._fetch_url_json(CITIES_MIX_URL))
                         }
                     )
