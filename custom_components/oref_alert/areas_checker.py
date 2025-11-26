@@ -49,11 +49,11 @@ class AreasChecker:
             async with self._http_client.get(CITIES_MIX_URL) as response:
                 data = await response.json()
             areas = {
-                area["label_he"]
+                area["label"]
                 for area in data
-                if not area["label_he"].endswith(FILTER_SUFFIX1)
-                and not area["label_he"].endswith(FILTER_SUFFIX2)
-                and not area["label_he"].endswith(DEPRECATION_SUFFIX)
+                if not area["label"].endswith(FILTER_SUFFIX1)
+                and not area["label"].endswith(FILTER_SUFFIX2)
+                and not area["label"].endswith(DEPRECATION_SUFFIX)
             }
             new = sorted(areas.difference(AREAS))
             old = sorted(AREAS.difference(areas))
