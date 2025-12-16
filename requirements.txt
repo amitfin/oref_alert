@@ -6,3 +6,4 @@ types-aiofiles
 types-shapely
 ruff
 mypy
+pycares==5.0.0  # temp: pining to avoid v5.0.0
