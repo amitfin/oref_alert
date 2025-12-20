@@ -41,6 +41,7 @@
     "paho",
     "Petah",
     "Pikud",
+    "pipefail",
     "popleft",
     "pycares",
     "pytest",
