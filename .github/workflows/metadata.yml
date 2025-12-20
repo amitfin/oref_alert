@@ -50,6 +50,7 @@ jobs:
         id: pr
         with:
           path: repo
+          token: ${{ secrets.MANIFEST_GITHUB_TOKEN }}
           branch: create-pull-request/metadata
           title: Metadata auto-sync
           body: Automated changes by "Metadata" GitHub action
