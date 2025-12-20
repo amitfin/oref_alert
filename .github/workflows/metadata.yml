@@ -17,7 +17,7 @@ jobs:
       - name: Clean up workspace
         run: |
           set -euo pipefail
-          find "${GITHUB_WORKSPACE:?}" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+          find "${GITHUB_WORKSPACE:?}" -mindepth 1 -maxdepth 1 ! -name '.uv-cache' -exec rm -rf -- {} +
 
       - name: Checkout the repository
         uses: actions/checkout@v6.0.1
@@ -31,6 +31,8 @@ jobs:
           ./uv venv .venv --python 3.14
 
       - name: Install requirements
+        env:
+          UV_CACHE_DIR: ${{ github.workspace }}/.uv-cache
         run: ./uv pip install --python .venv/bin/python --prerelease allow -r repo/requirements.txt
 
       - name: Regenerate metadata
