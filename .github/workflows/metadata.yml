@@ -33,7 +33,7 @@ jobs:
       - name: Install requirements
         env:
           UV_CACHE_DIR: ${{ github.workspace }}/.uv-cache
-        run: ./uv pip install --python .venv/bin/python --prerelease allow -r repo/requirements.txt
+        run: ./uv pip install --python .venv/bin/python aiohttp pyyaml ruff
 
       - name: Regenerate metadata
         shell: bash

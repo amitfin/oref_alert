@@ -32,6 +32,7 @@ from .const import (
     TITLE_FIELD,
     AlertSource,
 )
+from .metadata import PUSHY_TEST_SEGMENTS
 from .metadata.area_info import AREA_INFO
 from .metadata.segment_to_area import SEGMENT_TO_AREA
 from .ttl_deque import TTLDeque
@@ -62,14 +63,6 @@ REGISTRATION_PARAMETERS: Final = {
 }
 ANDROID_ID_SUFFIX: Final = "-Google-Android-SDK-built-for-x86_64"
 TOPICS_KEY: Final = "topics"
-TEST_SEGMENTS: Final = [
-    "5003000",
-    "5003001",
-    "5003002",
-    "5003003",
-    "5003004",
-    "5003006",
-]
 
 _device_id: str = ""
 
@@ -192,7 +185,7 @@ class PushyNotifications:
             if area in AREA_INFO and AREA_INFO[area]["segment"]
         ]
         if LOGGER.isEnabledFor(logging.DEBUG):
-            topics.extend(TEST_SEGMENTS)
+            topics.extend(PUSHY_TEST_SEGMENTS)
 
         previous_topics: list[str] = []
         if PUSHY_TOPICS_KEY not in self._config_entry.data:

@@ -27,6 +27,7 @@ from .const import (
     TITLE_FIELD,
     AlertSource,
 )
+from .metadata import TZEVAADOM_SPELLING_FIX
 from .metadata.areas import AREAS
 from .metadata.tzevaadom_id_to_area import (
     TZEVAADOM_ID_TO_AREA,
@@ -55,10 +56,6 @@ THREAT_TITLES = {
 }
 
 PRE_ALERT_TITLE = "בדקות הקרובות צפויות להתקבל התרעות באזורך"
-
-TZEVAADOM_SPELLING_FIX = {
-    "אשדוד -יא,יב,טו,יז,מרינה,סיט": "אשדוד -יא,יב,טו,יז,מרינה,סיטי"  # noqa: RUF001
-}
 
 
 class MessageType(str, enum.Enum):

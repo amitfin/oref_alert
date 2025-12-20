@@ -13,15 +13,18 @@ from typing import Any
 import aiohttp
 import yaml
 
-sys.path.insert(0, str((Path(__file__).parent / "..").resolve()))
+sys.path.insert(
+    0,
+    str((Path(__file__).parent.parent / "custom_components" / "oref_alert").resolve()),
+)
 
-from custom_components.oref_alert.areas_checker import (
+from metadata import (  # pyright: ignore[reportMissingImports]
+    ALL_AREAS_ALIASES,
     CITIES_MIX_URL,
     DEPRECATION_SUFFIX,
+    PUSHY_TEST_SEGMENTS,
+    TZEVAADOM_SPELLING_FIX,
 )
-from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
-from custom_components.oref_alert.pushy import TEST_SEGMENTS
-from custom_components.oref_alert.tzevaadom import TZEVAADOM_SPELLING_FIX
 
 RELATIVE_OUTPUT_DIRECTORY = "custom_components/oref_alert/metadata/"
 AREAS_OUTPUT = "areas.py"
@@ -219,7 +222,7 @@ class OrefMetadata:
     async def _get_segments_data(self) -> dict[int, dict[str, Any]]:
         """Get segments data as a sorted dict of segment to its data."""
         segments = (await self._fetch_url_json(SEGMENTS_URL))["segments"]
-        unknown_test_segments = TEST_SEGMENTS - segments.keys()
+        unknown_test_segments = PUSHY_TEST_SEGMENTS - segments.keys()
         assert not unknown_test_segments, (
             f"Unknown test segments: {unknown_test_segments}"
         )

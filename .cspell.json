@@ -47,6 +47,7 @@
     "pytest",
     "PYTHONPATH",
     "pytz",
+    "pyyaml",
     "reasoncodes",
     "Referer",
     "reqs",
