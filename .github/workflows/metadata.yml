@@ -15,7 +15,9 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Clean up workspace
-        run: find "${GITHUB_WORKSPACE:?}" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+        run: |
+          set -euo pipefail
+          find "${GITHUB_WORKSPACE:?}" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
 
       - name: Checkout the repository
         uses: actions/checkout@v6.0.1
@@ -24,11 +26,12 @@ jobs:
 
       - name: Set up Python
         run: |
+          set -euo pipefail
           curl -LsSf https://astral.sh/uv/install.sh | env UV_UNMANAGED_INSTALL="$(pwd)" sh
           ./uv venv .venv --python 3.14
 
       - name: Install requirements
-        run: .venv/bin/uv pip install --prerelease allow -r repo/requirements.txt
+        run: ./uv pip install --python .venv/bin/python --prerelease allow -r repo/requirements.txt
 
       - name: Regenerate metadata
         shell: bash
