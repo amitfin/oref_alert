@@ -415,6 +415,8 @@ class OrefMetadata:
 
         await (
             await asyncio.create_subprocess_exec(
+                sys.executable,
+                "-m",
                 "ruff",
                 "format",
                 str(self._output_directory),

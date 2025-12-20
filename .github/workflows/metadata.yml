@@ -28,7 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           curl -LsSf https://astral.sh/uv/install.sh | env UV_UNMANAGED_INSTALL="$(pwd)" sh
-          ./uv venv .venv --python 3.13
+          ./uv venv .venv --python 3.14
 
       - name: Install requirements
         run: ./uv pip install --python .venv/bin/python --prerelease allow -r repo/requirements.txt
