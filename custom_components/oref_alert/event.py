@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import types
+from contextlib import suppress
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
@@ -155,16 +156,10 @@ class AlertEvent(OrefAlertCoordinatorEntity, EventEntity):
     def _get_record(self) -> tuple[str, AlertType] | tuple[None, None]:
         """Get the latest record, if any."""
         for record in self.coordinator.data.active_items:
-            if (
-                area := record[AREA_FIELD]
-            ) != self._area and area not in ALL_AREAS_ALIASES:
-                continue
-
-            for record_type, schema in RECORDS_SCHEMA.items():
-                try:
-                    schema(record)
-                except:  # noqa: E722, S112
-                    continue
-                return record_type, record
+            if (area := record[AREA_FIELD]) == self._area or area in ALL_AREAS_ALIASES:
+                for record_type, schema in RECORDS_SCHEMA.items():
+                    with suppress(Exception):
+                        schema(record)
+                        return record_type, record
 
         return None, None
