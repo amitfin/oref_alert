@@ -15,7 +15,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v6.0.1
+        uses: actions/checkout@v6
 
       - name: Adjust version number
         shell: bash
@@ -30,6 +30,6 @@ jobs:
           zip oref_alert.zip -r ./
 
       - name: Upload the ZIP file to the release
-        uses: softprops/action-gh-release@v2.5.0
+        uses: softprops/action-gh-release@v2
         with:
           files: ${{ github.workspace }}/custom_components/oref_alert/oref_alert.zip

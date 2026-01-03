@@ -15,10 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v6.0.1
+        uses: actions/checkout@v6
 
       - name: Run
-        uses: streetsidesoftware/cspell-action@v8.1.1
+        uses: streetsidesoftware/cspell-action@v8
         with:
           incremental_files_only: false
           files: |
