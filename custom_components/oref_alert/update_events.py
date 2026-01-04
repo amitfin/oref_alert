@@ -33,6 +33,8 @@ from .metadata.areas import AREAS
 from .ttl_deque import TTLDeque
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from . import OrefAlertConfigEntry
     from .coordinator import OrefAlertDataUpdateCoordinator
 
@@ -47,13 +49,24 @@ class OrefAlertUpdateEventManager:
     ) -> None:
         """Initialize object with defaults."""
         self._hass = hass
+        self._config_entry = config_entry
         self._previous_updates: TTLDeque = TTLDeque(
             config_entry.options[CONF_ALERT_ACTIVE_DURATION]
         )
+        self._unsub_update: Callable[[], None] | None = None
+
+    def start(self) -> None:
+        """Subscribe to coordinator updates."""
         self._coordinator: OrefAlertDataUpdateCoordinator = (
-            config_entry.runtime_data.coordinator
+            self._config_entry.runtime_data.coordinator
         )
-        self._coordinator.async_add_listener(self._async_update)
+        self._unsub_update = self._coordinator.async_add_listener(self._async_update)
+
+    def stop(self) -> None:
+        """Remove listener."""
+        if self._unsub_update is not None:
+            self._unsub_update()
+            self._unsub_update = None
 
     @callback
     def _async_update(self) -> None:
