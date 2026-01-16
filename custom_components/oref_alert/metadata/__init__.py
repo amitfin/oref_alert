@@ -2,7 +2,7 @@
 
 from typing import Final
 
-ALL_AREAS_ALIASES: Final = {"כל הארץ"}
+ALL_AREAS_ALIASES: Final = {"כל הארץ", "ברחבי הארץ"}
 
 CITIES_MIX_URL: Final = (
     "https://alerts-history.oref.org.il/Shared/Ajax/GetCitiesMix.aspx"

@@ -48,6 +48,7 @@ DISTRICT_PREFIX = "מחוז "
 
 ALL_AREAS = {
     "כל הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": 0},
+    "ברחבי הארץ": {"lat": 31.7781, "lon": 35.2164, "segment": 0},
 }
 assert set(ALL_AREAS.keys()) == ALL_AREAS_ALIASES
 
@@ -252,9 +253,9 @@ class OrefMetadata:
             data[new] = data.pop(old)
 
         # The lists should be identical with the exception of "all areas" aliases..
-        assert set(data.keys()).union(set(ALL_AREAS.keys())) == set(
-            self._areas_no_group
-        )  # noqa: ERA001, RUF100
+        assert set(data.keys()).union(set(ALL_AREAS.keys())).union(
+            {"בחלק מהאזורים בארץ"}
+        ) == set(self._areas_no_group)  # noqa: ERA001, RUF100
         assert not set(data.keys()).intersection(set(ALL_AREAS.keys()))
 
         return data
