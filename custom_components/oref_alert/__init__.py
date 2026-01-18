@@ -68,6 +68,8 @@ from .const import (
 from .coordinator import OrefAlertCoordinatorUpdater, OrefAlertDataUpdateCoordinator
 from .metadata.areas import AREAS
 
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
 PLATFORMS = (
     Platform.EVENT,
     Platform.BINARY_SENSOR,
