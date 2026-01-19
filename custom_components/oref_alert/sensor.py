@@ -165,7 +165,7 @@ class OrefAlertTimerSensor(OrefAlertCoordinatorEntity, SensorEntity):
 class TimeToShelterSensor(OrefAlertTimerSensor):
     """Representation of the time to shelter sensor."""
 
-    _entity_component_unrecorded_attributes = frozenset(
+    _unrecorded_attributes = frozenset(
         {
             ATTR_AREA,
             ATTR_TIME_TO_SHELTER,
@@ -220,7 +220,7 @@ class TimeToShelterSensor(OrefAlertTimerSensor):
 class AlertEndTimeSensor(OrefAlertTimerSensor):
     """Representation of the alert end time sensor."""
 
-    _entity_component_unrecorded_attributes = frozenset(
+    _unrecorded_attributes = frozenset(
         {
             ATTR_AREA,
             CONF_ALERT_ACTIVE_DURATION,

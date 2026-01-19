@@ -65,7 +65,7 @@ class AlertSensorBase(OrefAlertCoordinatorEntity, binary_sensor.BinarySensorEnti
 
     _attr_device_class = binary_sensor.BinarySensorDeviceClass.SAFETY
     _attr_translation_key = "home_alert"
-    _entity_component_unrecorded_attributes = frozenset(
+    _unrecorded_attributes = frozenset(
         {
             ATTR_COUNTRY_ACTIVE_ALERTS,
             ATTR_COUNTRY_ALERTS,
