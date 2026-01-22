@@ -1,7 +1,6 @@
 """The tests for the area_to_polygon file."""
 
 import os
-import itertools
 
 import pytest
 from shapely.geometry import Polygon
