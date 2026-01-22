@@ -1,8 +1,15 @@
 """The tests for the area_to_polygon file."""
 
-import pytest
+import os
+import itertools
 
-from custom_components.oref_alert.metadata.area_to_polygon import async_find_area
+import pytest
+from shapely.geometry import Polygon
+
+from custom_components.oref_alert.metadata.area_to_polygon import (
+    async_find_area,
+    init_area_to_polygon,
+)
 
 
 @pytest.mark.parametrize(
@@ -17,3 +24,24 @@ from custom_components.oref_alert.metadata.area_to_polygon import async_find_are
 async def test_find_area(lat: float, lon: float, area: str | None) -> None:
     """Test finding an area using coordinate."""
     assert await async_find_area(lat, lon) == area
+
+
+@pytest.mark.skipif(
+    not os.getenv("GITHUB_ACTIONS"),
+    reason="slow test; run only in GitHub Actions",
+)
+async def test_polygons_do_not_overlap() -> None:
+    """Ensure no polygons overlap each other."""
+    areas = list((await init_area_to_polygon()).items())
+    polygons = [Polygon(coords) for _, coords in areas]
+    overlaps: list[str] = []
+
+    for index_a, (name_a, _) in enumerate(areas):
+        poly_a = polygons[index_a]
+        for index_b in range(index_a + 1, len(areas)):
+            name_b = areas[index_b][0]
+            poly_b = polygons[index_b]
+            if poly_a.intersection(poly_b).area > 0:
+                overlaps.append(f"{name_a} <-> {name_b}")
+
+    assert not overlaps, f"Overlapping areas: {', '.join(overlaps)}"

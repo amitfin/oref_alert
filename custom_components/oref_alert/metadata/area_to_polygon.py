@@ -11,11 +11,11 @@ from shapely.geometry import Point, Polygon
 _area_to_polygon: dict[str, list[tuple[float, float]]] = {}
 
 
-async def init_area_to_polygon() -> None:
+async def init_area_to_polygon() -> dict[str, list[tuple[float, float]]]:
     """Unzip and load the area to polygon map."""
     global _area_to_polygon  # noqa: PLW0603
     if _area_to_polygon:
-        return
+        return _area_to_polygon
     async with aiofiles.open(
         Path(__file__).with_suffix(".json.zip"), mode="rb"
     ) as zip_file_raw:
@@ -25,6 +25,7 @@ async def init_area_to_polygon() -> None:
         zip_file.open(f"{Path(__file__).stem}.json") as json_file,
     ):
         _area_to_polygon = json.load(json_file)
+    return _area_to_polygon
 
 
 def find_area(lat: float, lon: float) -> str | None:
