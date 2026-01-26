@@ -252,11 +252,10 @@ class OrefMetadata:
         for old, new in TZEVAADOM_SPELLING_FIX.items():
             data[new] = data.pop(old)
 
-        # The lists should be identical with the exception of "all areas" aliases..
-        assert set(data.keys()).union(set(ALL_AREAS.keys())).union(
-            {"בחלק מהאזורים בארץ"}
-        ) == set(self._areas_no_group)  # noqa: ERA001, RUF100
-        assert not set(data.keys()).intersection(set(ALL_AREAS.keys()))
+        # The lists should be identical with the exception of "all areas" aliases.
+        assert set(data.keys()) == set(self._areas_no_group) - set(ALL_AREAS.keys()) - {
+            "בחלק מהאזורים בארץ"
+        }
 
         return data
 
