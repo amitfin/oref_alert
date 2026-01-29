@@ -10,8 +10,8 @@ from pytest_homeassistant_custom_component.common import load_fixture
 
 from custom_components.oref_alert import records_schema
 from custom_components.oref_alert.areas_checker import CITIES_MIX_URL
+from custom_components.oref_alert.classifier import RECORDS_SCHEMA_URL
 from custom_components.oref_alert.coordinator import OREF_ALERTS_URL, OREF_HISTORY_URL
-from custom_components.oref_alert.event import RECORDS_SCHEMA_URL
 from custom_components.oref_alert.pushy import API_ENDPOINT as PUSHY_API_ENDPOINT
 
 if TYPE_CHECKING:

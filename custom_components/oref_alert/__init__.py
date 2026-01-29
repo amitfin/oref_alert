@@ -17,7 +17,7 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.entity_platform import async_get_platforms
 from homeassistant.helpers.service import async_register_admin_service
 
-from custom_components.oref_alert.event import RecordsSchemaLoader
+from custom_components.oref_alert.classifier import Classifier
 
 from .areas_checker import AreasChecker
 from .metadata.areas_and_groups import AREAS_AND_GROUPS
@@ -136,7 +136,7 @@ class OrefAlertRuntimeData:
     unload_template_extensions: Callable[[], None]
     pushy: PushyNotifications
     tzevaadom: TzevaAdomNotifications
-    records_schema: RecordsSchemaLoader
+    classifier: Classifier
     update_events: OrefAlertUpdateEventManager
 
     async def stop(self) -> None:
@@ -145,7 +145,7 @@ class OrefAlertRuntimeData:
         self.updater.stop()
         self.unload_template_extensions()
         self.update_events.stop()
-        self.records_schema.stop()
+        self.classifier.stop()
         await asyncio.gather(
             self.pushy.stop(),
             self.tzevaadom.stop(),
@@ -335,14 +335,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
         await inject_template_extensions(hass),
         pushy,
         tzevaadom,
-        RecordsSchemaLoader(hass),
+        Classifier(hass, coordinator),
         OrefAlertUpdateEventManager(hass, entry),
     )
 
     entry.runtime_data.update_events.start()
 
     try:
-        await entry.runtime_data.records_schema.load()
+        await entry.runtime_data.classifier.load()
 
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

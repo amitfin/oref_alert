@@ -20,6 +20,7 @@ from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
 )
 
+from custom_components.oref_alert.classifier import RECORDS_SCHEMA_URL
 from custom_components.oref_alert.const import (
     ADD_AREAS,
     ADD_SENSOR_ACTION,
@@ -38,7 +39,6 @@ from custom_components.oref_alert.const import (
     REMOVE_SENSOR_ACTION,
     SYNTHETIC_ALERT_ACTION,
 )
-from custom_components.oref_alert.event import RECORDS_SCHEMA_URL
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
