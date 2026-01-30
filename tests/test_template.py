@@ -12,6 +12,7 @@ from custom_components.oref_alert.const import (
     CONF_AREAS,
     DOMAIN,
 )
+from custom_components.oref_alert.metadata.area_to_polygon import init_area_to_polygon
 from custom_components.oref_alert.metadata.areas import AREAS
 from custom_components.oref_alert.metadata.areas_and_groups import AREAS_AND_GROUPS
 
@@ -93,6 +94,8 @@ async def load_oref_integration(hass: HomeAssistant) -> AsyncGenerator[None]:
             ["פתח תקווה", "תל אביב - מרכז העיר"],
         ),
         ("{{ oref_find_area(31.507, 34.460) }}", None),
+        ("{{ oref_polygon(none) }}", None),
+        ("{{ oref_polygon('unknown') }}", None),
     ],
     ids=[
         "district_func",
@@ -120,6 +123,8 @@ async def load_oref_integration(hass: HomeAssistant) -> AsyncGenerator[None]:
         "find_area_func",
         "find_area_filter",
         "find_area_none",
+        "polygon_none",
+        "polygon_unknown",
     ],
 )
 def test_custom_templates(
@@ -130,6 +135,22 @@ def test_custom_templates(
 ) -> None:
     """Test custom templates."""
     assert Template(template_str, hass).async_render() == expected
+
+
+async def test_polygon(
+    hass: HomeAssistant,
+    load_oref_integration: None,  # noqa: ARG001
+) -> None:
+    """Test oref_polygon."""
+    polygons = await init_area_to_polygon()
+    assert (
+        Template("{{ oref_polygon('פתח תקווה') }}", hass).async_render()
+        == polygons["פתח תקווה"]
+    )
+    assert (
+        Template("{{ 'גבעת שמואל' | oref_polygon }}", hass).async_render()
+        == polygons["גבעת שמואל"]
+    )
 
 
 @pytest.mark.allowed_logs(["Template variable error:"])

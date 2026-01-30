@@ -26,12 +26,14 @@ from .const import (
     EMOJI_TEMPLATE_FUNCTION,
     FIND_AREA_TEMPLATE_FUNCTION,
     ICON_TEMPLATE_FUNCTION,
+    POLYGON_TEMPLATE_FUNCTION,
     SHELTER_TEMPLATE_FUNCTION,
 )
 from .metadata.area_info import AREA_INFO
 from .metadata.area_to_district import AREA_TO_DISTRICT
 from .metadata.area_to_migun_time import AREA_TO_MIGUN_TIME
 from .metadata.area_to_polygon import (
+    area_to_polygon,
     find_area,
     init_area_to_polygon,
 )
@@ -114,6 +116,9 @@ async def inject_template_extensions(hass: HomeAssistant) -> Callable[[], None]:
         env.globals[DISTANCE_TEST_TEMPLATE_FUNCTION] = env.tests[
             DISTANCE_TEST_TEMPLATE_FUNCTION
         ] = area_distance_test
+        env.globals[POLYGON_TEMPLATE_FUNCTION] = env.filters[
+            POLYGON_TEMPLATE_FUNCTION
+        ] = area_to_polygon
         if not limited:
             env.globals[FIND_AREA_TEMPLATE_FUNCTION] = find_area_by_coordinate
             env.filters[FIND_AREA_TEMPLATE_FUNCTION] = find_area_by_coordinate_filter

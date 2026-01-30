@@ -295,6 +295,14 @@ Gets an area name and a distance and other optional parameters that will be pass
 
 `{{ ['area name'] | select('oref_test_distance', 5) }}`
 
+### `oref_polygon`
+
+Gets an area name and returns the polygon of the area's perimeter. If the area name is not found, the return value is None. Can be used also as a filter.
+
+`{{ oref_polygon('פתח תקווה') }}`
+
+`{{ 'area name' | oref_polygon }}`
+
 ### `oref_find_area`
 
 Returns area by coordinate (lat, lon). The coordinate can be anywhere inside the area's polygon. If no area is found, the return value is None.  Can be used also as a filter. Unavailable for [limited templates](https://www.home-assistant.io/docs/configuration/templating/#limited-templates).

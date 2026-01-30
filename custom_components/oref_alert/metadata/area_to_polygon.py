@@ -41,3 +41,8 @@ async def async_find_area(lat: float, lon: float) -> str | None:
     """Find an area using lat/lon."""
     await init_area_to_polygon()
     return find_area(lat, lon)
+
+
+def area_to_polygon(area: str | None) -> list[tuple[float, float]] | None:
+    """Return area's polygon."""
+    return _area_to_polygon.get(area) if area else None
