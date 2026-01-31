@@ -126,3 +126,30 @@ def test_get_last_record_returns_none(
 
     assert record_type is None
     assert record is None
+
+
+def test_record_type_returns_match(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test record_type returns a matching schema type."""
+    monkeypatch.setattr(classifier, "RECORDS_SCHEMA", records_schema.RECORDS_SCHEMA)
+
+    record_manager = _make_classifier(hass, [])
+    record = {CATEGORY_FIELD: categories.END_ALERT_CATEGORY}
+
+    record_type = record_manager.record_type(record)
+
+    assert str(record_type) == "end"
+
+
+def test_record_type_returns_none_on_invalid(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test record_type returns None for invalid records."""
+    monkeypatch.setattr(classifier, "RECORDS_SCHEMA", records_schema.RECORDS_SCHEMA)
+
+    record_manager = _make_classifier(hass, [])
+
+    record_type = record_manager.record_type({})
+
+    assert record_type is None

@@ -25,11 +25,9 @@ from .categories import (
 )
 from .const import (
     AREA_FIELD,
-    ATTR_AREA,
     ATTR_EMOJI,
     ATTR_HOME_DISTANCE,
     CATEGORY_FIELD,
-    CHANNEL_FIELD,
     DATE_FIELD,
     DOMAIN,
     IST,
@@ -114,17 +112,12 @@ class OrefAlertLocationEvent(OrefAlertEntity, GeolocationEvent):
         """Remove this entity."""
         self.hass.async_create_task(self.async_remove(force_remove=True))
 
-    def async_update(self, attributes: dict[str, Any]) -> bool:
+    @callback
+    def async_update(self, attributes: dict[str, Any]) -> None:
         """Update the extra attributes when needed."""
-        if not attributes or attributes == self._alert_attributes:
-            return False
-        significant_update = False
-        for attribute in [TITLE_FIELD, CATEGORY_FIELD]:
-            if attributes.get(attribute) != self._alert_attributes.get(attribute):
-                significant_update = True
-        self._alert_attributes = attributes
-        self.async_write_ha_state()
-        return significant_update
+        if attributes and attributes != self._alert_attributes:
+            self._alert_attributes = attributes
+            self.async_write_ha_state()
 
 
 class OrefAlertLocationEventManager:
@@ -175,36 +168,14 @@ class OrefAlertLocationEventManager:
             if (entity := self._location_events.pop(area, None)) is not None:
                 entity.async_remove_self()
 
-    def fire_events(self, events: dict[str, OrefAlertLocationEvent]) -> None:
-        """Fire events for new locations."""
-        for area, event in events.items():
-            attributes = event.extra_state_attributes
-            self._hass.bus.async_fire(
-                f"{DOMAIN}_event",
-                {
-                    ATTR_AREA: area,
-                    ATTR_HOME_DISTANCE: event.distance,
-                    ATTR_LATITUDE: event.latitude,
-                    ATTR_LONGITUDE: event.longitude,
-                    CATEGORY_FIELD: attributes.get(CATEGORY_FIELD),
-                    TITLE_FIELD: attributes.get(TITLE_FIELD),
-                    ATTR_ICON: attributes.get(ATTR_ICON),
-                    ATTR_EMOJI: attributes.get(ATTR_EMOJI),
-                    CHANNEL_FIELD: attributes.get(CHANNEL_FIELD),
-                },
-            )
-
     @callback
     def _async_update(self) -> None:
         """Add and/or remove entities according to the new active alerts list."""
         active = {alert[AREA_FIELD] for alert in self._coordinator.data.active_alerts}
         exists = set(self._location_events.keys())
 
-        updated = {
-            area: self._location_events[area]
-            for area in exists.intersection(active)
-            if self._location_events[area].async_update(self._alert_attributes(area))
-        }
+        for area in exists.intersection(active):
+            self._location_events[area].async_update(self._alert_attributes(area))
 
         to_add = {
             area: OrefAlertLocationEvent(
@@ -215,8 +186,6 @@ class OrefAlertLocationEventManager:
         }
         self._location_events.update(to_add)
         self._async_add_entities(to_add.values())
-
-        self.fire_events({**updated, **to_add})
 
         if len(exists - active):
             self._hass.async_create_task(self._cleanup_entities())

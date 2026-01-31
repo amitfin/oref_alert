@@ -69,16 +69,22 @@ class Classifier:
                 self._hass, self.load, dt_util.now() + timedelta(hours=6)
             )
 
+    def record_type(self, record: AlertType) -> str | None:
+        """Get record type."""
+        for record_type, schema in RECORDS_SCHEMA.items():
+            with suppress(Exception):
+                schema(record)
+                return record_type
+        return None
+
     def latest_record_type(
         self, area: str
     ) -> tuple[str, AlertType] | tuple[None, None]:
         """Get the latest record type."""
         for record in self._coordinator.data.active_items:
             if (
-                record_area := record[AREA_FIELD]
-            ) == area or record_area in ALL_AREAS_ALIASES:
-                for record_type, schema in RECORDS_SCHEMA.items():
-                    with suppress(Exception):
-                        schema(record)
-                        return record_type, record
+                (record_area := record[AREA_FIELD]) == area
+                or record_area in ALL_AREAS_ALIASES
+            ) and (record_type := self.record_type(record)) is not None:
+                return record_type, record
         return None, None

@@ -23,6 +23,7 @@ ATTR_SELECTED_AREAS_ALERTS: Final = "selected_areas_alerts"
 ATTR_SELECTED_AREAS_ACTIVE_ALERTS: Final = "selected_areas_active_alerts"
 ATTR_SELECTED_AREAS_UPDATES: Final = "selected_areas_updates"
 ATTR_TIME_TO_SHELTER: Final = "time_to_shelter"
+ATTR_TYPE: Final = "type"
 
 CONF_AREA: Final = "area"
 CONF_AREAS: Final = "areas"

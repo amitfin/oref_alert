@@ -209,39 +209,3 @@ async def test_distance_types(
         ).async_render(parse_result=False)
     )
     await async_shutdown(hass, config_id)
-
-
-async def test_bus_event(
-    hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
-    freezer: FrozenDateTimeFactory,
-) -> None:
-    """Test bus events."""
-    hass.config.latitude = 32.072
-    hass.config.longitude = 34.879
-    freezer.move_to("2023-10-07 06:30:00+03:00")
-    mock_urls(aioclient_mock, None, "single_alert_history.json")
-
-    events: list[Event] = []
-
-    async def event_listener(event: Event) -> None:
-        events.append(event)
-
-    hass.bus.async_listen(f"{DOMAIN}_event", event_listener)
-
-    config_id = await async_setup(hass)
-
-    assert len(events) == 1
-    assert events[0].data == {
-        "area": "בארי",
-        "home_distance": 80.7,
-        "latitude": 31.423811318545116,
-        "longitude": 34.491396100227774,
-        "category": 1,
-        "title": "ירי רקטות וטילים",
-        "icon": "mdi:rocket-launch",
-        "emoji": "🚀",
-        "channel": "website-history",
-    }
-
-    await async_shutdown(hass, config_id)

@@ -20,11 +20,11 @@ from homeassistant.helpers.service import async_register_admin_service
 from custom_components.oref_alert.classifier import Classifier
 
 from .areas_checker import AreasChecker
+from .bus_events import OrefAlertBusEventManager
 from .metadata.areas_and_groups import AREAS_AND_GROUPS
 from .pushy import PushyNotifications
 from .template import inject_template_extensions
 from .tzevaadom import TzevaAdomNotifications
-from .update_events import OrefAlertUpdateEventManager
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -137,14 +137,14 @@ class OrefAlertRuntimeData:
     pushy: PushyNotifications
     tzevaadom: TzevaAdomNotifications
     classifier: Classifier
-    update_events: OrefAlertUpdateEventManager
+    bus_events: OrefAlertBusEventManager
 
     async def stop(self) -> None:
         """Stop background managers and release resources."""
         self.areas_checker.stop()
         self.updater.stop()
         self.unload_template_extensions()
-        self.update_events.stop()
+        self.bus_events.stop()
         self.classifier.stop()
         await asyncio.gather(
             self.pushy.stop(),
@@ -336,10 +336,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
         pushy,
         tzevaadom,
         Classifier(hass, coordinator),
-        OrefAlertUpdateEventManager(hass, entry),
+        OrefAlertBusEventManager(hass, entry),
     )
 
-    entry.runtime_data.update_events.start()
+    entry.runtime_data.bus_events.start()
 
     try:
         await entry.runtime_data.classifier.load()

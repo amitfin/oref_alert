@@ -185,10 +185,10 @@ This will create a map presenting all active alerts in Israel:
 
 ## Home Assistant Events
 
-A new event is fired on HA bus for any new alert. Here is an example of such an event:
+A new event is fired on HA bus for any new alert. Here are 2 examples of such an events:
 
 ```
-event_type: oref_alert_event
+event_type: oref_alert_record
 data:
   area: תל אביב - מרכז העיר
   home_distance: 9.7
@@ -196,14 +196,30 @@ data:
   longitude: 34.7772
   category: 1
   title: ירי רקטות וטילים
+  type: alert
   icon: mdi:rocket-launch
   emoji: 🚀
   source: mobile
 ```
 
+```
+event_type: oref_alert_record
+data:
+  area: תל אביב - מרכז העיר
+  home_distance: 9.7
+  latitude: 32.0798
+  longitude: 34.7772
+  category: 14
+  title: התרעה מקדימה
+  type: pre-alert
+  icon: mdi:flash-alert
+  emoji: ⚡
+  source: tzevaadom
+```
+
 In the [Mobile Notifications: Detailed Alerts](#detailed-alerts) section there is an example for usage of this event.
 
-Events are also fired for updates. Their type is `oref_alert_update_event` instead of `oref_alert_event`. Here is an example of such an event:
+For backward compatibility, events are also fired on `oref_alert_event` and `oref_alert_update_event` for alert and update, respectively. Here is an example of such an update event:
 
 ```
 event_type: oref_alert_update_event
@@ -412,7 +428,7 @@ alias: Oref Alert Country Notifications Details
 id: oref_alert_country_notifications_details
 triggers:
   - trigger: event
-    event_type: oref_alert_event
+    event_type: oref_alert_record
 actions:
   - condition: or
     conditions:
