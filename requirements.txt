@@ -1,4 +1,3 @@
-pytest-homeassistant-custom-component
 shapely==2.1.2
 paho-mqtt
 aiofiles
@@ -6,3 +5,4 @@ types-aiofiles
 types-shapely
 ruff
 mypy
+prek

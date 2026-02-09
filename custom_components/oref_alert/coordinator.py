@@ -77,18 +77,12 @@ class OrefAlertCoordinatorData:
     def __init__(self, items: list[AlertType], active_duration: int) -> None:
         """Initialize the data."""
         self.items: list[AlertType] = items
-        self.alerts: list[AlertType] = list(
-            filter(_is_alert, items)
-        )
+        self.alerts: list[AlertType] = list(filter(_is_alert, items))
         self.active_items: list[AlertType] = (
             OrefAlertDataUpdateCoordinator.recent_alerts(items, active_duration)
         )
-        self.active_alerts: list[AlertType] = list(
-            filter(_is_alert, self.active_items)
-        )
-        self.updates: list[AlertType] = list(
-            filter(_is_update, self.active_items)
-        )
+        self.active_alerts: list[AlertType] = list(filter(_is_alert, self.active_items))
+        self.updates: list[AlertType] = list(filter(_is_update, self.active_items))
 
 
 def _sort_alerts(item1: AlertType, item2: AlertType) -> int:

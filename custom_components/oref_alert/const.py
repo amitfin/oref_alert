@@ -74,7 +74,7 @@ class AlertType(TypedDict):
     title: str
 
 
-class AlertSource(str, enum.Enum):
+class AlertSource(enum.StrEnum):
     """Enum for alert sources."""
 
     HISTORY = "website-history"

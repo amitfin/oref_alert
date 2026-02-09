@@ -105,7 +105,7 @@ def _mock_ws() -> Generator[None]:
 
     ws = AsyncMock()
     ws.receive = mock_receive
-    ws.close = AsyncMock(side_effect=lambda: ws_closed.set())
+    ws.close = AsyncMock(side_effect=ws_closed.set)
 
     with patch(
         "aiohttp.ClientSession.ws_connect",

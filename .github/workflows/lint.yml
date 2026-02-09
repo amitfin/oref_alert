@@ -23,16 +23,9 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.14"
-          cache: pip
 
       - name: Install requirements
-        run: python3 -m pip install -r requirements.txt
+        run: scripts/setup
 
       - name: Lint
-        run: python3 -m ruff check .
-
-      - name: Format
-        run: python3 -m ruff format . --check
-
-      - name: mypy
-        run: python3 -m mypy --strict custom_components/oref_alert
+        run: scripts/lint --no-fix

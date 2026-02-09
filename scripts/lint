@@ -4,6 +4,11 @@ set -e
 
 cd "$(dirname "$0")/.."
 
-ruff format .
-ruff check . --fix
+if [[ "${1:-}" == "--no-fix" ]]; then
+  ruff format . --check
+  ruff check .
+else
+  ruff format .
+  ruff check . --fix
+fi
 mypy --strict custom_components/oref_alert

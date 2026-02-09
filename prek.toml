@@ -1,0 +1,20 @@
+[[repos]]
+repo = "local"
+hooks = [
+  {
+    id = "lint",
+    name = "lint",
+    entry = "scripts/lint",
+    language = "script",
+    pass_filenames = false,
+    always_run = true
+  },
+  {
+    id = "pytest",
+    name = "pytest",
+    entry = "pytest",
+    language = "system",
+    pass_filenames = false,
+    always_run = true
+  }
+]

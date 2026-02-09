@@ -58,7 +58,7 @@ THREAT_TITLES = {
 PRE_ALERT_TITLE = "בדקות הקרובות צפויות להתקבל התרעות באזורך"
 
 
-class MessageType(str, enum.Enum):
+class MessageType(enum.StrEnum):
     """Message types for Tzeva Adom WebSocket messages."""
 
     ALERT = "ALERT"

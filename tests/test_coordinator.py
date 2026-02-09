@@ -194,7 +194,7 @@ def create_coordinator(
         options={
             CONF_ALERT_ACTIVE_DURATION: DEFAULT_ALERT_ACTIVE_DURATION,
             CONF_ALL_ALERTS_ATTRIBUTES: True,
-            **(options if options else {}),
+            **(options or {}),
         },
     )
     config.mock_state(hass, ConfigEntryState.SETUP_IN_PROGRESS)

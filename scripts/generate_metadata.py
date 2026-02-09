@@ -118,7 +118,7 @@ class OrefMetadata:
         """Fetch URL and return JSON reply."""
         async with self._http_client.get(
             url,
-            proxy=self.proxy if self.proxy else None,
+            proxy=self.proxy or None,
         ) as response:
             response.raise_for_status()
             return await response.json()
