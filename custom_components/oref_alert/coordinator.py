@@ -78,16 +78,16 @@ class OrefAlertCoordinatorData:
         """Initialize the data."""
         self.items: list[AlertType] = items
         self.alerts: list[AlertType] = list(
-            filter(lambda alert: _is_alert(alert), items)
+            filter(_is_alert, items)
         )
         self.active_items: list[AlertType] = (
             OrefAlertDataUpdateCoordinator.recent_alerts(items, active_duration)
         )
         self.active_alerts: list[AlertType] = list(
-            filter(lambda alert: _is_alert(alert), self.active_items)
+            filter(_is_alert, self.active_items)
         )
         self.updates: list[AlertType] = list(
-            filter(lambda alert: _is_update(alert), self.active_items)
+            filter(_is_update, self.active_items)
         )
 
 
