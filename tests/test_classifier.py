@@ -5,7 +5,7 @@ from __future__ import annotations
 from contextlib import suppress
 from datetime import datetime, timedelta
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import Mock, patch
 
 import homeassistant.util.dt as dt_util
@@ -135,7 +135,7 @@ def test_record_type_returns_match(
     monkeypatch.setattr(classifier, "RECORDS_SCHEMA", records_schema.RECORDS_SCHEMA)
 
     record_manager = _make_classifier(hass, [])
-    record = {CATEGORY_FIELD: categories.END_ALERT_CATEGORY}
+    record: Any = {CATEGORY_FIELD: categories.END_ALERT_CATEGORY}
 
     record_type = record_manager.record_type(record)
 
@@ -150,6 +150,6 @@ def test_record_type_returns_none_on_invalid(
 
     record_manager = _make_classifier(hass, [])
 
-    record_type = record_manager.record_type({})
+    record_type = record_manager.record_type(cast("Any", {}))
 
     assert record_type is None
