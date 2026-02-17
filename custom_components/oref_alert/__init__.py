@@ -60,7 +60,6 @@ from .const import (
     LOGGER,
     REMOVE_AREAS,
     REMOVE_SENSOR_ACTION,
-    STATUS_ID_SUFFIX,
     SYNTHETIC_ALERT_ACTION,
     TIME_TO_SHELTER_ID_SUFFIX,
     TITLE,
@@ -218,7 +217,7 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
         for platform, suffix in [
             (Platform.SENSOR, f"_{TIME_TO_SHELTER_ID_SUFFIX}"),
             (Platform.SENSOR, f"_{END_TIME_ID_SUFFIX}"),
-            (Platform.SENSOR, f"_{STATUS_ID_SUFFIX}"),
+            (Platform.SENSOR, None),
             (Platform.EVENT, None),
         ]:
             delete_entity = f"{platform}.{entity_id.split('.')[1]}{suffix or ''}"

@@ -27,14 +27,7 @@
       "named_end_time": {
         "default": "mdi:timer-sand-complete"
       },
-      "default_status": {
-        "default": "mdi:check-circle-outline",
-        "state": {
-          "pre_alert": "mdi:message-alert-outline",
-          "alert": "mdi:home-alert-outline"
-        }
-      },
-      "named_status": {
+      "status": {
         "default": "mdi:check-circle-outline",
         "state": {
           "pre_alert": "mdi:message-alert-outline",

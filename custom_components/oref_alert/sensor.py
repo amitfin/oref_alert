@@ -30,7 +30,6 @@ from .const import (
     END_TIME_ID_SUFFIX,
     IST,
     OREF_ALERT_UNIQUE_ID,
-    STATUS_ID_SUFFIX,
     TIME_TO_SHELTER_ID_SUFFIX,
     AlertType,
 )
@@ -295,15 +294,12 @@ class OrefAlertStatusSensor(OrefAlertCoordinatorEntity, SensorEntity):
         self._record: AlertType | None = None
         self._attr_options = [STATE_OK, RecordType.PRE_ALERT, RecordType.ALERT]
         if not name:
-            self._attr_translation_key = "default_status"
-            self._attr_unique_id = f"{OREF_ALERT_UNIQUE_ID}_{STATUS_ID_SUFFIX}"
+            self.use_device_name = True
+            self._attr_unique_id = OREF_ALERT_UNIQUE_ID
         else:
-            self._attr_translation_key = "named_status"
-            self._attr_translation_placeholders = {"name": name}
+            self._attr_name = name
             self._attr_unique_id = slugify(
-                OREF_ALERT_UNIQUE_ID
-                + f"_{name.lower().replace(' ', '_')}_"
-                + STATUS_ID_SUFFIX
+                f"{OREF_ALERT_UNIQUE_ID}_{name.lower().replace(' ', '_')}"
             )
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
 

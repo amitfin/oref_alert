@@ -53,16 +53,7 @@
             "named_end_time": {
                 "name": "{name} סיום התמגנות"
             },
-            "default_status": {
-                "name": " מצב",
-                "state": {
-                    "ok": "תקין",
-                    "pre_alert": "הנחיה מקדימה",
-                    "alert": "אזעקה"
-                }
-            },
-            "named_status": {
-                "name": "{name} מצב",
+            "status": {
                 "state": {
                     "ok": "תקין",
                     "pre_alert": "הנחיה מקדימה",

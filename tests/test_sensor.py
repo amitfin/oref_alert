@@ -27,7 +27,6 @@ from custom_components.oref_alert.const import (
     END_TIME_ID_SUFFIX,
     OREF_ALERT_UNIQUE_ID,
     REMOVE_SENSOR_ACTION,
-    STATUS_ID_SUFFIX,
     TIME_TO_SHELTER_ID_SUFFIX,
 )
 from custom_components.oref_alert.records_schema import RecordType
@@ -50,7 +49,7 @@ TIME_TO_SHELTER_ENTITY_ID = (
     f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_{TIME_TO_SHELTER_ID_SUFFIX}"
 )
 END_TIME_ENTITY_ID = f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_{END_TIME_ID_SUFFIX}"
-STATUS_ENTITY_ID = f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_{STATUS_ID_SUFFIX}"
+STATUS_ENTITY_ID = f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}"
 
 
 async def async_setup(
@@ -226,7 +225,7 @@ async def test_status_state_no_alert(
     state = hass.states.get(STATUS_ENTITY_ID)
     assert state is not None
     assert state.state == "ok"
-    assert state.name == "Oref Alert Status"
+    assert state.name == "Oref Alert"
     assert state.attributes[ATTR_AREA] == "בארי"
     assert state.attributes[ATTR_RECORD] is None
     await async_shutdown(hass, config_id)
@@ -379,8 +378,8 @@ async def test_additional_sensor(
             "Oref Alert Test End Time",
         ),
         (
-            f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_test_{STATUS_ID_SUFFIX}",
-            "Oref Alert Test Status",
+            f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_test",
+            "Oref Alert Test",
         ),
     ):
         assert entity_id in sensors
