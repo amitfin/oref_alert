@@ -293,6 +293,8 @@ class OrefAlertStatusSensor(OrefAlertCoordinatorEntity, SensorEntity, RestoreEnt
         super().__init__(config_entry)
         self._area: str = area
         self._record: AlertType | None = None
+        self._record_type: str | None = None
+        self._record_expired: bool = True
         self._attr_options = [STATE_OK, RecordType.PRE_ALERT, RecordType.ALERT]
         if not name:
             self.use_device_name = True
@@ -304,13 +306,35 @@ class OrefAlertStatusSensor(OrefAlertCoordinatorEntity, SensorEntity, RestoreEnt
             )
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
 
+    def _update_record(self, record: AlertType, record_type: str | None = None) -> None:
+        """Update the record."""
+        self._record = record
+
+        if record_type:
+            self._record_type = record_type
+        else:
+            self._record_type = self._config_entry.runtime_data.classifier.record_type(
+                record
+            )
+
+        if (
+            expiration := RECORD_EXPIRATION_MINUTES.get(self._record_type or "")
+        ) is None:
+            self._record_expired = False
+        elif dt_util.now() - dt_util.parse_datetime(
+            record[DATE_FIELD], raise_on_error=True
+        ).replace(tzinfo=IST) > timedelta(minutes=expiration):
+            self._record_expired = True
+        else:
+            self._record_expired = False
+
     async def async_added_to_hass(self) -> None:
         """Handle entity which will be added."""
         await super().async_added_to_hass()
         if (last_state := await self.async_get_last_state()) and (
             record := last_state.attributes.get(ATTR_RECORD)
         ):
-            self._record = record
+            self._update_record(record)
 
     @property
     def native_value(self) -> str:
@@ -318,24 +342,15 @@ class OrefAlertStatusSensor(OrefAlertCoordinatorEntity, SensorEntity, RestoreEnt
         record_type, record = (
             self._config_entry.runtime_data.classifier.latest_record_type(self._area)
         )
-        if record:
-            self._record = record
-        elif self._record:
-            record = self._record
-            record_type = self._config_entry.runtime_data.classifier.record_type(record)
+        if record and record != self._record:
+            self._update_record(record, record_type)
 
-        if not record_type or not record:
-            return STATE_OK
+        if not self._record_expired and self._record_type in (
+            RecordType.PRE_ALERT,
+            RecordType.ALERT,
+        ):
+            return str(self._record_type)
 
-        if (expiration := RECORD_EXPIRATION_MINUTES.get(record_type)) is not None:
-            record_time = dt_util.parse_datetime(
-                record[DATE_FIELD], raise_on_error=True
-            ).replace(tzinfo=IST)
-            if dt_util.now() - record_time > timedelta(minutes=expiration):
-                return STATE_OK
-
-        if record_type in (RecordType.PRE_ALERT, RecordType.ALERT):
-            return record_type
         return STATE_OK
 
     @property
