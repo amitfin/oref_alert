@@ -15,18 +15,24 @@ from custom_components.oref_alert.const import (
     ATTR_ALERT,
     ATTR_AREA,
     ATTR_DISPLAY,
+    ATTR_RECORD,
     ATTR_TIME_TO_SHELTER,
+    CATEGORY_FIELD,
+    CHANNEL_FIELD,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREAS,
+    DATE_FIELD,
     DOMAIN,
     END_TIME_ID_SUFFIX,
     OREF_ALERT_UNIQUE_ID,
     REMOVE_SENSOR_ACTION,
+    STATUS_ID_SUFFIX,
     TIME_TO_SHELTER_ID_SUFFIX,
 )
+from custom_components.oref_alert.records_schema import RecordType
 
-from .utils import load_json_fixture, mock_urls
+from .utils import load_json_fixture, mock_urls, refresh_coordinator
 
 if TYPE_CHECKING:
     from freezegun.api import FrozenDateTimeFactory
@@ -44,6 +50,7 @@ TIME_TO_SHELTER_ENTITY_ID = (
     f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_{TIME_TO_SHELTER_ID_SUFFIX}"
 )
 END_TIME_ENTITY_ID = f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_{END_TIME_ID_SUFFIX}"
+STATUS_ENTITY_ID = f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_{STATUS_ID_SUFFIX}"
 
 
 async def async_setup(
@@ -211,6 +218,134 @@ async def test_alert_end_time_attributes_no_alert(
     await async_shutdown(hass, config_id)
 
 
+async def test_status_state_no_alert(
+    hass: HomeAssistant,
+) -> None:
+    """Test status sensor state when no alert exists."""
+    config_id = await async_setup(hass)
+    state = hass.states.get(STATUS_ENTITY_ID)
+    assert state is not None
+    assert state.state == "ok"
+    assert state.name == "Oref Alert Status"
+    assert state.attributes[ATTR_AREA] == "בארי"
+    assert state.attributes[ATTR_RECORD] is None
+    await async_shutdown(hass, config_id)
+
+
+async def test_status_state_transition_and_cache(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    monkeypatch: Any,
+) -> None:
+    """Test status transitions and cached latest record behavior."""
+    freezer.move_to("2025-01-01 12:00:00+03:00")
+    config_id = await async_setup(hass)
+    config = hass.config_entries.async_get_entry(config_id)
+    assert config is not None
+    classifier = config.runtime_data.classifier
+
+    pre_alert_record = {
+        CATEGORY_FIELD: 14,
+        CHANNEL_FIELD: "website-history",
+        DATE_FIELD: "2025-01-01 11:59:30",
+    }
+    monkeypatch.setattr(
+        classifier,
+        "latest_record_type",
+        lambda _: (RecordType.PRE_ALERT, pre_alert_record),
+    )
+    await refresh_coordinator(hass, config_id)
+    state = hass.states.get(STATUS_ENTITY_ID)
+    assert state is not None
+    assert state.state == RecordType.PRE_ALERT
+    assert state.attributes[ATTR_RECORD] == pre_alert_record
+
+    alert_record = {
+        CATEGORY_FIELD: 1,
+        CHANNEL_FIELD: "website-history",
+        DATE_FIELD: "2025-01-01 11:59:40",
+    }
+    monkeypatch.setattr(
+        classifier,
+        "latest_record_type",
+        lambda _: (RecordType.ALERT, alert_record),
+    )
+    await refresh_coordinator(hass, config_id)
+    state = hass.states.get(STATUS_ENTITY_ID)
+    assert state is not None
+    assert state.state == RecordType.ALERT
+    assert state.attributes[ATTR_RECORD] == alert_record
+
+    monkeypatch.setattr(classifier, "latest_record_type", lambda _: (None, None))
+    await refresh_coordinator(hass, config_id)
+    state = hass.states.get(STATUS_ENTITY_ID)
+    assert state is not None
+    assert state.state == RecordType.ALERT
+    assert state.attributes[ATTR_RECORD] == alert_record
+
+    await async_shutdown(hass, config_id)
+
+
+async def test_status_state_end_record(
+    hass: HomeAssistant,
+    monkeypatch: Any,
+) -> None:
+    """Test status returns OK for END records."""
+    config_id = await async_setup(hass)
+    config = hass.config_entries.async_get_entry(config_id)
+    assert config is not None
+    classifier = config.runtime_data.classifier
+
+    end_record = {
+        CATEGORY_FIELD: 13,
+        CHANNEL_FIELD: "website-history",
+        DATE_FIELD: "2025-01-01 11:59:00",
+    }
+    monkeypatch.setattr(
+        classifier,
+        "latest_record_type",
+        lambda _: (RecordType.END, end_record),
+    )
+    await refresh_coordinator(hass, config_id)
+    state = hass.states.get(STATUS_ENTITY_ID)
+    assert state is not None
+    assert state.state == "ok"
+    assert state.attributes[ATTR_RECORD] == end_record
+
+    await async_shutdown(hass, config_id)
+
+
+async def test_status_state_expired_pre_alert(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    monkeypatch: Any,
+) -> None:
+    """Test status returns OK for expired pre_alert records."""
+    freezer.move_to("2025-01-01 12:00:00+02:00")
+    config_id = await async_setup(hass)
+    config = hass.config_entries.async_get_entry(config_id)
+    assert config is not None
+    classifier = config.runtime_data.classifier
+
+    old_pre_alert_record = {
+        CATEGORY_FIELD: 14,
+        CHANNEL_FIELD: "website-history",
+        DATE_FIELD: "2025-01-01 11:30:00",
+    }
+    monkeypatch.setattr(
+        classifier,
+        "latest_record_type",
+        lambda _: (RecordType.PRE_ALERT, old_pre_alert_record),
+    )
+    await refresh_coordinator(hass, config_id)
+    state = hass.states.get(STATUS_ENTITY_ID)
+    assert state is not None
+    assert state.state == "ok"
+    assert state.attributes[ATTR_RECORD] == old_pre_alert_record
+
+    await async_shutdown(hass, config_id)
+
+
 async def test_no_entity_for_multi_areas(
     hass: HomeAssistant,
 ) -> None:
@@ -233,7 +368,7 @@ async def test_additional_sensor(
     )
     await hass.async_block_till_done(wait_background_tasks=True)
     sensors = hass.states.async_entity_ids(Platform.SENSOR)
-    assert len(sensors) == 2
+    assert len(sensors) == 3
     for entity_id, name in (
         (
             f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_test_{TIME_TO_SHELTER_ID_SUFFIX}",
@@ -242,6 +377,10 @@ async def test_additional_sensor(
         (
             f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_test_{END_TIME_ID_SUFFIX}",
             "Oref Alert Test End Time",
+        ),
+        (
+            f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_test_{STATUS_ID_SUFFIX}",
+            "Oref Alert Test Status",
         ),
     ):
         assert entity_id in sensors
@@ -266,8 +405,8 @@ async def test_remove_sensors(
     await hass.async_block_till_done(wait_background_tasks=True)
     # There are 3 binary sensors: default, all_areas, test
     assert len(hass.states.async_entity_ids(Platform.BINARY_SENSOR)) == 3
-    # There are 4 sensors: (time-to-shelter & end-time times) * (default & test)
-    assert len(hass.states.async_entity_ids(Platform.SENSOR)) == 4
+    # There are 6 sensors: (time-to-shelter, end-time, status) * (default, test)
+    assert len(hass.states.async_entity_ids(Platform.SENSOR)) == 6
     await hass.services.async_call(
         DOMAIN,
         REMOVE_SENSOR_ACTION,
@@ -276,7 +415,7 @@ async def test_remove_sensors(
     )
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(hass.states.async_entity_ids(Platform.BINARY_SENSOR)) == 2
-    assert len(hass.states.async_entity_ids(Platform.SENSOR)) == 2
+    assert len(hass.states.async_entity_ids(Platform.SENSOR)) == 3
     await async_shutdown(hass, config_id)
 
 

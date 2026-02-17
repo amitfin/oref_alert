@@ -45,6 +45,7 @@ OREF_ALERT_UNIQUE_ID: Final = DOMAIN
 ALL_AREAS_ID_SUFFIX: Final = "all_areas"
 END_TIME_ID_SUFFIX: Final = "end_time"
 TIME_TO_SHELTER_ID_SUFFIX: Final = "time_to_shelter"
+STATUS_ID_SUFFIX: Final = "status"
 LOCATION_ID_SUFFIX: Final = "location"
 AREAS_TEMPLATE_FUNCTION: Final = "oref_areas"
 DISTRICT_TEMPLATE_FUNCTION: Final = "oref_district"

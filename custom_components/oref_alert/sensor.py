@@ -4,21 +4,24 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 import homeassistant.util.dt as dt_util
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor.const import SensorDeviceClass
-from homeassistant.const import Platform, UnitOfTime
+from homeassistant.const import STATE_OK, Platform, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import event as event_helper
 from homeassistant.util import slugify
+
+from custom_components.oref_alert.records_schema import RecordType
 
 from .const import (
     AREA_FIELD,
     ATTR_ALERT,
     ATTR_AREA,
     ATTR_DISPLAY,
+    ATTR_RECORD,
     ATTR_TIME_TO_SHELTER,
     CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
@@ -27,6 +30,7 @@ from .const import (
     END_TIME_ID_SUFFIX,
     IST,
     OREF_ALERT_UNIQUE_ID,
+    STATUS_ID_SUFFIX,
     TIME_TO_SHELTER_ID_SUFFIX,
     AlertType,
 )
@@ -42,9 +46,12 @@ if TYPE_CHECKING:
 
     from . import OrefAlertConfigEntry
 
-PARALLEL_UPDATES = 0
-
-SECONDS_IN_A_MINUTE = 60
+PARALLEL_UPDATES: Final = 0
+SECONDS_IN_A_MINUTE: Final = 60
+RECORD_EXPIRATION_MINUTES: Final[dict[str, int]] = {
+    RecordType.PRE_ALERT: 20,
+    RecordType.ALERT: 720,
+}
 
 
 async def async_setup_entry(
@@ -64,6 +71,7 @@ async def async_setup_entry(
     async_add_entities(
         [TimeToShelterSensor(name, area, config_entry) for name, area in entities]
         + [AlertEndTimeSensor(name, area, config_entry) for name, area in entities]
+        + [OrefAlertStatusSensor(name, area, config_entry) for name, area in entities]
     )
 
 
@@ -265,4 +273,70 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
             CONF_ALERT_ACTIVE_DURATION: self._active_duration,
             ATTR_ALERT: self._get_alert(),
             ATTR_DISPLAY: self.oref_display_value(),
+        }
+
+
+class OrefAlertStatusSensor(OrefAlertCoordinatorEntity, SensorEntity):
+    """Representation of a status sensor."""
+
+    _unrecorded_attributes = frozenset({ATTR_AREA, ATTR_RECORD})
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_translation_key = "status"
+
+    def __init__(
+        self,
+        name: str,
+        area: str,
+        config_entry: OrefAlertConfigEntry,
+    ) -> None:
+        """Initialize object with defaults."""
+        super().__init__(config_entry)
+        self._area: str = area
+        self._record: AlertType | None = None
+        self._attr_options = [STATE_OK, RecordType.PRE_ALERT, RecordType.ALERT]
+        if not name:
+            self._attr_translation_key = "default_status"
+            self._attr_unique_id = f"{OREF_ALERT_UNIQUE_ID}_{STATUS_ID_SUFFIX}"
+        else:
+            self._attr_translation_key = "named_status"
+            self._attr_translation_placeholders = {"name": name}
+            self._attr_unique_id = slugify(
+                OREF_ALERT_UNIQUE_ID
+                + f"_{name.lower().replace(' ', '_')}_"
+                + STATUS_ID_SUFFIX
+            )
+        self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
+
+    @property
+    def native_value(self) -> str:
+        """Return the state value."""
+        record_type, record = (
+            self._config_entry.runtime_data.classifier.latest_record_type(self._area)
+        )
+        if record:
+            self._record = record
+        elif self._record:
+            record = self._record
+            record_type = self._config_entry.runtime_data.classifier.record_type(record)
+
+        if not record_type or not record:
+            return STATE_OK
+
+        if (expiration := RECORD_EXPIRATION_MINUTES.get(record_type)) is not None:
+            record_time = dt_util.parse_datetime(
+                record[DATE_FIELD], raise_on_error=True
+            ).replace(tzinfo=IST)
+            if dt_util.now() - record_time > timedelta(minutes=expiration):
+                return STATE_OK
+
+        if record_type in (RecordType.PRE_ALERT, RecordType.ALERT):
+            return record_type
+        return STATE_OK
+
+    @property
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
+        """Return additional attributes."""
+        return {
+            ATTR_AREA: self._area,
+            ATTR_RECORD: self._record,
         }

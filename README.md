@@ -8,7 +8,7 @@
 
 ![Project Maintenance](https://img.shields.io/badge/maintainer-Amit%20Finkelstein-blue.svg?style=for-the-badge)
 
-The integration is used to monitor the emergency messages coming from the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud Haoref). Its main usage is via the entity `event.oref_alert`. This entity receives the relevant messages based on HA's home location (coordinate). There are 3 types of events: `pre-alert`, `alert`, and `end`.
+The integration is used to monitor the emergency messages coming from the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud Haoref). Its main usage is via the entity `sensor.oref_alert`. The entity receives the relevant messages based on HA's home location (coordinate). `sensor.oref_alert`'s state is one of: `ok`, `pre_alert`, and `alert`.
 The integration is installed and configured via the user interface. There is no YAML or templates involved.
 
 A demo video (in Hebrew) can be found [here](https://youtu.be/xzxSxtSQIR8).
@@ -34,19 +34,19 @@ Once the component is installed, it's possible to control additional parameters 
 [![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=oref_alert)
 
 There are 3 configuration fields:
-1. **Selected area**: by default the integration finds the area based on HA's home location. There is no need to change this default. Note: it's highly discouraged to select more than a single area. `event.oref_alert` doesn't support more than a single area, and will not be created when choosing multiple areas. It's possible to create additional `event` entities by creating additional sensors (check below for more information). However, `event` entities are created only when a single area is selected.
-2. **Active duration of an alert**: this field doesn't impact `event.oref_alert` but it's used by other entities as explained below. It's the alert's active time period (in minutes). The default is 10 minutes.
+1. **Selected area**: by default the integration finds the area based on HA's home location. There is no need to change this default. Note: it's highly discouraged to select more than a single area. `sensor.oref_alert` doesn't support more than a single area, and will not be created when choosing multiple areas. It's possible to create additional `sensor` entities by creating additional sensors (check below for more information) with a single area.
+2. **Active duration of an alert**: this field doesn't impact `sensor.oref_alert` but it's used by other entities as explained below.
 3. **Add 'All Alerts' attributes**: when it's off (the default) the attributes `Country alerts` and `Selected areas alerts` are not added to the binary sensors. These attributes hold the list of all alerts over the last 24-hours which can be long and cause performance issues on weaker systems. Both attributes are not used often and are not part of any example below.
 
 <kbd><img src="https://github.com/user-attachments/assets/960168bd-d7ad-47f6-88e7-26d216f705a9" width="400"></kbd>
 
 ## Record's Attribute
 
-`event.oref_alert` has `record` attribute which holds additional information about the message. This record has the following fields:
+`sensor.oref_alert` has `record` attribute which holds additional information about the last message. This record has the following fields:
 1. `alertDate`: e.g. `2025-06-30 15:00:00` (Israel timezone).
 2. `title`: e.g. `ירי רקטות וטילים`. Always in Hebrew.
 3. `data`: a single area name, e.g. `תל אביב - מרכז העיר`.
-4. `category`: an integer of the category as listed [here](https://www.oref.org.il/alerts/alertCategories.json). Categories 14 and 13 are used for `pre-alert` and `end`, respectively.
+4. `category`: an integer of the category as listed [here](https://www.oref.org.il/alerts/alertCategories.json). Categories 14 and 13 are used for `pre_alert` and `end`, respectively.
 5. `channel`: the receiving channel. Below is the ordered list of options. When the same alert is coming on multiple channels, only the higher channel will be used. The fields of the messages are normalized and have the same format regardless of the channel.
     1. `website-history`: the history file of the official website.
     2. `website`: the real-time file of the official website.
@@ -56,47 +56,27 @@ There are 3 configuration fields:
 
 ## Automation
 
-Here is a typical automation:
+Here are typical automation triggers:
 
 ```yaml
 triggers:
   - trigger: state
-    entity_id: event.oref_alert
-actions:
-  - choose:
-      - conditions:
-          - condition: state
-            entity_id: event.oref_alert
-            attribute: event_type
-            state: pre_alert
-        sequence:
-          - ...
-      - conditions:
-          - condition: state
-            entity_id: event.oref_alert
-            attribute: event_type
-            state: alert
-        sequence:
-          - ...
-      - conditions:
-          - condition: state
-            entity_id: event.oref_alert
-            attribute: event_type
-            state: end
-        sequence:
-          - ...
+    entity_id: sensor.oref_alert
+    to: pre_alert
+
+triggers:
+  - trigger: state
+    entity_id: sensor.oref_alert
+    to: alert
+
+triggers:
+  - trigger: state
+    entity_id: sensor.oref_alert
+    from:
+      - pre_alert
+      - alert
+    to: ok
 ```
-
-Note that the following trigger is wrong and should ***not be used***:
-
-```yaml
-trigger: state
-entity_id: event.oref_alert
-attribute: event_type
-to: pre_alert
-```
-
-The reason is that `pre_alert` can follow a `pre_alert` if the 1st instance was not followed by `alert` (happens when the threat is eliminated early on). In such a case, the 2nd instance won't trigger the above condition since there is no change. It doesn't happen to the original automation since the state of `event.oref_alert` holds the timestamp so there is a change to `event.oref_alert` as a whole.
 
 ## Additional Sensors
 
@@ -114,9 +94,15 @@ The action `oref_alert.edit_sensor` can be used for editing an additional sensor
 
 [![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.edit_sensor)
 
+## Event Entity
+
+`event.oref_alert` is an additional entity which can be used to get the messages. There are 3 type of events: `pre_alert`, `alert` and `end`.
+
+*Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the action `oref_alert.add_sensor`.*
+
 ## Binary Sensor
 
-`binary_sensor.oref_alert` is a legacy entity. The sensor is `on` when there is an active alert in the home's area. An alert is consider active according to the specified duration in the configuration (10 minutes by default).
+`binary_sensor.oref_alert` is a legacy entity. The sensor is `on` when there is an active alert in the home's area. An alert is consider active according to the specified duration in the configuration (10 minutes by default). This is not according to the new guidelines where alerts don't have a fixed duration but exist until an `end` update is announced.
 
 ## All Areas Sensor
 
@@ -146,7 +132,7 @@ The integration creates an additional set of sensors which monitor the time to s
 
 ## Alert End Time Sensors
 
-The integration creates an additional set of sensors which monitor the time to the end of the alert for a specific area. The ID of the entity is similar to the corresponding binary sensor, with the suffix of `_end_time`. For example, `sensor.oref_alert_end_time`. When there is a new alert in the area, the `state` of the sensor is set according to the `Alert active duration` as configured by the user (default is 10 minutes). The `state` of the sensor decrements as time passes, and it becomes `unknown` once the alert is `off`. The sensor has the following extra attributes:
+The integration creates an additional set of sensors which monitor the time to the end of the alert for a specific area. The ID of the entity is similar to the corresponding binary sensor, with the suffix of `_end_time`. For example, `sensor.oref_alert_end_time`. When there is a new alert in the area, the `state` of the sensor is set according to the `Alert active duration` as configured by the user (default is 10 minutes). This is not according to the new guidelines where alerts don't have a fixed duration but exist until an `end` update is announced. The `state` of the sensor decrements as time passes, and it becomes `unknown` once the alert is `off`. The sensor has the following extra attributes:
 1. `Area`: the name of the area.
 2. `Alert active duration`: as configured by the user.
 3. `Alert`: the active alert (when there is such).
@@ -211,7 +197,7 @@ data:
   longitude: 34.7772
   category: 14
   title: התרעה מקדימה
-  type: pre-alert
+  type: pre_alert
   icon: mdi:flash-alert
   emoji: ⚡
   source: tzevaadom
@@ -331,19 +317,16 @@ Returns area by coordinate (lat, lon). The coordinate can be anywhere inside the
 
 ## Usages
 
-The basic usage is to trigger an automation rule when `event.oref_alert` is triggered. Some ideas for the `actions` section can be: play a song (can be less stressful when choosing the right song and setting the volume properly), open the lights and TV in the shelter, etc'.
+The basic usage is to trigger an automation rule when `sensor.oref_alert` state is changed. Some ideas for the `actions` section can be: play a song (can be less stressful when choosing the right song and setting the volume properly), open the lights and TV in the shelter, etc'.
 
 Below are a few more examples:
 
-### Displaying Countdown Timers
+### Displaying Countdown Timer
 
 ```
 type: entities
 entities:
   - entity: sensor.oref_alert_time_to_shelter
-    type: attribute
-    attribute: display
-  - entity: sensor.oref_alert_end_time
     type: attribute
     attribute: display
 ```

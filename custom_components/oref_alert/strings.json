@@ -52,6 +52,22 @@
             },
             "named_end_time": {
                 "name": "{name} End Time"
+            },
+            "default_status": {
+                "name": "Status",
+                "state": {
+                    "ok": "OK",
+                    "pre_alert": "Pre Alert",
+                    "alert": "Alert"
+                }
+            },
+            "named_status": {
+                "name": "{name} Status",
+                "state": {
+                    "ok": "OK",
+                    "pre_alert": "Pre Alert",
+                    "alert": "Alert"
+                }
             }
         },
         "event": {

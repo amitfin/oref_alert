@@ -15,8 +15,31 @@
       }
     },
     "sensor": {
-      "timer": {
+      "default_time_to_shelter": {
         "default": "mdi:timer-sand"
+      },
+      "named_time_to_shelter": {
+        "default": "mdi:timer-sand"
+      },
+      "default_end_time": {
+        "default": "mdi:timer-sand-complete"
+      },
+      "named_end_time": {
+        "default": "mdi:timer-sand-complete"
+      },
+      "default_status": {
+        "default": "mdi:check-circle-outline",
+        "state": {
+          "pre_alert": "mdi:message-alert-outline",
+          "alert": "mdi:home-alert-outline"
+        }
+      },
+      "named_status": {
+        "default": "mdi:check-circle-outline",
+        "state": {
+          "pre_alert": "mdi:message-alert-outline",
+          "alert": "mdi:home-alert-outline"
+        }
       }
     },
     "event": {
