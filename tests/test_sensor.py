@@ -5,9 +5,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, STATE_UNKNOWN, Platform
+from homeassistant.core import State
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
+    mock_restore_cache,
 )
 
 from custom_components.oref_alert.const import (
@@ -341,6 +343,41 @@ async def test_status_state_expired_pre_alert(
     assert state is not None
     assert state.state == "ok"
     assert state.attributes[ATTR_RECORD] == old_pre_alert_record
+
+    await async_shutdown(hass, config_id)
+
+
+async def test_status_state_restored_record(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test status sensor restores the previous record from state cache."""
+    freezer.move_to("2025-01-01 12:00:00+03:00")
+    restored_record = {
+        CATEGORY_FIELD: 14,
+        CHANNEL_FIELD: "website-history",
+        DATE_FIELD: "2025-01-01 11:59:30",
+    }
+    mock_restore_cache(
+        hass,
+        [
+            State(
+                STATUS_ENTITY_ID,
+                STATE_UNKNOWN,
+                {
+                    ATTR_AREA: "בארי",
+                    ATTR_RECORD: restored_record,
+                },
+            )
+        ],
+    )
+
+    config_id = await async_setup(hass)
+
+    state = hass.states.get(STATUS_ENTITY_ID)
+    assert state is not None
+    assert state.state == RecordType.PRE_ALERT
+    assert state.attributes[ATTR_RECORD] == restored_record
 
     await async_shutdown(hass, config_id)
 

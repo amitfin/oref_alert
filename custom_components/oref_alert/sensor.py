@@ -12,6 +12,7 @@ from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.const import STATE_OK, Platform, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import event as event_helper
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import slugify
 
 from custom_components.oref_alert.records_schema import RecordType
@@ -275,7 +276,7 @@ class AlertEndTimeSensor(OrefAlertTimerSensor):
         }
 
 
-class OrefAlertStatusSensor(OrefAlertCoordinatorEntity, SensorEntity):
+class OrefAlertStatusSensor(OrefAlertCoordinatorEntity, SensorEntity, RestoreEntity):
     """Representation of a status sensor."""
 
     _unrecorded_attributes = frozenset({ATTR_AREA, ATTR_RECORD})
@@ -302,6 +303,14 @@ class OrefAlertStatusSensor(OrefAlertCoordinatorEntity, SensorEntity):
                 f"{OREF_ALERT_UNIQUE_ID}_{name.lower().replace(' ', '_')}"
             )
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
+
+    async def async_added_to_hass(self) -> None:
+        """Handle entity which will be added."""
+        await super().async_added_to_hass()
+        if (last_state := await self.async_get_last_state()) and (
+            record := last_state.attributes.get(ATTR_RECORD)
+        ):
+            self._record = record
 
     @property
     def native_value(self) -> str:
