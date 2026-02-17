@@ -6,7 +6,12 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 from homeassistant.components.event import ATTR_EVENT_TYPE, ATTR_EVENT_TYPES
-from homeassistant.const import ATTR_FRIENDLY_NAME, CONF_NAME, STATE_UNKNOWN
+from homeassistant.const import (
+    ATTR_FRIENDLY_NAME,
+    CONF_ENTITY_ID,
+    CONF_NAME,
+    STATE_UNKNOWN,
+)
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
@@ -21,6 +26,7 @@ from custom_components.oref_alert.const import (
     CONF_AREAS,
     CONF_DURATION,
     DOMAIN,
+    REMOVE_SENSOR_ACTION,
     SYNTHETIC_ALERT_ACTION,
 )
 
@@ -217,5 +223,14 @@ async def test_additional(
     assert state is not None
     assert state.attributes.get(ATTR_EVENT_TYPE) == "alert"
     assert state.attributes.get(ATTR_FRIENDLY_NAME) == "Oref Alert Test"
+
+    await hass.services.async_call(
+        DOMAIN,
+        REMOVE_SENSOR_ACTION,
+        {CONF_ENTITY_ID: "binary_sensor.oref_alert_test"},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+    assert hass.states.get("event.oref_alert_test") is None
 
     await async_shutdown(hass, config_id)

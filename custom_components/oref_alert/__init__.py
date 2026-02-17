@@ -215,8 +215,13 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
             if name != sensor_key
         }
         entity_reg.async_remove(entity_id)
-        for suffix in [TIME_TO_SHELTER_ID_SUFFIX, END_TIME_ID_SUFFIX, STATUS_ID_SUFFIX]:
-            delete_entity = f"{Platform.SENSOR}.{entity_id.split('.')[1]}_{suffix}"
+        for platform, suffix in [
+            (Platform.SENSOR, f"_{TIME_TO_SHELTER_ID_SUFFIX}"),
+            (Platform.SENSOR, f"_{END_TIME_ID_SUFFIX}"),
+            (Platform.SENSOR, f"_{STATUS_ID_SUFFIX}"),
+            (Platform.EVENT, None),
+        ]:
+            delete_entity = f"{platform}.{entity_id.split('.')[1]}{suffix or ''}"
             if entity_reg.async_get(delete_entity) is not None:
                 entity_reg.async_remove(delete_entity)
         hass.config_entries.async_update_entry(
