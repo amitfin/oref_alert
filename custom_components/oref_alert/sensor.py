@@ -48,10 +48,6 @@ if TYPE_CHECKING:
 
 PARALLEL_UPDATES: Final = 0
 SECONDS_IN_A_MINUTE: Final = 60
-RECORD_EXPIRATION_MINUTES: Final[dict[str, int]] = {
-    RecordType.PRE_ALERT: 20,
-    RecordType.ALERT: 720,
-}
 
 
 async def async_setup_entry(
@@ -306,44 +302,32 @@ class OrefAlertStatusSensor(OrefAlertCoordinatorEntity, SensorEntity, RestoreEnt
             )
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
 
-    def _update_record(self, record: AlertType, record_type: str | None = None) -> None:
-        """Update the record."""
-        self._record = record
-
-        if record_type:
-            self._record_type = record_type
-        else:
-            self._record_type = self._config_entry.runtime_data.classifier.record_type(
-                record
-            )
-
-        if (
-            expiration := RECORD_EXPIRATION_MINUTES.get(self._record_type or "")
-        ) is None:
-            self._record_expired = False
-        elif dt_util.now() - dt_util.parse_datetime(
-            record[DATE_FIELD], raise_on_error=True
-        ).replace(tzinfo=IST) > timedelta(minutes=expiration):
-            self._record_expired = True
-        else:
-            self._record_expired = False
-
     async def async_added_to_hass(self) -> None:
         """Handle entity which will be added."""
         await super().async_added_to_hass()
         if (last_state := await self.async_get_last_state()) and (
             record := last_state.attributes.get(ATTR_RECORD)
         ):
-            self._update_record(record)
+            self._record = record
+            self._record_type = self._config_entry.runtime_data.classifier.record_type(
+                record
+            )
+            self._record_expired = (
+                self._config_entry.runtime_data.classifier.record_expired(
+                    record, self._record_type
+                )
+            )
 
     @property
     def native_value(self) -> str:
         """Return the state value."""
-        record_type, record = (
+        record_type, record, record_expired = (
             self._config_entry.runtime_data.classifier.latest_record_type(self._area)
         )
         if record and record != self._record:
-            self._update_record(record, record_type)
+            self._record = record
+            self._record_type = record_type
+            self._record_expired = record_expired
 
         if not self._record_expired and self._record_type in (
             RecordType.PRE_ALERT,

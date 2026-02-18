@@ -253,7 +253,7 @@ async def test_status_state_transition_and_cache(
     monkeypatch.setattr(
         classifier,
         "latest_record_type",
-        lambda _: (RecordType.PRE_ALERT, pre_alert_record),
+        lambda _: (RecordType.PRE_ALERT, pre_alert_record, False),
     )
     await refresh_coordinator(hass, config_id)
     state = hass.states.get(STATUS_ENTITY_ID)
@@ -269,7 +269,7 @@ async def test_status_state_transition_and_cache(
     monkeypatch.setattr(
         classifier,
         "latest_record_type",
-        lambda _: (RecordType.ALERT, alert_record),
+        lambda _: (RecordType.ALERT, alert_record, False),
     )
     await refresh_coordinator(hass, config_id)
     state = hass.states.get(STATUS_ENTITY_ID)
@@ -277,7 +277,7 @@ async def test_status_state_transition_and_cache(
     assert state.state == RecordType.ALERT
     assert state.attributes[ATTR_RECORD] == alert_record
 
-    monkeypatch.setattr(classifier, "latest_record_type", lambda _: (None, None))
+    monkeypatch.setattr(classifier, "latest_record_type", lambda _: (None, None, True))
     await refresh_coordinator(hass, config_id)
     state = hass.states.get(STATUS_ENTITY_ID)
     assert state is not None
@@ -305,7 +305,7 @@ async def test_status_state_end_record(
     monkeypatch.setattr(
         classifier,
         "latest_record_type",
-        lambda _: (RecordType.END, end_record),
+        lambda _: (RecordType.END, end_record, False),
     )
     await refresh_coordinator(hass, config_id)
     state = hass.states.get(STATUS_ENTITY_ID)
@@ -336,7 +336,7 @@ async def test_status_state_expired_pre_alert(
     monkeypatch.setattr(
         classifier,
         "latest_record_type",
-        lambda _: (RecordType.PRE_ALERT, old_pre_alert_record),
+        lambda _: (RecordType.PRE_ALERT, old_pre_alert_record, True),
     )
     await refresh_coordinator(hass, config_id)
     state = hass.states.get(STATUS_ENTITY_ID)

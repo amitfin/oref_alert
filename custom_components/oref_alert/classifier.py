@@ -5,15 +5,16 @@ from __future__ import annotations
 import types
 from contextlib import suppress
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 import homeassistant.util.dt as dt_util
 from homeassistant.core import callback
 from homeassistant.helpers import event
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from custom_components.oref_alert.const import AREA_FIELD, AlertType
+from custom_components.oref_alert.const import AREA_FIELD, DATE_FIELD, IST, AlertType
 from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
+from custom_components.oref_alert.records_schema import RecordType
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -23,11 +24,15 @@ if TYPE_CHECKING:
 
     from custom_components.oref_alert.coordinator import OrefAlertDataUpdateCoordinator
 
-PARALLEL_UPDATES = 0
-GITHUB_ROOT = "https://raw.githubusercontent.com/amitfin/oref_alert/main/custom_components/oref_alert"
-RECORDS_SCHEMA_FILE_NAME = "records_schema"
-RECORDS_SCHEMA_URL = f"{GITHUB_ROOT}/{RECORDS_SCHEMA_FILE_NAME}.py"
+PARALLEL_UPDATES: Final = 0
+GITHUB_ROOT: Final = "https://raw.githubusercontent.com/amitfin/oref_alert/main/custom_components/oref_alert"
+RECORDS_SCHEMA_FILE_NAME: Final = "records_schema"
+RECORDS_SCHEMA_URL: Final = f"{GITHUB_ROOT}/{RECORDS_SCHEMA_FILE_NAME}.py"
 RECORDS_SCHEMA: dict[str, Schema] = {}
+RECORD_EXPIRATION_MINUTES: Final[dict[str, int]] = {
+    RecordType.PRE_ALERT: 20,
+    RecordType.ALERT: 720,
+}
 
 
 class Classifier:
@@ -77,14 +82,32 @@ class Classifier:
                 return record_type
         return None
 
+    def record_expired(self, record: AlertType, record_type: str | None = None) -> bool:
+        """Check if the record is expired."""
+        if not record_type:
+            record_type = self.record_type(record)
+
+        if (
+            not record_type
+            or (expiration := RECORD_EXPIRATION_MINUTES.get(record_type)) is None
+        ):
+            return False
+
+        return (
+            dt_util.now()
+            - dt_util.parse_datetime(record[DATE_FIELD], raise_on_error=True).replace(
+                tzinfo=IST
+            )
+        ) > timedelta(minutes=expiration)
+
     def latest_record_type(
         self, area: str
-    ) -> tuple[str, AlertType] | tuple[None, None]:
+    ) -> tuple[str, AlertType, bool] | tuple[None, None, bool]:
         """Get the latest record type."""
         for record in self._coordinator.data.active_items:
             if (
                 (record_area := record[AREA_FIELD]) == area
                 or record_area in ALL_AREAS_ALIASES
             ) and (record_type := self.record_type(record)) is not None:
-                return record_type, record
-        return None, None
+                return record_type, record, self.record_expired(record, record_type)
+        return None, None, True

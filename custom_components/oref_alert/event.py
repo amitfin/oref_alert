@@ -85,7 +85,7 @@ class AlertEvent(OrefAlertCoordinatorEntity, EventEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        event_type, record = (
+        event_type, record, _ = (
             self._config_entry.runtime_data.classifier.latest_record_type(self._area)
         )
         if not event_type or not record:

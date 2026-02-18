@@ -9,14 +9,20 @@ from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import Mock, patch
 
 import homeassistant.util.dt as dt_util
+import pytest
 
 from custom_components.oref_alert import categories, classifier, records_schema
 from custom_components.oref_alert.classifier import Classifier
-from custom_components.oref_alert.const import AREA_FIELD, CATEGORY_FIELD
+from custom_components.oref_alert.const import (
+    AREA_FIELD,
+    CATEGORY_FIELD,
+    DATE_FIELD,
+    IST,
+)
 from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
+from custom_components.oref_alert.records_schema import RecordType
 
 if TYPE_CHECKING:
-    import pytest
     from homeassistant.core import HomeAssistant
 
     from custom_components.oref_alert.coordinator import OrefAlertDataUpdateCoordinator
@@ -80,18 +86,25 @@ def test_get_last_record_matches_area_and_skips_invalid(
 ) -> None:
     """Test area matching and invalid record handling."""
     monkeypatch.setattr(classifier, "RECORDS_SCHEMA", records_schema.RECORDS_SCHEMA)
+    monkeypatch.setattr(
+        classifier.dt_util,
+        "now",
+        lambda: datetime(2025, 1, 1, 12, 0, 0, tzinfo=IST),
+    )
 
     invalid_record = {AREA_FIELD: "Area 1"}
     valid_record = {
         AREA_FIELD: "Area 1",
         CATEGORY_FIELD: categories.PRE_ALERT_CATEGORY,
+        DATE_FIELD: "2025-01-01 11:59:30",
     }
     record_manager = _make_classifier(hass, [invalid_record, valid_record])
 
-    record_type, record = record_manager.latest_record_type("Area 1")
+    record_type, record, record_expired = record_manager.latest_record_type("Area 1")
 
     assert str(record_type) == "pre_alert"
     assert record == valid_record
+    assert record_expired is False
 
 
 def test_get_last_record_accepts_alias(
@@ -107,10 +120,11 @@ def test_get_last_record_accepts_alias(
     }
     record_manager = _make_classifier(hass, [valid_record])
 
-    record_type, record = record_manager.latest_record_type("Area 2")
+    record_type, record, record_expired = record_manager.latest_record_type("Area 2")
 
     assert str(record_type) == "end"
     assert record == valid_record
+    assert record_expired is False
 
 
 def test_get_last_record_returns_none(
@@ -122,10 +136,11 @@ def test_get_last_record_returns_none(
     record = {AREA_FIELD: "Area B", CATEGORY_FIELD: categories.PRE_ALERT_CATEGORY}
     record_manager = _make_classifier(hass, [record])
 
-    record_type, record = record_manager.latest_record_type("Area A")
+    record_type, record, record_expired = record_manager.latest_record_type("Area A")
 
     assert record_type is None
     assert record is None
+    assert record_expired is True
 
 
 def test_record_type_returns_match(
@@ -153,3 +168,48 @@ def test_record_type_returns_none_on_invalid(
     record_type = record_manager.record_type(cast("Any", {}))
 
     assert record_type is None
+
+
+@pytest.mark.parametrize(
+    ("record", "record_type", "expected"),
+    [
+        (
+            {DATE_FIELD: "2025-01-01 11:39:00"},
+            RecordType.PRE_ALERT,
+            True,
+        ),
+        (
+            {DATE_FIELD: "2025-01-01 11:50:00"},
+            RecordType.PRE_ALERT,
+            False,
+        ),
+        (
+            {DATE_FIELD: "2025-01-01 01:00:00"},
+            RecordType.END,
+            False,
+        ),
+        (
+            {
+                CATEGORY_FIELD: categories.PRE_ALERT_CATEGORY,
+                DATE_FIELD: "2025-01-01 11:39:00",
+            },
+            None,
+            True,
+        ),
+    ],
+)
+def test_record_expired(
+    hass: HomeAssistant,
+    monkeypatch: pytest.MonkeyPatch,
+    record: Any,
+    record_type: str | None,
+    expected: bool,  # noqa: FBT001
+) -> None:
+    """Test record expiration behavior across record types and inputs."""
+    monkeypatch.setattr(classifier, "RECORDS_SCHEMA", records_schema.RECORDS_SCHEMA)
+    record_manager = _make_classifier(hass, [])
+    now = datetime(2025, 1, 1, 12, 0, 0, tzinfo=IST)
+
+    monkeypatch.setattr(classifier.dt_util, "now", lambda: now)
+
+    assert record_manager.record_expired(record, record_type) is expected
