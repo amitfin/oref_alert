@@ -130,16 +130,6 @@ The integration creates an additional set of sensors which monitor the time to s
 
 *Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the action `oref_alert.add_sensor`.*
 
-## Alert End Time Sensors
-
-The integration creates an additional set of sensors which monitor the time to the end of the alert for a specific area. The ID of the entity is similar to the corresponding binary sensor, with the suffix of `_end_time`. For example, `sensor.oref_alert_end_time`. When there is a new alert in the area, the `state` of the sensor is set according to the `Alert active duration` as configured by the user (default is 10 minutes). This is not according to the new guidelines where alerts don't have a fixed duration but exist until an `end` update is announced. The `state` of the sensor decrements as time passes, and it becomes `unknown` once the alert is `off`. The sensor has the following extra attributes:
-1. `Area`: the name of the area.
-2. `Alert active duration`: as configured by the user.
-3. `Alert`: the active alert (when there is such).
-4. `Display`: a user-friendly string of the time in the format of "mm:ss".
-
-*Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the action `oref_alert.add_sensor`.*
-
 ## Geo Location Entities
 
 Geo-location entities are created for every active alert in Israel (regardless of the selected areas). These entities exist while the corresponding alert is active (10 minutes by default). The state of the entity is the distance in kilometers from HA home's coordinate. In addition, each entity has the following attributes:

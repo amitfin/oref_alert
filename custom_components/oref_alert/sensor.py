@@ -28,7 +28,6 @@ from .const import (
     CONF_AREAS,
     CONF_SENSORS,
     DATE_FIELD,
-    END_TIME_ID_SUFFIX,
     IST,
     OREF_ALERT_UNIQUE_ID,
     TIME_TO_SHELTER_ID_SUFFIX,
@@ -66,7 +65,6 @@ async def async_setup_entry(
     ]
     async_add_entities(
         [TimeToShelterSensor(name, area, config_entry) for name, area in entities]
-        + [AlertEndTimeSensor(name, area, config_entry) for name, area in entities]
         + [OrefAlertStatusSensor(name, area, config_entry) for name, area in entities]
     )
 
@@ -216,57 +214,6 @@ class TimeToShelterSensor(OrefAlertTimerSensor):
         return {
             ATTR_AREA: self._area,
             ATTR_TIME_TO_SHELTER: self._migun_time,
-            ATTR_ALERT: self._get_alert(),
-            ATTR_DISPLAY: self.oref_display_value(),
-        }
-
-
-class AlertEndTimeSensor(OrefAlertTimerSensor):
-    """Representation of the alert end time sensor."""
-
-    _unrecorded_attributes = frozenset(
-        {
-            ATTR_AREA,
-            CONF_ALERT_ACTIVE_DURATION,
-            ATTR_ALERT,
-            ATTR_DISPLAY,
-        }
-    )
-
-    def __init__(
-        self,
-        name: str,
-        area: str,
-        config_entry: OrefAlertConfigEntry,
-    ) -> None:
-        """Initialize object with defaults."""
-        super().__init__(area, config_entry)
-        if not name:
-            self._attr_translation_key = "default_end_time"
-            self._attr_unique_id = f"{OREF_ALERT_UNIQUE_ID}_{END_TIME_ID_SUFFIX}"
-        else:
-            self._attr_translation_key = "named_end_time"
-            self._attr_translation_placeholders = {"name": name}
-            self._attr_unique_id = slugify(
-                OREF_ALERT_UNIQUE_ID
-                + f"_{name.lower().replace(' ', '_')}_"
-                + END_TIME_ID_SUFFIX
-            )
-        self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
-
-    def oref_value_seconds(self) -> int | None:
-        """Return the remaining seconds till the end of the alert."""
-        if alert_timestamp := self._get_alert_timestamp():
-            alert_age = dt_util.now().timestamp() - alert_timestamp
-            return int(self._active_duration * 60 - alert_age)
-        return None
-
-    @property
-    def extra_state_attributes(self) -> Mapping[str, Any] | None:
-        """Return additional attributes."""
-        return {
-            ATTR_AREA: self._area,
-            CONF_ALERT_ACTIVE_DURATION: self._active_duration,
             ATTR_ALERT: self._get_alert(),
             ATTR_DISPLAY: self.oref_display_value(),
         }

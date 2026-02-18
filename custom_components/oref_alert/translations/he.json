@@ -47,12 +47,6 @@
             "named_time_to_shelter": {
                 "name": "{name} זמן להתמגן"
             },
-            "default_end_time": {
-                "name": "סיום התמגנות"
-            },
-            "named_end_time": {
-                "name": "{name} סיום התמגנות"
-            },
             "status": {
                 "state": {
                     "ok": "תקין",

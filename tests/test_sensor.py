@@ -26,7 +26,6 @@ from custom_components.oref_alert.const import (
     CONF_AREAS,
     DATE_FIELD,
     DOMAIN,
-    END_TIME_ID_SUFFIX,
     OREF_ALERT_UNIQUE_ID,
     REMOVE_SENSOR_ACTION,
     TIME_TO_SHELTER_ID_SUFFIX,
@@ -50,7 +49,6 @@ DEFAULT_OPTIONS = {
 TIME_TO_SHELTER_ENTITY_ID = (
     f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_{TIME_TO_SHELTER_ID_SUFFIX}"
 )
-END_TIME_ENTITY_ID = f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_{END_TIME_ID_SUFFIX}"
 STATUS_ENTITY_ID = f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}"
 
 
@@ -159,61 +157,6 @@ async def test_time_to_shelter_attributes_no_alert(
     assert state is not None
     assert state.attributes[ATTR_AREA] == "בארי"
     assert state.attributes[ATTR_TIME_TO_SHELTER] == 15
-    assert state.attributes[ATTR_ALERT] is None
-    assert state.attributes[ATTR_DISPLAY] is None
-    await async_shutdown(hass, config_id)
-
-
-async def test_alert_end_time_state(
-    hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
-    freezer: FrozenDateTimeFactory,
-) -> None:
-    """Test entity state."""
-    freezer.move_to("2023-10-07 06:30:00+03:00")
-    mock_urls(
-        aioclient_mock, "multi_alerts_real_time.json", "multi_alerts_history.json"
-    )
-
-    config_id = await async_setup(hass)
-
-    state = hass.states.get(END_TIME_ENTITY_ID)
-    assert state is not None
-    assert state.name == "Oref Alert End Time"
-    assert (
-        state.attributes[ATTR_ALERT]
-        == load_json_fixture("single_alert_history.json", "website-history")[0]
-    )
-    alert_end_time = 600
-    for _ in range(11):
-        state = hass.states.get(END_TIME_ENTITY_ID)
-        assert state is not None
-        assert state.state == str(alert_end_time)
-        assert (
-            state.attributes[ATTR_DISPLAY]
-            == f"{alert_end_time // 60:02}:{alert_end_time % 60:02}"
-        )
-        freezer.tick(60)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
-        alert_end_time -= 60
-
-    state = hass.states.get(END_TIME_ENTITY_ID)
-    assert state is not None
-    assert state.state == STATE_UNKNOWN
-    assert state.attributes[ATTR_DISPLAY] is None
-    await async_shutdown(hass, config_id)
-
-
-async def test_alert_end_time_attributes_no_alert(
-    hass: HomeAssistant,
-) -> None:
-    """Test attributes when there is no alert."""
-    config_id = await async_setup(hass)
-    state = hass.states.get(END_TIME_ENTITY_ID)
-    assert state is not None
-    assert state.attributes[ATTR_AREA] == "בארי"
-    assert state.attributes[CONF_ALERT_ACTIVE_DURATION] == 10
     assert state.attributes[ATTR_ALERT] is None
     assert state.attributes[ATTR_DISPLAY] is None
     await async_shutdown(hass, config_id)
@@ -404,15 +347,11 @@ async def test_additional_sensor(
     )
     await hass.async_block_till_done(wait_background_tasks=True)
     sensors = hass.states.async_entity_ids(Platform.SENSOR)
-    assert len(sensors) == 3
+    assert len(sensors) == 2
     for entity_id, name in (
         (
             f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_test_{TIME_TO_SHELTER_ID_SUFFIX}",
             "Oref Alert Test Time To Shelter",
-        ),
-        (
-            f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_test_{END_TIME_ID_SUFFIX}",
-            "Oref Alert Test End Time",
         ),
         (
             f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_test",
@@ -441,8 +380,8 @@ async def test_remove_sensors(
     await hass.async_block_till_done(wait_background_tasks=True)
     # There are 3 binary sensors: default, all_areas, test
     assert len(hass.states.async_entity_ids(Platform.BINARY_SENSOR)) == 3
-    # There are 6 sensors: (time-to-shelter, end-time, status) * (default, test)
-    assert len(hass.states.async_entity_ids(Platform.SENSOR)) == 6
+    # There are 4 sensors: (time-to-shelter, status) * (default, test)
+    assert len(hass.states.async_entity_ids(Platform.SENSOR)) == 4
     await hass.services.async_call(
         DOMAIN,
         REMOVE_SENSOR_ACTION,
@@ -451,7 +390,7 @@ async def test_remove_sensors(
     )
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(hass.states.async_entity_ids(Platform.BINARY_SENSOR)) == 2
-    assert len(hass.states.async_entity_ids(Platform.SENSOR)) == 3
+    assert len(hass.states.async_entity_ids(Platform.SENSOR)) == 2
     await async_shutdown(hass, config_id)
 
 
@@ -469,15 +408,14 @@ async def test_all_areas_alert(
 
     config_id = await async_setup(hass)
 
-    entities = (
-        (TIME_TO_SHELTER_ENTITY_ID, "15"),
-        (END_TIME_ENTITY_ID, "600"),
-    )
+    state = hass.states.get(TIME_TO_SHELTER_ENTITY_ID)
+    assert state is not None
+    assert state.state == "15"
+    assert state.attributes[ATTR_ALERT] == alert
 
-    for entity_id, value in entities:
-        state = hass.states.get(entity_id)
-        assert state is not None
-        assert state.state == value
-        assert state.attributes[ATTR_ALERT] == alert
+    state = hass.states.get(STATUS_ENTITY_ID)
+    assert state is not None
+    assert state.state == "alert"
+    assert state.attributes[ATTR_RECORD] == alert
 
     await async_shutdown(hass, config_id)

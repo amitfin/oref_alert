@@ -56,7 +56,6 @@ from .const import (
     CONF_SENSORS,
     DOMAIN,
     EDIT_SENSOR_ACTION,
-    END_TIME_ID_SUFFIX,
     LOGGER,
     REMOVE_AREAS,
     REMOVE_SENSOR_ACTION,
@@ -216,7 +215,6 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
         entity_reg.async_remove(entity_id)
         for platform, suffix in [
             (Platform.SENSOR, f"_{TIME_TO_SHELTER_ID_SUFFIX}"),
-            (Platform.SENSOR, f"_{END_TIME_ID_SUFFIX}"),
             (Platform.SENSOR, None),
             (Platform.EVENT, None),
         ]:
