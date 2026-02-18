@@ -56,8 +56,8 @@ async def async_setup_entry(
     async_add_entities(AlertSensor(name, config_entry) for name in names)
 
 
-class AlertSensorBase(OrefAlertCoordinatorEntity, binary_sensor.BinarySensorEntity):
-    """Representation of the alert sensor base."""
+class AlertSensor(OrefAlertCoordinatorEntity, binary_sensor.BinarySensorEntity):
+    """Representation of the alert binary sensor."""
 
     _attr_device_class = binary_sensor.BinarySensorDeviceClass.SAFETY
     _attr_translation_key = "home_alert"
@@ -76,57 +76,15 @@ class AlertSensorBase(OrefAlertCoordinatorEntity, binary_sensor.BinarySensorEnti
 
     def __init__(
         self,
-        config_entry: OrefAlertConfigEntry,
-    ) -> None:
-        """Initialize object with defaults."""
-        super().__init__(config_entry)
-        self._common_attributes = {
-            CONF_ALERT_ACTIVE_DURATION: self._config_entry.options[
-                CONF_ALERT_ACTIVE_DURATION
-            ],
-        }
-        self._add_all_alerts_attributes: bool = config_entry.options.get(
-            CONF_ALL_ALERTS_ATTRIBUTES, False
-        )
-
-
-class AlertAreaSensorBase(AlertSensorBase):
-    """Representation of alert area sensor."""
-
-    def __init__(
-        self,
-        areas: list[str],
-        config_entry: OrefAlertConfigEntry,
-    ) -> None:
-        """Initialize object with defaults."""
-        super().__init__(config_entry)
-        self._areas = expand_areas_and_groups(areas)
-        self._common_area_sensor_attributes = {
-            CONF_AREAS: self._areas,
-            **self._common_attributes,
-        }
-
-    def is_selected_area(self, alert: AlertType) -> bool:
-        """Check is the alert is among the selected areas."""
-        return (
-            alert[AREA_FIELD] in self._areas or alert[AREA_FIELD] in ALL_AREAS_ALIASES
-        )
-
-
-class AlertSensor(AlertAreaSensorBase):
-    """Representation of the alert sensor."""
-
-    def __init__(
-        self,
         name: str | None,
         config_entry: OrefAlertConfigEntry,
     ) -> None:
         """Initialize object with defaults."""
-        super().__init__(
+        super().__init__(config_entry)
+        self._areas = expand_areas_and_groups(
             config_entry.options[CONF_AREAS]
             if not name
-            else config_entry.options[CONF_SENSORS][name],
-            config_entry,
+            else config_entry.options[CONF_SENSORS][name]
         )
         self._active_seconds: int = (
             config_entry.options[CONF_ALERT_ACTIVE_DURATION] * SECONDS_IN_A_MINUTE
@@ -142,6 +100,15 @@ class AlertSensor(AlertAreaSensorBase):
                 f"{OREF_ALERT_UNIQUE_ID}_{name.lower().replace(' ', '_')}"
             )
         self.entity_id = f"{Platform.BINARY_SENSOR}.{self._attr_unique_id}"
+        self._add_all_alerts_attributes: bool = config_entry.options.get(
+            CONF_ALL_ALERTS_ATTRIBUTES, False
+        )
+
+    def is_selected_area(self, alert: AlertType) -> bool:
+        """Check is the alert is among the selected areas."""
+        return (
+            alert[AREA_FIELD] in self._areas or alert[AREA_FIELD] in ALL_AREAS_ALIASES
+        )
 
     def _default_to_device_class_name(self) -> bool:
         """Do not use device class name for binary sensors."""
@@ -169,7 +136,10 @@ class AlertSensor(AlertAreaSensorBase):
     def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return additional attributes."""
         return {
-            **self._common_area_sensor_attributes,
+            CONF_AREAS: self._areas,
+            CONF_ALERT_ACTIVE_DURATION: self._config_entry.options[
+                CONF_ALERT_ACTIVE_DURATION
+            ],
             ATTR_SELECTED_AREAS_ACTIVE_ALERTS: [
                 alert
                 for alert in self.coordinator.data.active_alerts
