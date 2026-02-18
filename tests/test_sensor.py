@@ -378,8 +378,8 @@ async def test_remove_sensors(
         blocking=True,
     )
     await hass.async_block_till_done(wait_background_tasks=True)
-    # There are 3 binary sensors: default, all_areas, test
-    assert len(hass.states.async_entity_ids(Platform.BINARY_SENSOR)) == 3
+    # There are 2 binary sensors: default, test
+    assert len(hass.states.async_entity_ids(Platform.BINARY_SENSOR)) == 2
     # There are 4 sensors: (time-to-shelter, status) * (default, test)
     assert len(hass.states.async_entity_ids(Platform.SENSOR)) == 4
     await hass.services.async_call(
@@ -389,7 +389,7 @@ async def test_remove_sensors(
         blocking=True,
     )
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert len(hass.states.async_entity_ids(Platform.BINARY_SENSOR)) == 2
+    assert len(hass.states.async_entity_ids(Platform.BINARY_SENSOR)) == 1
     assert len(hass.states.async_entity_ids(Platform.SENSOR)) == 2
     await async_shutdown(hass, config_id)
 

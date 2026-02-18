@@ -13,7 +13,6 @@ from pytest_homeassistant_custom_component.common import (
 
 from custom_components.oref_alert.const import (
     ADD_SENSOR_ACTION,
-    ALL_AREAS_ID_SUFFIX,
     ATTR_COUNTRY_ACTIVE_ALERTS,
     ATTR_COUNTRY_ALERTS,
     ATTR_COUNTRY_UPDATES,
@@ -253,27 +252,6 @@ async def test_additional_sensor(
     await async_shutdown(hass, config_id)
 
 
-async def test_all_areas_sensor(
-    hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
-    freezer: FrozenDateTimeFactory,
-) -> None:
-    """Test all-areas sensor."""
-    freezer.move_to("2023-10-10 11:30:00+03:00")
-    mock_urls(aioclient_mock, None, "single_alert_random_area_history.json")
-    config_id = await async_setup(hass)
-    state = hass.states.get(f"{ENTITY_ID}_{ALL_AREAS_ID_SUFFIX}")
-    assert state is not None
-    assert state.state == STATE_ON
-    assert state.name == "Oref Alert All Areas"
-    expected_alerts = load_json_fixture(
-        "single_alert_random_area_history.json", "website-history"
-    )
-    assert state.attributes[ATTR_COUNTRY_ACTIVE_ALERTS] == expected_alerts
-    assert state.attributes[ATTR_COUNTRY_ALERTS] == expected_alerts
-    await async_shutdown(hass, config_id)
-
-
 @pytest.mark.parametrize(
     ("real_time_file", "history_file", "test_expired"),
     [
@@ -315,10 +293,6 @@ async def test_updates_attribute(  # noqa: PLR0913
         ),
         (
             f"{ENTITY_ID}_test",
-            ATTR_COUNTRY_UPDATES,
-        ),
-        (
-            f"{ENTITY_ID}_{ALL_AREAS_ID_SUFFIX}",
             ATTR_COUNTRY_UPDATES,
         ),
     )
@@ -371,22 +345,12 @@ async def test_all_areas_alert(  # noqa: PLR0913
     config_id = await async_setup(hass, {CONF_AREAS: ["פתח תקווה"]})
     await hass.async_block_till_done(wait_background_tasks=True)
 
-    entities = (
-        (
-            ENTITY_ID,
-            ATTR_SELECTED_AREAS_ACTIVE_ALERTS,
-        ),
-        (
-            f"{ENTITY_ID}_{ALL_AREAS_ID_SUFFIX}",
-            ATTR_COUNTRY_ACTIVE_ALERTS,
-        ),
+    state = hass.states.get(ENTITY_ID)
+    assert state is not None
+    assert state.state == STATE_ON
+    assert state.attributes[ATTR_SELECTED_AREAS_ACTIVE_ALERTS] == alerts, (
+        state.attributes[ATTR_SELECTED_AREAS_ACTIVE_ALERTS]
     )
-
-    for entity_id, attribute in entities:
-        state = hass.states.get(entity_id)
-        assert state is not None
-        assert state.state == STATE_ON
-        assert state.attributes[attribute] == alerts, state.attributes[attribute]
 
     await async_shutdown(hass, config_id)
 
@@ -403,10 +367,6 @@ async def test_all_alerts_attributes_is_off(hass: HomeAssistant) -> None:
     state = hass.states.get(ENTITY_ID)
     assert state is not None
     assert ATTR_SELECTED_AREAS_ALERTS not in state.attributes
-    assert ATTR_COUNTRY_ALERTS not in state.attributes
-
-    state = hass.states.get(f"{ENTITY_ID}_{ALL_AREAS_ID_SUFFIX}")
-    assert state is not None
     assert ATTR_COUNTRY_ALERTS not in state.attributes
 
     await async_shutdown(hass, config_id)

@@ -104,12 +104,6 @@ The action `oref_alert.edit_sensor` can be used for editing an additional sensor
 
 `binary_sensor.oref_alert` is a legacy entity. The sensor is `on` when there is an active alert in the home's area. An alert is consider active according to the specified duration in the configuration (10 minutes by default). This is not according to the new guidelines where alerts don't have a fixed duration but exist until an `end` update is announced.
 
-## All Areas Sensor
-
-`binary_sensor.oref_alert_all_areas` is an additional legacy sensor monitoring any active alert in the country. The sensor is `on` when there is one or more active alerts in Israel.
-
-## Additional Attributes
-
 Binary sensors have the following attributes:
 1. `Areas`: the list of areas provided by the user.
 2. `Alert active duration`: as configured by the user.

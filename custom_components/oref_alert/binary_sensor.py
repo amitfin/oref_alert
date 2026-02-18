@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 
 from .area_utils import expand_areas_and_groups
 from .const import (
-    ALL_AREAS_ID_SUFFIX,
     AREA_FIELD,
     ATTR_COUNTRY_ACTIVE_ALERTS,
     ATTR_COUNTRY_ALERTS,
@@ -54,10 +53,7 @@ async def async_setup_entry(
 ) -> None:
     """Initialize config entry."""
     names = [None, *list(config_entry.options.get(CONF_SENSORS, {}).keys())]
-    async_add_entities(
-        [AlertSensor(name, config_entry) for name in names]
-        + [AlertSensorAllAreas(config_entry)]
-    )
+    async_add_entities(AlertSensor(name, config_entry) for name in names)
 
 
 class AlertSensorBase(OrefAlertCoordinatorEntity, binary_sensor.BinarySensorEntity):
@@ -209,39 +205,3 @@ class AlertSensor(AlertAreaSensorBase):
     def get_sensor_key(self) -> str:
         """Get the key of the extra sensor."""
         return self._sensor_key
-
-
-class AlertSensorAllAreas(AlertSensorBase):
-    """Representation of the alert sensor for all areas."""
-
-    _attr_translation_key = "all_areas"
-
-    def __init__(
-        self,
-        config_entry: OrefAlertConfigEntry,
-    ) -> None:
-        """Initialize object with defaults."""
-        super().__init__(config_entry)
-        self._attr_unique_id = f"{OREF_ALERT_UNIQUE_ID}_{ALL_AREAS_ID_SUFFIX}"
-        self.entity_id = f"{Platform.BINARY_SENSOR}.{self._attr_unique_id}"
-
-    @property
-    def is_on(self) -> bool:
-        """Return True is sensor is on."""
-        return len(self.coordinator.data.active_alerts) > 0
-
-    @property
-    def extra_state_attributes(self) -> Mapping[str, Any] | None:
-        """Return additional attributes."""
-        return {
-            **self._common_attributes,
-            ATTR_COUNTRY_ACTIVE_ALERTS: self.coordinator.data.active_alerts,
-            **(
-                {
-                    ATTR_COUNTRY_ALERTS: self.coordinator.data.alerts,
-                }
-                if self._add_all_alerts_attributes
-                else {}
-            ),
-            ATTR_COUNTRY_UPDATES: self.coordinator.data.updates,
-        }

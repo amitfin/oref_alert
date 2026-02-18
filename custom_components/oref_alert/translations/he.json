@@ -35,11 +35,6 @@
         }
     },
     "entity": {
-        "binary_sensor": {
-            "all_areas": {
-                "name": "כל האזורים"
-            }
-        },
         "sensor": {
             "default_time_to_shelter": {
                 "name": "זמן להתמגן"

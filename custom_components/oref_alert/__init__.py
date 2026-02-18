@@ -88,7 +88,6 @@ EXISTING_SENSOR_SELECTOR = selector.EntitySelector(
     selector.EntitySelectorConfig(
         exclude_entities=[
             "binary_sensor.oref_alert",
-            "binary_sensor.oref_alert_all_areas",
         ],
         filter=selector.EntityFilterSelectorConfig(
             integration="oref_alert", domain="binary_sensor"
