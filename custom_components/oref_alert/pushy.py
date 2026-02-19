@@ -20,17 +20,13 @@ from paho.mqtt.enums import CallbackAPIVersion
 
 from .categories import pushy_thread_id_to_history_category
 from .const import (
-    AREA_FIELD,
-    CATEGORY_FIELD,
-    CHANNEL_FIELD,
-    CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_SENSORS,
-    DATE_FIELD,
     DOMAIN,
     LOGGER,
-    TITLE_FIELD,
-    AlertSource,
+    Record,
+    RecordAndMetadata,
+    RecordSource,
 )
 from .metadata import PUSHY_TEST_SEGMENTS
 from .metadata.area_info import AREA_INFO
@@ -87,9 +83,7 @@ class PushyNotifications:
         self._http_client = async_get_clientsession(hass)
         self._credentials: dict[str, str] = {}
         self._mqtt: MQTTClient | None = None
-        self.alerts: TTLDeque = TTLDeque(
-            config_entry.options[CONF_ALERT_ACTIVE_DURATION]
-        )
+        self.alerts: TTLDeque[RecordAndMetadata] = TTLDeque()
 
     async def _api_call(self, uri: str, content: Any, check: bool = True) -> Any:  # noqa: FBT001, FBT002
         """Make HTTP request to the API server."""
@@ -285,13 +279,15 @@ class PushyNotifications:
                     if int(segment) in SEGMENT_TO_AREA
                 ]:
                     self.alerts.add(
-                        {
-                            DATE_FIELD: alert_date,
-                            TITLE_FIELD: content[TITLE_FIELD],
-                            AREA_FIELD: area,
-                            CATEGORY_FIELD: category,
-                            CHANNEL_FIELD: AlertSource.MOBILE,
-                        }
+                        self._config_entry.runtime_data.classifier.add_metadata(
+                            Record(
+                                alertDate=alert_date,
+                                title=content["title"],
+                                data=area,
+                                category=category,
+                                channel=RecordSource.MOBILE,
+                            )
+                        )
                     )
                     new_alert = True
             if new_alert:

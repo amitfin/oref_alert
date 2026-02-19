@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from dataclasses import asdict
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
@@ -25,7 +26,6 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import (
 from yarl import URL
 
 from custom_components.oref_alert.const import (
-    CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_SENSORS,
     DOMAIN,
@@ -58,7 +58,7 @@ if TYPE_CHECKING:
         MqttMockPahoClient,
     )
 
-DEFAULT_OPTIONS = {CONF_AREAS: ["קריית אונו"], CONF_ALERT_ACTIVE_DURATION: 10}
+DEFAULT_OPTIONS = {CONF_AREAS: ["קריית אונו"]}
 ENTITY_ID = f"{Platform.BINARY_SENSOR}.{OREF_ALERT_UNIQUE_ID}"
 
 
@@ -369,7 +369,9 @@ async def test_simple_message(
     listener.on_message(message)
     await config.runtime_data.coordinator.async_refresh()
     assert f"MQTT message: {payload}" in caplog.text
-    assert listener.alerts.items() == load_json_fixture("pushy_alerts_as_history.json")
+    assert [asdict(item.item) for item in listener.alerts.items()] == load_json_fixture(
+        "pushy_alerts_as_history.json"
+    )
     state = hass.states.get(ENTITY_ID)
     assert state is not None
     assert state.state == STATE_ON

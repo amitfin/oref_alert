@@ -22,9 +22,7 @@
             "init": {
                 "title": "Configure Oref Alert",
                 "data": {
-                    "areas": "Select areas to monitor (Hebrew only)",
-                    "alert_active_duration": "Alert's active duration (minutes)",
-                    "all_alerts_attributes": "Add 'all alerts' attributes"
+                    "areas": "Select areas to monitor (Hebrew only)"
                 }
             }
         }

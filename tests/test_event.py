@@ -12,16 +12,17 @@ from homeassistant.const import (
     CONF_NAME,
     STATE_UNKNOWN,
 )
+from homeassistant.core import State
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
+    mock_restore_cache,
 )
 
 from custom_components.oref_alert.const import (
     ADD_SENSOR_ACTION,
     ATTR_RECORD,
     CATEGORY_FIELD,
-    CONF_ALERT_ACTIVE_DURATION,
     CONF_AREA,
     CONF_AREAS,
     CONF_DURATION,
@@ -29,6 +30,7 @@ from custom_components.oref_alert.const import (
     REMOVE_SENSOR_ACTION,
     SYNTHETIC_ALERT_ACTION,
 )
+from custom_components.oref_alert.records_schema import RecordType
 
 from .utils import mock_urls
 
@@ -42,7 +44,6 @@ if TYPE_CHECKING:
 AREA = "תל אביב - מרכז העיר"
 DEFAULT_OPTIONS = {
     CONF_AREAS: [AREA],
-    CONF_ALERT_ACTIVE_DURATION: 10,
 }
 
 
@@ -107,7 +108,7 @@ async def test_event(
     assert state.attributes.get(ATTR_EVENT_TYPE) == event_type
     record = state.attributes.get(ATTR_RECORD)
     assert record is not None
-    assert record.get(CATEGORY_FIELD) == category
+    assert record.category == category
 
     await async_shutdown(hass, config_id)
 
@@ -132,17 +133,17 @@ async def test_dedup(
 
     config_id = await async_setup(hass)
 
-    assert events == [None, "alert"]
+    assert events == [None, RecordType.ALERT]
 
     freezer.tick(10)
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert events == [None, "alert"]
+    assert events == [None, RecordType.ALERT]
 
     freezer.tick(10 * 60)
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert events == [None, "alert", "alert"]
+    assert events == [None, RecordType.ALERT, RecordType.ALERT]
 
     await async_shutdown(hass, config_id)
 
@@ -173,12 +174,12 @@ async def test_synthetic_dedup(
         blocking=True,
     )
     await hass.async_block_till_done()
-    assert events == [None, "alert"]
+    assert events == [None, RecordType.ALERT]
 
     freezer.tick(10)
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert events == [None, "alert"]
+    assert events == [None, RecordType.ALERT]
 
     await hass.services.async_call(
         DOMAIN,
@@ -187,7 +188,7 @@ async def test_synthetic_dedup(
         blocking=True,
     )
     await hass.async_block_till_done()
-    assert events == [None, "alert", "alert"]
+    assert events == [None, RecordType.ALERT]
 
     await async_shutdown(hass, config_id)
 
@@ -233,4 +234,30 @@ async def test_additional(
     await hass.async_block_till_done()
     assert hass.states.get("event.oref_alert_test") is None
 
+    await async_shutdown(hass, config_id)
+
+
+async def test_restore_record_dict(hass: HomeAssistant) -> None:
+    """Test restoring event record from dict state does not fail."""
+    mock_restore_cache(
+        hass,
+        [
+            State(
+                "event.oref_alert",
+                STATE_UNKNOWN,
+                {
+                    ATTR_RECORD: {
+                        "data": AREA,
+                        "category": 1,
+                        "channel": "website-history",
+                        "alertDate": "2025-01-01 11:59:30",
+                        "title": "",
+                    }
+                },
+            )
+        ],
+    )
+    config_id = await async_setup(hass)
+    state = hass.states.get("event.oref_alert")
+    assert state is not None
     await async_shutdown(hass, config_id)

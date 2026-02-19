@@ -8,7 +8,6 @@ from homeassistant.helpers.template import Template
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.oref_alert.const import (
-    CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     DOMAIN,
 )
@@ -26,9 +25,7 @@ async def async_setup(hass: HomeAssistant) -> str:
     """Integration setup."""
     hass.config.latitude = 32.072
     hass.config.longitude = 34.879
-    config_entry = MockConfigEntry(
-        domain=DOMAIN, options={CONF_AREAS: ["בארי"], CONF_ALERT_ACTIVE_DURATION: 10}
-    )
+    config_entry = MockConfigEntry(domain=DOMAIN, options={CONF_AREAS: ["בארי"]})
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)

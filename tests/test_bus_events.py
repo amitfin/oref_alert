@@ -9,11 +9,7 @@ from pytest_homeassistant_custom_component.common import (
     async_fire_time_changed,
 )
 
-from custom_components.oref_alert.const import (
-    CONF_ALERT_ACTIVE_DURATION,
-    CONF_AREAS,
-    DOMAIN,
-)
+from custom_components.oref_alert.const import CONF_AREAS, DOMAIN
 
 from .utils import mock_urls
 
@@ -24,7 +20,7 @@ if TYPE_CHECKING:
         AiohttpClientMocker,
     )
 
-DEFAULT_OPTIONS = {CONF_AREAS: ["פתח תקווה"], CONF_ALERT_ACTIVE_DURATION: 10}
+DEFAULT_OPTIONS = {CONF_AREAS: ["פתח תקווה"]}
 
 
 async def async_setup(

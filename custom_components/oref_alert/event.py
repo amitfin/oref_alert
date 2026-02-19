@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import TYPE_CHECKING
 
-import homeassistant.util.dt as dt_util
-from homeassistant.components.event import ATTR_EVENT_TYPE, EventEntity
+from homeassistant.components.event import EventEntity
 from homeassistant.const import Platform
 from homeassistant.core import callback
 from homeassistant.util import slugify
@@ -14,13 +12,11 @@ from homeassistant.util import slugify
 from .classifier import RECORDS_SCHEMA
 from .const import (
     ATTR_RECORD,
-    CHANNEL_FIELD,
-    CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     CONF_SENSORS,
-    DATE_FIELD,
     OREF_ALERT_UNIQUE_ID,
-    AlertSource,
+    Record,
+    RecordAndMetadata,
 )
 from .entity import OrefAlertCoordinatorEntity
 from .metadata.areas import AREAS
@@ -67,11 +63,6 @@ class AlertEvent(OrefAlertCoordinatorEntity, EventEntity):
         super().__init__(config_entry)
         self._attr_event_types = list(RECORDS_SCHEMA.keys())
         self._area = area
-        self._active_duration: timedelta = timedelta(
-            minutes=config_entry.options[CONF_ALERT_ACTIVE_DURATION]
-        )
-        self._event_triggered = dt_util.utcnow() - self._active_duration
-        self._synthetic_timestamp: str | None = None
         if not name:
             self.use_device_name = True
             self._attr_unique_id = OREF_ALERT_UNIQUE_ID
@@ -81,30 +72,26 @@ class AlertEvent(OrefAlertCoordinatorEntity, EventEntity):
                 f"{OREF_ALERT_UNIQUE_ID}_{name.lower().replace(' ', '_')}"
             )
         self.entity_id = f"{Platform.EVENT}.{self._attr_unique_id}"
+        self._record: RecordAndMetadata | None = None
+
+    async def async_added_to_hass(self) -> None:
+        """Handle entity which will be added."""
+        await super().async_added_to_hass()
+        if (last_state := await self.async_get_last_state()) and (
+            record := last_state.attributes.get(ATTR_RECORD)
+        ):
+            self._record = self._config_entry.runtime_data.classifier.add_metadata(
+                Record(**record)
+            )
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        event_type, record, _ = (
-            self._config_entry.runtime_data.classifier.latest_record_type(self._area)
-        )
-        if not event_type or not record:
-            return
-
-        # We always trigger for a different type of event
-        if event_type == self.state_attributes.get(ATTR_EVENT_TYPE):
-            # For non-synthetic events, we trigger only if enough time has passed
-            if record[CHANNEL_FIELD] != AlertSource.SYNTHETIC:
-                if dt_util.utcnow() - self._event_triggered < self._active_duration:
-                    return
-            # For synthetic events, we trigger only if the timestamp is different
-            elif record[DATE_FIELD] == self._synthetic_timestamp:
-                return
-
-        if record[CHANNEL_FIELD] != AlertSource.SYNTHETIC:
-            self._event_triggered = dt_util.utcnow()
-        else:
-            self._synthetic_timestamp = record[DATE_FIELD]
-
-        self._trigger_event(event_type, {ATTR_RECORD: record})
-        self.async_write_ha_state()
+        if (
+            (record := self.coordinator.data.areas.get(self._area)) is not None
+            and record.record_type is not None
+            and self._record != record
+        ):
+            self._record = record
+            self._trigger_event(record.record_type, {ATTR_RECORD: record.item})
+            self.async_write_ha_state()

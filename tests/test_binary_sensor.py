@@ -14,13 +14,9 @@ from pytest_homeassistant_custom_component.common import (
 from custom_components.oref_alert.const import (
     ADD_SENSOR_ACTION,
     ATTR_COUNTRY_ACTIVE_ALERTS,
-    ATTR_COUNTRY_ALERTS,
     ATTR_COUNTRY_UPDATES,
     ATTR_SELECTED_AREAS_ACTIVE_ALERTS,
-    ATTR_SELECTED_AREAS_ALERTS,
     ATTR_SELECTED_AREAS_UPDATES,
-    CONF_ALERT_ACTIVE_DURATION,
-    CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREA,
     CONF_AREAS,
     CONF_DURATION,
@@ -39,11 +35,7 @@ if TYPE_CHECKING:
         AiohttpClientMocker,
     )
 
-DEFAULT_OPTIONS = {
-    CONF_AREAS: ["בארי"],
-    CONF_ALERT_ACTIVE_DURATION: 10,
-    CONF_ALL_ALERTS_ATTRIBUTES: True,
-}
+DEFAULT_OPTIONS = {CONF_AREAS: ["בארי"]}
 ENTITY_ID = f"{Platform.BINARY_SENSOR}.{OREF_ALERT_UNIQUE_ID}"
 
 
@@ -82,14 +74,8 @@ async def test_state(
     assert state.state == STATE_ON
     assert state.name == TITLE
 
-    freezer.move_to("2023-10-07 06:39:50+03:00")
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get(ENTITY_ID)
-    assert state is not None
-    assert state.state == STATE_ON
-
-    freezer.move_to("2023-10-07 06:40:01+03:00")
+    mock_urls(aioclient_mock, None, "single_alert_history_end.json")
+    freezer.tick(2)
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(ENTITY_ID)
@@ -132,48 +118,9 @@ async def test_state_attributes(
     active_area_alert = load_json_fixture(
         "single_alert_history.json", "website-history"
     )
-    assert state.attributes[CONF_ALERT_ACTIVE_DURATION] == 10
     assert state.attributes[ATTR_SELECTED_AREAS_ACTIVE_ALERTS] == active_area_alert
-    assert state.attributes[ATTR_SELECTED_AREAS_ALERTS] == active_area_alert
     combined_alerts = load_json_fixture("combined_alerts.json")
     assert state.attributes[ATTR_COUNTRY_ACTIVE_ALERTS] == combined_alerts
-    assert state.attributes[ATTR_COUNTRY_ALERTS] == combined_alerts
-    await async_shutdown(hass, config_id)
-
-
-async def test_state_on_caching(
-    hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
-    freezer: FrozenDateTimeFactory,
-) -> None:
-    """Test that state 'on' is cached properly."""
-    mock_urls(aioclient_mock, "single_alert_real_time.json", None)
-    config_id = await async_setup(
-        hass,
-        {
-            CONF_AREAS: ["תל אביב - כל האזורים"],
-        },
-    )
-
-    state = hass.states.get(ENTITY_ID)
-    assert state is not None
-    assert state.state == STATE_ON
-    mock_urls(aioclient_mock, None, None)
-
-    freezer.tick(595)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get(ENTITY_ID)
-    assert state is not None
-    assert state.state == STATE_ON
-
-    freezer.tick(10)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get(ENTITY_ID)
-    assert state is not None
-    assert state.state == STATE_OFF
-
     await async_shutdown(hass, config_id)
 
 
@@ -348,25 +295,7 @@ async def test_all_areas_alert(  # noqa: PLR0913
     state = hass.states.get(ENTITY_ID)
     assert state is not None
     assert state.state == STATE_ON
-    assert state.attributes[ATTR_SELECTED_AREAS_ACTIVE_ALERTS] == alerts, (
-        state.attributes[ATTR_SELECTED_AREAS_ACTIVE_ALERTS]
-    )
-
-    await async_shutdown(hass, config_id)
-
-
-async def test_all_alerts_attributes_is_off(hass: HomeAssistant) -> None:
-    """Test that all alerts attributes are not included when the option is off."""
-    config_id = await async_setup(
-        hass,
-        {
-            CONF_AREAS: ["פתח תקווה"],
-            CONF_ALL_ALERTS_ATTRIBUTES: False,
-        },
-    )
-    state = hass.states.get(ENTITY_ID)
-    assert state is not None
-    assert ATTR_SELECTED_AREAS_ALERTS not in state.attributes
-    assert ATTR_COUNTRY_ALERTS not in state.attributes
+    assert state.attributes[ATTR_SELECTED_AREAS_ACTIVE_ALERTS] == []
+    assert state.attributes[ATTR_COUNTRY_ACTIVE_ALERTS] == alerts
 
     await async_shutdown(hass, config_id)

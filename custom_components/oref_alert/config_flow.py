@@ -5,7 +5,6 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING, Any
 
-import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
 from homeassistant.core import async_get_hass, callback
@@ -18,10 +17,7 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigFlowResult
 
 from .const import (
-    CONF_ALERT_ACTIVE_DURATION,
-    CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREAS,
-    DEFAULT_ALERT_ACTIVE_DURATION,
     DOMAIN,
     TITLE,
 )
@@ -79,8 +75,6 @@ class OrefAlertConfigFlow(ConfigFlow, domain=DOMAIN):
                 data={},
                 options={
                     CONF_AREAS: user_input.get(CONF_AREAS, [self._auto_detected_area]),
-                    CONF_ALERT_ACTIVE_DURATION: DEFAULT_ALERT_ACTIVE_DURATION,
-                    CONF_ALL_ALERTS_ATTRIBUTES: False,
                 },
             )
         return self.async_show_form(
@@ -117,16 +111,6 @@ class OptionsFlowHandler(OptionsFlow):
                     vol.Required(
                         CONF_AREAS, default=self._config_entry.options[CONF_AREAS]
                     ): selector.SelectSelector(AREAS_CONFIG),
-                    vol.Required(
-                        CONF_ALERT_ACTIVE_DURATION,
-                        default=self._config_entry.options[CONF_ALERT_ACTIVE_DURATION],
-                    ): cv.positive_int,
-                    vol.Required(
-                        CONF_ALL_ALERTS_ATTRIBUTES,
-                        default=self._config_entry.options.get(
-                            CONF_ALL_ALERTS_ATTRIBUTES, False
-                        ),
-                    ): selector.BooleanSelector(),
                 }
             ),
         )

@@ -4,12 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import homeassistant.util.dt as dt_util
 from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, STATE_UNKNOWN, Platform
-from homeassistant.core import State
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
-    mock_restore_cache,
 )
 
 from custom_components.oref_alert.const import (
@@ -19,20 +18,19 @@ from custom_components.oref_alert.const import (
     ATTR_DISPLAY,
     ATTR_RECORD,
     ATTR_TIME_TO_SHELTER,
-    CATEGORY_FIELD,
-    CHANNEL_FIELD,
-    CONF_ALERT_ACTIVE_DURATION,
-    CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREAS,
-    DATE_FIELD,
     DOMAIN,
+    IST,
     OREF_ALERT_UNIQUE_ID,
     REMOVE_SENSOR_ACTION,
     TIME_TO_SHELTER_ID_SUFFIX,
+    Record,
+    RecordAndMetadata,
 )
+from custom_components.oref_alert.coordinator import OrefAlertCoordinatorData
 from custom_components.oref_alert.records_schema import RecordType
 
-from .utils import load_json_fixture, mock_urls, refresh_coordinator
+from .utils import load_json_fixture, mock_urls
 
 if TYPE_CHECKING:
     from freezegun.api import FrozenDateTimeFactory
@@ -41,11 +39,7 @@ if TYPE_CHECKING:
         AiohttpClientMocker,
     )
 
-DEFAULT_OPTIONS = {
-    CONF_AREAS: ["בארי"],
-    CONF_ALERT_ACTIVE_DURATION: 10,
-    CONF_ALL_ALERTS_ATTRIBUTES: True,
-}
+DEFAULT_OPTIONS = {CONF_AREAS: ["בארי"]}
 TIME_TO_SHELTER_ENTITY_ID = (
     f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}_{TIME_TO_SHELTER_ID_SUFFIX}"
 )
@@ -179,82 +173,124 @@ async def test_status_state_no_alert(
 async def test_status_state_transition_and_cache(
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
-    monkeypatch: Any,
 ) -> None:
     """Test status transitions and cached latest record behavior."""
     freezer.move_to("2025-01-01 12:00:00+03:00")
     config_id = await async_setup(hass)
     config = hass.config_entries.async_get_entry(config_id)
     assert config is not None
-    classifier = config.runtime_data.classifier
+    coordinator = config.runtime_data.coordinator
 
-    pre_alert_record = {
-        CATEGORY_FIELD: 14,
-        CHANNEL_FIELD: "website-history",
-        DATE_FIELD: "2025-01-01 11:59:30",
-    }
-    monkeypatch.setattr(
-        classifier,
-        "latest_record_type",
-        lambda _: (RecordType.PRE_ALERT, pre_alert_record, False),
+    pre_alert_record = Record(
+        data="בארי",
+        category=14,
+        channel="website-history",
+        alertDate="2025-01-01 11:59:30",
+        title="",
     )
-    await refresh_coordinator(hass, config_id)
+    pre_alert_metadata = RecordAndMetadata(
+        item=pre_alert_record,
+        time=dt_util.parse_datetime(
+            pre_alert_record.alertDate, raise_on_error=True
+        ).replace(tzinfo=IST),
+        record_type=RecordType.PRE_ALERT,
+        expire=dt_util.parse_datetime(
+            "2025-01-01 12:19:30", raise_on_error=True
+        ).replace(tzinfo=IST),
+    )
+    coordinator.data = OrefAlertCoordinatorData({"בארי": pre_alert_metadata})
+    coordinator.async_update_listeners()
+    await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(STATUS_ENTITY_ID)
     assert state is not None
     assert state.state == RecordType.PRE_ALERT
-    assert state.attributes[ATTR_RECORD] == pre_alert_record
-
-    alert_record = {
-        CATEGORY_FIELD: 1,
-        CHANNEL_FIELD: "website-history",
-        DATE_FIELD: "2025-01-01 11:59:40",
+    assert state.attributes[ATTR_RECORD] == {
+        "data": "בארי",
+        "category": 14,
+        "channel": "website-history",
+        "alertDate": "2025-01-01 11:59:30",
+        "title": "",
     }
-    monkeypatch.setattr(
-        classifier,
-        "latest_record_type",
-        lambda _: (RecordType.ALERT, alert_record, False),
-    )
-    await refresh_coordinator(hass, config_id)
-    state = hass.states.get(STATUS_ENTITY_ID)
-    assert state is not None
-    assert state.state == RecordType.ALERT
-    assert state.attributes[ATTR_RECORD] == alert_record
 
-    monkeypatch.setattr(classifier, "latest_record_type", lambda _: (None, None, True))
-    await refresh_coordinator(hass, config_id)
+    alert_record = Record(
+        data="בארי",
+        category=1,
+        channel="website-history",
+        alertDate="2025-01-01 11:59:40",
+        title="",
+    )
+    alert_metadata = RecordAndMetadata(
+        item=alert_record,
+        time=dt_util.parse_datetime(
+            alert_record.alertDate, raise_on_error=True
+        ).replace(tzinfo=IST),
+        record_type=RecordType.ALERT,
+        expire=dt_util.parse_datetime(
+            "2025-01-01 23:59:40", raise_on_error=True
+        ).replace(tzinfo=IST),
+    )
+    coordinator.data = OrefAlertCoordinatorData({"בארי": alert_metadata})
+    coordinator.async_update_listeners()
+    await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(STATUS_ENTITY_ID)
     assert state is not None
     assert state.state == RecordType.ALERT
-    assert state.attributes[ATTR_RECORD] == alert_record
+    assert state.attributes[ATTR_RECORD] == {
+        "data": "בארי",
+        "category": 1,
+        "channel": "website-history",
+        "alertDate": "2025-01-01 11:59:40",
+        "title": "",
+    }
+
+    coordinator.data = OrefAlertCoordinatorData({})
+    coordinator.async_update_listeners()
+    await hass.async_block_till_done(wait_background_tasks=True)
+    state = hass.states.get(STATUS_ENTITY_ID)
+    assert state is not None
+    assert state.state == "ok"
+    assert state.attributes[ATTR_RECORD] is None
 
     await async_shutdown(hass, config_id)
 
 
 async def test_status_state_end_record(
     hass: HomeAssistant,
-    monkeypatch: Any,
 ) -> None:
     """Test status returns OK for END records."""
     config_id = await async_setup(hass)
     config = hass.config_entries.async_get_entry(config_id)
     assert config is not None
-    classifier = config.runtime_data.classifier
+    coordinator = config.runtime_data.coordinator
 
-    end_record = {
-        CATEGORY_FIELD: 13,
-        CHANNEL_FIELD: "website-history",
-        DATE_FIELD: "2025-01-01 11:59:00",
-    }
-    monkeypatch.setattr(
-        classifier,
-        "latest_record_type",
-        lambda _: (RecordType.END, end_record, False),
+    end_record = Record(
+        data="בארי",
+        category=13,
+        channel="website-history",
+        alertDate="2025-01-01 11:59:00",
+        title="",
     )
-    await refresh_coordinator(hass, config_id)
+    end_metadata = RecordAndMetadata(
+        item=end_record,
+        time=dt_util.parse_datetime(end_record.alertDate, raise_on_error=True).replace(
+            tzinfo=IST
+        ),
+        record_type=RecordType.END,
+        expire=None,
+    )
+    coordinator.data = OrefAlertCoordinatorData({"בארי": end_metadata})
+    coordinator.async_update_listeners()
+    await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(STATUS_ENTITY_ID)
     assert state is not None
     assert state.state == "ok"
-    assert state.attributes[ATTR_RECORD] == end_record
+    assert state.attributes[ATTR_RECORD] == {
+        "data": "בארי",
+        "category": 13,
+        "channel": "website-history",
+        "alertDate": "2025-01-01 11:59:00",
+        "title": "",
+    }
 
     await async_shutdown(hass, config_id)
 
@@ -262,65 +298,44 @@ async def test_status_state_end_record(
 async def test_status_state_expired_pre_alert(
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
-    monkeypatch: Any,
 ) -> None:
     """Test status returns OK for expired pre_alert records."""
     freezer.move_to("2025-01-01 12:00:00+02:00")
     config_id = await async_setup(hass)
     config = hass.config_entries.async_get_entry(config_id)
     assert config is not None
-    classifier = config.runtime_data.classifier
+    coordinator = config.runtime_data.coordinator
 
-    old_pre_alert_record = {
-        CATEGORY_FIELD: 14,
-        CHANNEL_FIELD: "website-history",
-        DATE_FIELD: "2025-01-01 11:30:00",
-    }
-    monkeypatch.setattr(
-        classifier,
-        "latest_record_type",
-        lambda _: (RecordType.PRE_ALERT, old_pre_alert_record, True),
+    old_pre_alert_record = Record(
+        data="בארי",
+        category=14,
+        channel="website-history",
+        alertDate="2025-01-01 11:30:00",
+        title="",
     )
-    await refresh_coordinator(hass, config_id)
-    state = hass.states.get(STATUS_ENTITY_ID)
-    assert state is not None
-    assert state.state == "ok"
-    assert state.attributes[ATTR_RECORD] == old_pre_alert_record
-
-    await async_shutdown(hass, config_id)
-
-
-async def test_status_state_restored_record(
-    hass: HomeAssistant,
-    freezer: FrozenDateTimeFactory,
-) -> None:
-    """Test status sensor restores the previous record from state cache."""
-    freezer.move_to("2025-01-01 12:00:00+03:00")
-    restored_record = {
-        CATEGORY_FIELD: 14,
-        CHANNEL_FIELD: "website-history",
-        DATE_FIELD: "2025-01-01 11:59:30",
-    }
-    mock_restore_cache(
-        hass,
-        [
-            State(
-                STATUS_ENTITY_ID,
-                STATE_UNKNOWN,
-                {
-                    ATTR_AREA: "בארי",
-                    ATTR_RECORD: restored_record,
-                },
-            )
-        ],
+    old_metadata = RecordAndMetadata(
+        item=old_pre_alert_record,
+        time=dt_util.parse_datetime(
+            old_pre_alert_record.alertDate, raise_on_error=True
+        ).replace(tzinfo=IST),
+        record_type=RecordType.PRE_ALERT,
+        expire=dt_util.parse_datetime(
+            "2025-01-01 11:50:00", raise_on_error=True
+        ).replace(tzinfo=IST),
     )
-
-    config_id = await async_setup(hass)
-
+    coordinator.data = OrefAlertCoordinatorData({"בארי": old_metadata})
+    coordinator.async_update_listeners()
+    await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(STATUS_ENTITY_ID)
     assert state is not None
     assert state.state == RecordType.PRE_ALERT
-    assert state.attributes[ATTR_RECORD] == restored_record
+    assert state.attributes[ATTR_RECORD] == {
+        "data": "בארי",
+        "category": 14,
+        "channel": "website-history",
+        "alertDate": "2025-01-01 11:30:00",
+        "title": "",
+    }
 
     await async_shutdown(hass, config_id)
 

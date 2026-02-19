@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import itertools
 import json
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from functools import cmp_to_key
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
@@ -15,6 +16,8 @@ from homeassistant.helpers import event as event_helper
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
+from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
+
 from .categories import (
     category_is_alert,
     category_is_update,
@@ -23,26 +26,25 @@ from .categories import (
 from .const import (
     AREA_FIELD,
     CATEGORY_FIELD,
-    CHANNEL_FIELD,
-    CONF_ALERT_ACTIVE_DURATION,
-    CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREA,
     CONF_DURATION,
     DATE_FIELD,
-    DEFAULT_ALERT_ACTIVE_DURATION,
     DOMAIN,
     IST,
     LOGGER,
     TITLE_FIELD,
-    AlertSource,
-    AlertType,
+    Record,
+    RecordAndMetadata,
+    RecordSource,
 )
 from .metadata.areas import AREAS
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable
 
     from homeassistant.core import HomeAssistant
+
+    from custom_components.oref_alert.records_schema import RecordType
 
     from . import OrefAlertConfigEntry
     from .ttl_deque import TTLDeque
@@ -58,45 +60,14 @@ OREF_HEADERS = {
 }
 REQUEST_RETRIES = 3
 REQUEST_THROTTLING = 0.8
-REAL_TIME_ALERT_LOGIC_WINDOW = 2
+DEDUP_WINDOW_SECONDS = 60
 
 
-def _is_update(alert: AlertType) -> bool:
-    """Check if the alert is an update."""
-    return category_is_update(alert["category"])
-
-
-def _is_alert(alert: AlertType) -> bool:
-    """Check if the alert is an alert."""
-    return category_is_alert(alert["category"]) and not _is_update(alert)
-
-
+@dataclass(frozen=True)
 class OrefAlertCoordinatorData:
     """Class for holding coordinator data."""
 
-    def __init__(self, items: list[AlertType], active_duration: int) -> None:
-        """Initialize the data."""
-        self.items: list[AlertType] = items
-        self.alerts: list[AlertType] = list(filter(_is_alert, items))
-        self.active_items: list[AlertType] = (
-            OrefAlertDataUpdateCoordinator.recent_alerts(items, active_duration)
-        )
-        self.active_alerts: list[AlertType] = list(filter(_is_alert, self.active_items))
-        self.updates: list[AlertType] = list(filter(_is_update, self.active_items))
-
-
-def _sort_alerts(item1: AlertType, item2: AlertType) -> int:
-    """Sort by descending-order "date" and then ascending-order "name"."""
-    result = 0
-    if item1[DATE_FIELD] < item2[DATE_FIELD]:
-        result = 1
-    elif item1[DATE_FIELD] > item2[DATE_FIELD]:
-        result = -1
-    elif item1[AREA_FIELD] > item2[AREA_FIELD]:
-        result = 1
-    elif item1[AREA_FIELD] < item2[AREA_FIELD]:
-        result = -1
-    return result
+    areas: dict[str, RecordAndMetadata]
 
 
 class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorData]):
@@ -106,7 +77,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         self,
         hass: HomeAssistant,
         config_entry: OrefAlertConfigEntry,
-        channels: list[TTLDeque],
+        channels: list[TTLDeque[RecordAndMetadata]],
     ) -> None:
         """Initialize global data updater."""
         super().__init__(
@@ -114,22 +85,53 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             LOGGER,
             name=DOMAIN,
         )
-        self._active_duration = config_entry.options.get(
-            CONF_ALERT_ACTIVE_DURATION, DEFAULT_ALERT_ACTIVE_DURATION
-        )
-        self._all_alerts: bool = config_entry.options.get(
-            CONF_ALL_ALERTS_ATTRIBUTES, False
-        )
+        self._config_entry = config_entry
         self._http_client = async_get_clientsession(hass)
         self._http_cache: dict[str, tuple[Any, str, float]] = {}
-        self._channels: list[TTLDeque] = channels
+        self._channels: list[TTLDeque[RecordAndMetadata]] = channels
         self._channels_change: list[datetime | None] = []
-        self._synthetic_alerts: list[tuple[float, AlertType]] = []
-        self.data = OrefAlertCoordinatorData([], self._active_duration)
+        self._synthetic_alerts: list[tuple[datetime, RecordAndMetadata]] = []
+        self._areas: dict[str, RecordAndMetadata] = {}
+        self.data = OrefAlertCoordinatorData({})
+
+    def get_records(
+        self,
+        areas: Iterable[str] | None = None,
+        record_types: Iterable[RecordType | None] | None = None,
+    ) -> list[dict[str, str | int]]:
+        """Return the records as dict, sorted, and for the given areas and types."""
+        return [
+            asdict(sorted_record.item)
+            for sorted_record in sorted(
+                sorted(
+                    {
+                        record
+                        for record in self.data.areas.values()
+                        if (areas is None or record.item.data in areas)
+                        and (record_types is None or record.record_type in record_types)
+                    },
+                    key=lambda record: record.item.data,
+                ),
+                key=lambda record: record.time,
+                reverse=True,
+            )
+        ]
+
+    def get_record(
+        self,
+        area: str,
+        record_types: Iterable[RecordType | None] | None = None,
+    ) -> dict[str, str | int] | None:
+        """Return area's record as dict if it matches the types."""
+        if (record := self.data.areas.get(area)) is None or (
+            record_types and record.record_type not in record_types
+        ):
+            return None
+        return asdict(record.item)
 
     async def _async_update_data(self) -> OrefAlertCoordinatorData:
-        """Request the data from Oref servers.."""
-        channels_change = [alerts.changed() for alerts in self._channels]
+        """Request the data from Oref servers."""
+        channels_change = [channel.changed() for channel in self._channels]
         (current, current_modified), (history, history_modified) = await asyncio.gather(
             *[
                 self._async_fetch_url(url)
@@ -143,28 +145,49 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             or (any(channels_change) and channels_change != self._channels_change)
             or self._synthetic_alerts
         ):
-            history = history or []
-            if not self._all_alerts:
-                history = OrefAlertDataUpdateCoordinator.recent_alerts(
-                    history, self._active_duration
-                )
-            history = self._process_history_alerts(history)
-            alerts = (
-                self._current_to_history_format(current, history) if current else []
-            )
-            alerts.extend(history)
-            alerts.sort(key=cmp_to_key(_sort_alerts))
-            self._add_channels(alerts)
+            # Update the latest areas' records.
+            for record in itertools.chain(
+                self._get_synthetic_alerts(),
+                self._process_history_alerts(history or []),
+                self._current_to_history_format(current),
+                itertools.chain.from_iterable(
+                    channel.items() for channel in self._channels
+                ),
+            ):
+                if not category_is_alert(
+                    record.item.category
+                ) and not category_is_update(record.item.category):
+                    continue
+
+                for area in (
+                    (record.item.data,)
+                    if record.item.data not in ALL_AREAS_ALIASES
+                    else AREAS
+                ):
+                    if (current := self._areas.get(area)) is None:
+                        self._areas[area] = record
+                        if area not in AREAS:
+                            LOGGER.error("Alert has an unrecognized area: %s", area)
+                    elif record.time <= current.time:
+                        continue
+                    elif (
+                        record.item.category != current.item.category
+                        or record.time - current.time
+                        > timedelta(seconds=DEDUP_WINDOW_SECONDS)
+                    ):
+                        self._areas[area] = record
+
             self._channels_change = channels_change
-            alerts.extend(self._get_synthetic_alerts())
-            alerts.sort(key=cmp_to_key(_sort_alerts))
-            for unrecognized_area in {alert[AREA_FIELD] for alert in alerts}.difference(
-                {alert[AREA_FIELD] for alert in getattr(self.data, "items", [])}
-            ).difference(AREAS):
-                LOGGER.error("Alert has an unrecognized area: %s", unrecognized_area)
-        else:
-            alerts = self.data.items
-        return OrefAlertCoordinatorData(alerts, self._active_duration)
+
+        # Remove expired records.
+        now = dt_util.now()
+        self._areas = {
+            area: record
+            for area, record in self._areas.items()
+            if not record.expire or record.expire > now
+        }
+
+        return OrefAlertCoordinatorData(self._areas)
 
     async def _async_fetch_url(self, url: str) -> tuple[Any, bool]:
         """Fetch data from Oref servers."""
@@ -218,130 +241,55 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         LOGGER.error("Failed to fetch '%s'", url)
         raise exc_info
 
-    def _current_to_history_format(
-        self, current: dict[str, str], history: list[AlertType]
-    ) -> list[AlertType]:
+    def _current_to_history_format(self, current: Any) -> list[RecordAndMetadata]:
         """Convert current alerts payload to history format."""
-        if (category := real_time_to_history_category(int(current["cat"]))) is None:
+        if (
+            not isinstance(current, dict)
+            or (category := real_time_to_history_category(int(current.get("cat", 0))))
+            is None
+        ):
             # Unknown category. Wait for the history to include it.
             return []
         now = dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S")
-        history_recent_alerts = self.recent_alerts(
-            history, REAL_TIME_ALERT_LOGIC_WINDOW
-        )
-        previous_recent_alerts = (
-            self.recent_alerts(self.data.items, REAL_TIME_ALERT_LOGIC_WINDOW)
-            if self.data
-            else []
-        )
-        alerts = []
-        for alert_area in current[AREA_FIELD]:
-            area = self._fix_area_spelling(alert_area)
-            for history_recent_alert in history_recent_alerts:
-                if history_recent_alert[AREA_FIELD] == area:
-                    # The alert is already in the history list. No need to add it twice.
-                    break
-            else:
-                for previous_recent_alert in previous_recent_alerts:
-                    if previous_recent_alert[AREA_FIELD] == area:
-                        # The alert was already added, so take the original timestamp.
-                        alerts.append(previous_recent_alert)
-                        break
-                else:
-                    alerts.append(
-                        {
-                            DATE_FIELD: now,
-                            TITLE_FIELD: current[TITLE_FIELD],
-                            AREA_FIELD: area,
-                            CATEGORY_FIELD: category,
-                            CHANNEL_FIELD: AlertSource.WEBSITE,
-                        }
-                    )
-        return alerts
-
-    def _add_channels(self, alerts: list[AlertType]) -> None:
-        """Add alerts from the different channels after de-dup."""
-        dedup_window = REAL_TIME_ALERT_LOGIC_WINDOW * 60
-        new_alerts: list[AlertType] = []
-        for channel in self._channels:
-            if channel.changed() is None:
-                continue
-
-            if new_alerts:  # From the previous iteration of this loop.
-                alerts.sort(key=cmp_to_key(_sort_alerts))
-
-            # Channel data only exists for active duration, so this is the de-dup window
-            exist_alerts = (
-                self.recent_alerts(alerts, self._active_duration)
-                if self._all_alerts
-                else alerts  # It already includes only active alerts.
+        return [
+            self._config_entry.runtime_data.classifier.add_metadata(
+                Record(
+                    alertDate=now,
+                    title=current[TITLE_FIELD],
+                    data=self._fix_area_spelling(area),
+                    category=category,
+                    channel=RecordSource.WEBSITE,
+                )
             )
-
-            new_alerts = []
-            for alert in channel.items():
-                alert_timestamp = self._alert_timestamp(alert)
-                to_add = True
-                for exist_alert in exist_alerts:
-                    if (
-                        alert[AREA_FIELD] == exist_alert[AREA_FIELD]
-                        and alert[CATEGORY_FIELD] == exist_alert[CATEGORY_FIELD]
-                    ):
-                        # We only de-dup alerts with the same area and category.
-                        exist_timestamp = self._alert_timestamp(exist_alert)
-                        if abs(alert_timestamp - exist_timestamp) < dedup_window:
-                            # There is a similar alert within the window.
-                            to_add = False
-                            break
-                        if alert_timestamp - exist_timestamp > dedup_window:
-                            # exist_timestamp is decreasing so the delta is increasing
-                            break
-                if to_add:
-                    new_alerts.append(alert)
-            if new_alerts:
-                alerts.extend(new_alerts)
-
-    @staticmethod
-    def _alert_timestamp(alert: AlertType) -> float:
-        """Return alert's timestamp."""
-        return (
-            dt_util.parse_datetime(alert[DATE_FIELD], raise_on_error=True)
-            .replace(tzinfo=IST)
-            .timestamp()
-        )
-
-    @classmethod
-    def recent_alerts(cls, alerts: list[Any], active_duration: int) -> list[Any]:
-        """Return the list of recent alerts, assuming the input is sorted."""
-        earliest_alert = dt_util.now().timestamp() - active_duration * 60
-        recent_alerts = []
-        for alert in alerts:
-            if cls._alert_timestamp(alert) < earliest_alert:
-                break
-            recent_alerts.append(alert)
-        return recent_alerts
+            for area in current[AREA_FIELD]
+        ]
 
     def add_synthetic_alert(self, details: dict[str, Any]) -> None:
         """Add a synthetic alert for testing purposes."""
         now = dt_util.now(IST)
+        expire = now + timedelta(seconds=details[CONF_DURATION])
         for area in details[CONF_AREA]:
             self._synthetic_alerts.append(
                 (
-                    now.timestamp() + details[CONF_DURATION],
-                    {
-                        DATE_FIELD: now.strftime("%Y-%m-%d %H:%M:%S"),
-                        TITLE_FIELD: details.get(
-                            TITLE_FIELD, "התרעה סינטטית לצורכי בדיקות"
+                    expire,
+                    self._config_entry.runtime_data.classifier.add_metadata(
+                        Record(
+                            alertDate=now.strftime("%Y-%m-%d %H:%M:%S"),
+                            title=details.get(
+                                TITLE_FIELD, "התרעה סינטטית לצורכי בדיקות"
+                            ),
+                            data=area,
+                            category=details[CATEGORY_FIELD],
+                            channel=RecordSource.SYNTHETIC,
                         ),
-                        AREA_FIELD: area,
-                        CATEGORY_FIELD: details[CATEGORY_FIELD],
-                        CHANNEL_FIELD: AlertSource.SYNTHETIC,
-                    },
+                        expire,
+                    ),
                 )
             )
 
-    def _get_synthetic_alerts(self) -> list[AlertType]:
+    def _get_synthetic_alerts(self) -> list[RecordAndMetadata]:
         """Return the list of synthetic alerts."""
-        now = dt_util.now().timestamp()
+        now = dt_util.now()
         self._synthetic_alerts = [
             (expired, alert)
             for expired, alert in self._synthetic_alerts
@@ -349,16 +297,32 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         ]
         return [alert for _, alert in self._synthetic_alerts]
 
-    def is_synthetic_alert(self, alert: AlertType) -> bool:
+    def is_synthetic_alert(self, alert: Record) -> bool:
         """Check if the alert is a synthetic alert."""
-        return alert.get(CHANNEL_FIELD) == AlertSource.SYNTHETIC
+        return alert.channel == RecordSource.SYNTHETIC
 
-    def _process_history_alerts(self, alerts: list[AlertType]) -> list[AlertType]:
-        """Add channel field and fix spelling errors in area names."""
-        for alert in alerts:
-            alert[CHANNEL_FIELD] = AlertSource.HISTORY
-            alert[AREA_FIELD] = self._fix_area_spelling(alert[AREA_FIELD])
-        return alerts
+    def _process_history_alerts(
+        self, records: list[dict[str, Any]]
+    ) -> list[RecordAndMetadata]:
+        """Keep only latest record per area, add channel, and fix spelling."""
+        result = []
+        areas = set()
+        for record in records:
+            if record[AREA_FIELD] in areas:
+                continue
+            areas.add(record[AREA_FIELD])
+            result.append(
+                self._config_entry.runtime_data.classifier.add_metadata(
+                    Record(
+                        alertDate=record[DATE_FIELD],
+                        title=record[TITLE_FIELD],
+                        data=self._fix_area_spelling(record[AREA_FIELD]),
+                        category=record[CATEGORY_FIELD],
+                        channel=RecordSource.HISTORY,
+                    )
+                )
+            )
+        return result
 
     def _fix_area_spelling(self, area: str) -> str:
         """Fix spelling error in area name."""
@@ -396,11 +360,11 @@ class OrefAlertCoordinatorUpdater:
         self._unsub_update = None
         now = dt_util.now()
         update = False
-        if self._coordinator.data.active_alerts or self._coordinator.data.updates:
+        if self._coordinator.data.areas:
             self._active = now
             update = True
         elif now - self._active < timedelta(
-            minutes=20
+            minutes=10
         ) or now - self._update > timedelta(seconds=20):
             update = True
         if update:

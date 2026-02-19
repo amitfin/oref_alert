@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 from http import HTTPStatus
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 import homeassistant.util.dt as dt_util
@@ -13,22 +14,23 @@ from pytest_homeassistant_custom_component.common import (
     async_fire_time_changed,
 )
 
+from custom_components.oref_alert import classifier, records_schema
+from custom_components.oref_alert.classifier import Classifier
 from custom_components.oref_alert.const import (
-    CONF_ALERT_ACTIVE_DURATION,
-    CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREA,
     CONF_DURATION,
-    DEFAULT_ALERT_ACTIVE_DURATION,
     DOMAIN,
     IST,
+    Record,
+    RecordAndMetadata,
 )
 from custom_components.oref_alert.coordinator import (
     OREF_ALERTS_URL,
     OREF_HISTORY_URL,
-    OrefAlertCoordinatorData,
     OrefAlertCoordinatorUpdater,
     OrefAlertDataUpdateCoordinator,
 )
+from custom_components.oref_alert.records_schema import RecordType
 from custom_components.oref_alert.ttl_deque import TTLDeque
 
 from .utils import load_json_fixture, mock_urls
@@ -40,166 +42,23 @@ if TYPE_CHECKING:
         AiohttpClientMocker,
     )
 
-
-@pytest.mark.parametrize(
-    ("items", "alerts", "active_alerts", "update"),
-    [
-        ([], [], [], []),
-        (
-            [
-                {
-                    "alertDate": "2025-04-26 03:30:00",
-                    "title": "",
-                    "data": "area1",
-                    "category": 1,
-                }
-            ],
-            [
-                {
-                    "alertDate": "2025-04-26 03:30:00",
-                    "title": "",
-                    "data": "area1",
-                    "category": 1,
-                }
-            ],
-            [
-                {
-                    "alertDate": "2025-04-26 03:30:00",
-                    "title": "",
-                    "data": "area1",
-                    "category": 1,
-                }
-            ],
-            [],
-        ),
-        (
-            [
-                {
-                    "alertDate": "2025-04-26 03:30:00",
-                    "title": "",
-                    "data": "area1",
-                    "category": 13,
-                }
-            ],
-            [],
-            [],
-            [
-                {
-                    "alertDate": "2025-04-26 03:30:00",
-                    "title": "",
-                    "data": "area1",
-                    "category": 13,
-                }
-            ],
-        ),
-        (
-            [
-                {
-                    "alertDate": "2025-04-26 03:30:00",
-                    "title": "",
-                    "data": "area1",
-                    "category": 1,
-                },
-                {
-                    "alertDate": "2025-04-26 03:30:00",
-                    "title": "",
-                    "data": "area1",
-                    "category": 13,
-                },
-            ],
-            [
-                {
-                    "alertDate": "2025-04-26 03:30:00",
-                    "title": "",
-                    "data": "area1",
-                    "category": 1,
-                }
-            ],
-            [
-                {
-                    "alertDate": "2025-04-26 03:30:00",
-                    "title": "",
-                    "data": "area1",
-                    "category": 1,
-                }
-            ],
-            [
-                {
-                    "alertDate": "2025-04-26 03:30:00",
-                    "title": "",
-                    "data": "area1",
-                    "category": 13,
-                },
-            ],
-        ),
-        (
-            [
-                {
-                    "alertDate": "2025-04-26 03:19:59",
-                    "title": "",
-                    "data": "area1",
-                    "category": 1,
-                },
-                {
-                    "alertDate": "2025-04-26 03:19:59",
-                    "title": "",
-                    "data": "area1",
-                    "category": 13,
-                },
-            ],
-            [
-                {
-                    "alertDate": "2025-04-26 03:19:59",
-                    "title": "",
-                    "data": "area1",
-                    "category": 1,
-                }
-            ],
-            [],
-            [],
-        ),
-    ],
-    ids=(
-        "empty",
-        "simple",
-        "update",
-        "active update",
-        "post active",
-    ),
-)
-def test_coordinator_data(
-    freezer: FrozenDateTimeFactory,
-    items: list[dict[str, Any]],
-    alerts: list[dict[str, Any]],
-    active_alerts: list[dict[str, Any]],
-    update: list[dict[str, Any]],
-) -> None:
-    """Test the coordinator data class."""
-    freezer.move_to("2025-04-26 03:30:00+03:00")
-    coordinator_data = OrefAlertCoordinatorData(items, 10)  # pyright: ignore[reportArgumentType]
-    assert coordinator_data.items == items
-    assert coordinator_data.alerts == alerts
-    assert coordinator_data.active_alerts == active_alerts
-    assert coordinator_data.updates == update
+classifier.RECORDS_SCHEMA = records_schema.RECORDS_SCHEMA
 
 
 def create_coordinator(
     hass: HomeAssistant,
     options: dict | None = None,
-    channels: list[TTLDeque] | None = None,
+    channels: list[TTLDeque[RecordAndMetadata]] | None = None,
 ) -> OrefAlertDataUpdateCoordinator:
     """Create a test coordinator."""
     config = MockConfigEntry(
         domain=DOMAIN,
-        options={
-            CONF_ALERT_ACTIVE_DURATION: DEFAULT_ALERT_ACTIVE_DURATION,
-            CONF_ALL_ALERTS_ATTRIBUTES: True,
-            **(options or {}),
-        },
+        options=options or {},
     )
     config.mock_state(hass, ConfigEntryState.SETUP_IN_PROGRESS)
     coordinator = OrefAlertDataUpdateCoordinator(hass, config, channels or [])
     coordinator.config_entry = config
+    config.runtime_data = SimpleNamespace(classifier=Classifier(hass))
     return coordinator
 
 
@@ -259,8 +118,7 @@ async def test_alerts_processing(
     )
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
-    assert coordinator.data.alerts == load_json_fixture("combined_alerts.json")
-    assert coordinator.data.active_alerts == load_json_fixture("combined_alerts.json")
+    assert coordinator.get_records() == load_json_fixture("combined_alerts.json")
 
 
 async def test_cached_content_on_failure(
@@ -277,8 +135,7 @@ async def test_cached_content_on_failure(
     alerts = load_json_fixture("combined_alerts.json")
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
-    assert coordinator.data.alerts == alerts
-    assert coordinator.data.active_alerts == alerts
+    assert coordinator.get_records() == alerts
 
     freezer.tick()  # Skip the throttling threshold
     async_fire_time_changed(hass)
@@ -286,8 +143,7 @@ async def test_cached_content_on_failure(
     mock_urls(aioclient_mock, None, None, exc=Exception("dummy log for testing"))
     await coordinator.async_refresh()
     assert "dummy log for testing" in caplog.text
-    assert coordinator.data.alerts == alerts
-    assert coordinator.data.active_alerts == alerts
+    assert coordinator.get_records() == alerts
 
 
 async def test_request_throttling(
@@ -302,32 +158,15 @@ async def test_request_throttling(
     await coordinator.async_config_entry_first_refresh()
     assert aioclient_mock.call_count == 2
     aioclient_mock.mock_calls.clear()
-    assert len(coordinator.data.alerts) == 1
+    assert len(coordinator.get_records()) == 1
 
     for i in range(10):
         await coordinator.async_refresh()
         assert aioclient_mock.call_count == 2 * (i // 2)
-        assert len(coordinator.data.alerts) == 1
+        assert len(coordinator.get_records()) == 1
         freezer.tick(0.7)
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
-
-
-async def test_active_alerts(
-    hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
-    freezer: FrozenDateTimeFactory,
-) -> None:
-    """Test active alerts logic."""
-    freezer.move_to("2023-10-07 06:30:00+03:00")
-    mock_urls(aioclient_mock, None, "multi_alerts_history.json")
-    coordinator = create_coordinator(hass, {CONF_ALERT_ACTIVE_DURATION: 1})
-    await coordinator.async_config_entry_first_refresh()
-    inactive_alert, active_alert = load_json_fixture(
-        "multi_alerts_history.json", "website-history"
-    )
-    assert coordinator.data.alerts == [active_alert, inactive_alert]
-    assert coordinator.data.active_alerts == [active_alert]
 
 
 @pytest.mark.parametrize(
@@ -347,14 +186,14 @@ async def test_real_time_timestamp(
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
-    for _ in range(9):
-        # Timestamp should stay the same for the first 2 minutes.
-        assert coordinator.data.items[0]["alertDate"] == "2023-10-07 06:30:00"
+    for _ in range(5):
+        # Timestamp should stay the same for the first minute.
+        assert coordinator.get_records()[0]["alertDate"] == "2023-10-07 06:30:00"
         freezer.tick(15)
         await coordinator.async_refresh()
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
-    assert coordinator.data.items[0]["alertDate"] == "2023-10-07 06:32:15"
+    assert coordinator.get_records()[0]["alertDate"] == "2023-10-07 06:31:15"
     await coordinator.async_shutdown()
 
 
@@ -370,7 +209,29 @@ async def test_real_time_in_history(
     )
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
-    assert len(coordinator.data.alerts) == 1
+    assert len(coordinator.get_records()) == 1
+
+
+def test_process_history_alerts_skips_duplicate_area(hass: HomeAssistant) -> None:
+    """Test duplicate areas in history payload are skipped."""
+    coordinator = create_coordinator(hass)
+    records = [
+        {
+            "data": "בארי",
+            "category": 1,
+            "alertDate": "2025-01-01 12:00:00",
+            "title": "ירי רקטות וטילים",
+        },
+        {
+            "data": "בארי",
+            "category": 1,
+            "alertDate": "2025-01-01 11:59:00",
+            "title": "ירי רקטות וטילים",
+        },
+    ]
+
+    processed = coordinator._process_history_alerts(records)  # noqa: SLF001
+    assert len(processed) == 1
 
 
 async def test_area_name_typo(
@@ -387,8 +248,8 @@ async def test_area_name_typo(
     )
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
-    assert len(coordinator.data.alerts) == 1
-    assert coordinator.data.alerts[0]["data"] == "ביר הדאג\u0027"
+    assert len(coordinator.get_records()) == 1
+    assert coordinator.get_records()[0]["data"] == "ביר הדאג\u0027"
 
 
 @pytest.mark.allowed_logs(["Failed to fetch", "Unexpected error fetching oref_alert"])
@@ -414,10 +275,10 @@ async def test_synthetic_alert(
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test synthetic alert."""
-    coordinator = create_coordinator(hass, {CONF_ALERT_ACTIVE_DURATION: 100})
+    coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
-    assert len(coordinator.data.alerts) == 0
+    assert len(coordinator.get_records()) == 0
     synthetic_alert_time = dt_util.now(IST)
     areas = ["אילת", "קריית שמונה"]
     coordinator.add_synthetic_alert(
@@ -432,19 +293,20 @@ async def test_synthetic_alert(
     async_fire_time_changed(hass)
     await coordinator.async_refresh()
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert len(coordinator.data.alerts) == 2
+    records = coordinator.get_records()
+    assert len(records) == 2
     for index, area in enumerate(areas):
-        assert coordinator.data.alerts[index]["data"] == area
-        assert coordinator.data.alerts[index][
-            "alertDate"
-        ] == synthetic_alert_time.strftime("%Y-%m-%d %H:%M:%S")
-        assert coordinator.data.alerts[index]["category"] == 4
-        assert coordinator.data.alerts[index]["title"] == "test"
+        assert records[index]["data"] == area
+        assert records[index]["alertDate"] == synthetic_alert_time.strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        assert records[index]["category"] == 4
+        assert records[index]["title"] == "test"
     freezer.tick(2)
     async_fire_time_changed(hass)
     await coordinator.async_refresh()
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert len(coordinator.data.alerts) == 0
+    assert len(coordinator.get_records()) == 0
     await coordinator.async_shutdown()
 
 
@@ -462,7 +324,9 @@ async def test_is_synthetic_alert(
         }
     )
     await coordinator.async_config_entry_first_refresh()
-    assert coordinator.is_synthetic_alert(coordinator.data.alerts[0])
+    assert coordinator.is_synthetic_alert(
+        next(iter(coordinator.data.areas.values())).item
+    )
     await coordinator.async_shutdown()
 
 
@@ -479,7 +343,7 @@ async def test_http_cache(
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
-    assert len(coordinator.data.alerts) == 2
+    assert len(coordinator.get_records()) == 2
 
     aioclient_mock.clear_requests()
     aioclient_mock.get(OREF_ALERTS_URL, status=HTTPStatus.NOT_MODIFIED)
@@ -488,8 +352,9 @@ async def test_http_cache(
     await coordinator.async_refresh()
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert len(coordinator.data.alerts) == 2
+    assert len(coordinator.get_records()) == 2
 
+    coordinator.data.areas.clear()
     aioclient_mock.clear_requests()
     aioclient_mock.get(OREF_ALERTS_URL, text="")
     aioclient_mock.get(OREF_HISTORY_URL, status=HTTPStatus.NOT_MODIFIED)
@@ -497,7 +362,7 @@ async def test_http_cache(
     await coordinator.async_refresh()
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert len(coordinator.data.alerts) == 1
+    assert len(coordinator.get_records()) == 1
 
     await coordinator.async_shutdown()
 
@@ -513,11 +378,9 @@ async def test_non_alert_category(
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
-    expected_alerts = load_json_fixture(
+    assert coordinator.get_records() == load_json_fixture(
         "alert_categories_expected.json", "website-history"
     )
-    assert coordinator.data.alerts == expected_alerts
-    assert coordinator.data.active_alerts == expected_alerts
     await coordinator.async_shutdown()
 
 
@@ -530,7 +393,7 @@ async def test_unknown_real_time_category(
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
-    assert coordinator.data.items == []
+    assert coordinator.get_records() == []
     await coordinator.async_shutdown()
 
 
@@ -542,74 +405,74 @@ async def test_disable_all_alerts(
     """Test disabling all alerts."""
     freezer.move_to("2023-10-07 06:30:00+03:00")
     mock_urls(aioclient_mock, None, "single_alert_history.json")
-    coordinator = create_coordinator(hass, {CONF_ALL_ALERTS_ATTRIBUTES: False})
+    coordinator = create_coordinator(hass)
     coordinator.async_add_listener(lambda: None)
     await coordinator.async_config_entry_first_refresh()
-    assert len(coordinator.data.alerts) == 1
+    assert len(coordinator.get_records()) == 1
     freezer.tick(601)
     async_fire_time_changed(hass)
     await coordinator.async_refresh()
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert len(coordinator.data.alerts) == 0
+    assert len(coordinator.get_records()) == 1
     await coordinator.async_shutdown()
 
 
 @pytest.mark.parametrize(
-    ("alerts", "expected"),
+    ("alert", "expected"),
     [
         (
-            [
-                {
-                    "alertDate": "2023-10-07 06:30:00",
-                    "title": "ירי רקטות וטילים",
-                    "data": "קריית אונו",
-                    "category": 1,
-                }
-            ],
+            {
+                "alertDate": "2023-10-07 06:30:00",
+                "title": "ירי רקטות וטילים",
+                "data": "קריית אונו",
+                "category": 1,
+            },
             3,
         ),
         (
-            [
-                {
-                    "alertDate": "2023-10-07 06:30:00",
-                    "title": "ירי רקטות וטילים",
-                    "data": "בארי",
-                    "category": 1,
-                }
-            ],
+            {
+                "alertDate": "2023-10-07 06:31:00",
+                "title": "ירי רקטות וטילים",
+                "data": "נחל עוז",
+                "category": 2,
+            },
             2,
         ),
-        (
-            [
-                {
-                    "alertDate": "2023-10-07 06:31:00",
-                    "title": "ירי רקטות וטילים",
-                    "data": "נחל עוז",
-                    "category": 1,
-                }
-            ],
-            3,
-        ),
     ],
-    ids=("new", "de-dup", "stop searching"),
+    ids=("new", "override"),
 )
 async def test_channels(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
     freezer: FrozenDateTimeFactory,
-    alerts: list[dict],
+    alert: dict[str, Any],
     expected: int,
 ) -> None:
     """Test merging channel alerts."""
     freezer.move_to("2023-10-07 06:31:00+03:00")
     mock_urls(aioclient_mock, None, "multi_alerts_history.json")
-    channel = TTLDeque(10)
-    for alert in alerts:
-        channel.add(alert)
+    channel: TTLDeque[RecordAndMetadata] = TTLDeque()
+    channel.add(
+        RecordAndMetadata(
+            item=Record(
+                alertDate=alert["alertDate"],
+                title=alert["title"],
+                data=alert["data"],
+                category=alert["category"],
+                channel="website-history",
+            ),
+            time=dt_util.parse_datetime(
+                alert["alertDate"], raise_on_error=True
+            ).replace(tzinfo=IST),
+            record_type=RecordType.ALERT,
+            expire=None,
+        )
+    )
     coordinator = create_coordinator(hass, channels=[channel, channel])
     coordinator.async_add_listener(lambda: None)
     await coordinator.async_config_entry_first_refresh()
-    assert len(coordinator.data.alerts) == expected
+    assert len(coordinator.get_records()) == expected
+    assert coordinator.data.areas[alert["data"]].item.category == alert["category"]
     await coordinator.async_shutdown()
 
 
@@ -642,19 +505,19 @@ async def test_updater_previous_active(
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the updater is refreshing after active."""
-    mock_urls(aioclient_mock, "single_alert_real_time.json", None)
+    mock_urls(aioclient_mock, "single_update_real_time.json", None)
     coordinator = create_coordinator(hass)
     await coordinator.async_refresh()
     updater = OrefAlertCoordinatorUpdater(hass, coordinator)
     updater.start()
 
     mock_urls(aioclient_mock, None, None)
-    freezer.tick(timedelta(minutes=11))  # Set the active timestamp.
+    freezer.tick(timedelta(minutes=21))  # Set the active timestamp.
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
 
-    # 19:53 leaves 4 additional rounds of updates till 20:00.
-    freezer.tick(timedelta(minutes=19, seconds=53))
+    # 9:53 leaves 4 additional rounds of updates till 10:00.
+    freezer.tick(timedelta(minutes=9, seconds=53))
     for i in range(2, 10):
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)

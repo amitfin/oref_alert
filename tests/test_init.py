@@ -24,10 +24,7 @@ from custom_components.oref_alert.classifier import RECORDS_SCHEMA_URL
 from custom_components.oref_alert.const import (
     ADD_AREAS,
     ADD_SENSOR_ACTION,
-    ATTR_COUNTRY_ALERTS,
-    CONF_ALERT_ACTIVE_DURATION,
-    CONF_ALERT_MAX_AGE_DEPRECATED,
-    CONF_ALL_ALERTS_ATTRIBUTES,
+    ATTR_COUNTRY_ACTIVE_ALERTS,
     CONF_AREA,
     CONF_AREAS,
     CONF_DURATION,
@@ -46,11 +43,7 @@ if TYPE_CHECKING:
         AiohttpClientMocker,
     )
 
-DEFAULT_OPTIONS = {
-    CONF_AREAS: [],
-    CONF_ALERT_ACTIVE_DURATION: 10,
-    CONF_ALL_ALERTS_ATTRIBUTES: True,
-}
+DEFAULT_OPTIONS: dict[str, list[str]] = {CONF_AREAS: []}
 ENTITY_ID = f"{Platform.BINARY_SENSOR}.{OREF_ALERT_UNIQUE_ID}"
 
 
@@ -81,16 +74,16 @@ async def test_config_update(hass: HomeAssistant) -> None:
     assert state is not None
     attributes = state.attributes
     assert attributes is not None
-    assert attributes[CONF_ALERT_ACTIVE_DURATION] == 10
+    assert attributes[CONF_AREAS] == []
     hass.config_entries.async_update_entry(
-        config_entry, options={**DEFAULT_OPTIONS, CONF_ALERT_ACTIVE_DURATION: 5}
+        config_entry, options={**DEFAULT_OPTIONS, CONF_AREAS: ["פתח תקווה"]}
     )
     await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(ENTITY_ID)
     assert state is not None
     attributes = state.attributes
     assert attributes is not None
-    assert attributes[CONF_ALERT_ACTIVE_DURATION] == 5
+    assert attributes[CONF_AREAS] == ["פתח תקווה"]
     assert await hass.config_entries.async_remove(config_entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
 
@@ -231,28 +224,12 @@ async def test_synthetic_alert_action(hass: HomeAssistant, areas: str | list) ->
     state = hass.states.get(ENTITY_ID)
     assert state is not None
     assert (
-        len(state.attributes[ATTR_COUNTRY_ALERTS]) == 1
+        len(state.attributes[ATTR_COUNTRY_ACTIVE_ALERTS]) == 1
         if isinstance(areas, str)
         else len(areas)
     )
     for index, area in enumerate([areas] if isinstance(areas, str) else areas):
-        assert state.attributes[ATTR_COUNTRY_ALERTS][index]["data"] == area
-
-
-async def test_max_age_deprecation(hass: HomeAssistant) -> None:
-    """Test an old config with max_age option."""
-    config_entry = MockConfigEntry(
-        domain=DOMAIN, options={CONF_AREAS: [], CONF_ALERT_MAX_AGE_DEPRECATED: 15}
-    )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get(ENTITY_ID)
-    assert state is not None
-    assert state.state == STATE_OFF
-    assert state.attributes[CONF_ALERT_ACTIVE_DURATION] == 15
-    assert await hass.config_entries.async_remove(config_entry.entry_id)
-    await hass.async_block_till_done(wait_background_tasks=True)
+        assert state.attributes[ATTR_COUNTRY_ACTIVE_ALERTS][index]["data"] == area
 
 
 async def test_sensor_name_migration(hass: HomeAssistant) -> None:
@@ -261,7 +238,6 @@ async def test_sensor_name_migration(hass: HomeAssistant) -> None:
         domain=DOMAIN,
         options={
             CONF_AREAS: [],
-            CONF_ALERT_ACTIVE_DURATION: 10,
             CONF_SENSORS: {"Oref Alert Test": []},
         },
     )
@@ -281,7 +257,6 @@ async def test_unknown_area(hass: HomeAssistant) -> None:
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         options={
-            CONF_ALERT_ACTIVE_DURATION: 10,
             CONF_AREAS: ["unknown1"],
             CONF_SENSORS: {"x": ["unknown2"]},
         },

@@ -4,14 +4,13 @@ from typing import TYPE_CHECKING
 
 from homeassistant.config_entries import SOURCE_USER
 from homeassistant.data_entry_flow import FlowResultType
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+)
 
 from custom_components.oref_alert.const import (
-    CONF_ALERT_ACTIVE_DURATION,
-    CONF_ALL_ALERTS_ATTRIBUTES,
     CONF_AREAS,
     CONF_SENSORS,
-    DEFAULT_ALERT_ACTIVE_DURATION,
     DOMAIN,
     TITLE,
 )
@@ -19,12 +18,8 @@ from custom_components.oref_alert.const import (
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
-DEFAULT_OPTIONS = {
-    CONF_AREAS: [],
-    CONF_ALERT_ACTIVE_DURATION: DEFAULT_ALERT_ACTIVE_DURATION,
-    CONF_ALL_ALERTS_ATTRIBUTES: False,
-}
-DEFAULT_SENSORS = {"dummy": ["dummy"]}
+DEFAULT_OPTIONS: dict[str, list[str]] = {CONF_AREAS: []}
+DEFAULT_SENSORS: dict[str, list[str]] = {"dummy": ["dummy"]}
 
 
 async def test_config_flow_defaults(hass: HomeAssistant) -> None:
@@ -101,11 +96,9 @@ async def test_options_flow(hass: HomeAssistant) -> None:
         result["flow_id"],
         user_input={
             **DEFAULT_OPTIONS,
-            CONF_ALERT_ACTIVE_DURATION: 15,
-            CONF_ALL_ALERTS_ATTRIBUTES: True,
+            CONF_AREAS: ["תל אביב - כל האזורים"],
         },
     )
     assert result2.get("type") == FlowResultType.CREATE_ENTRY
-    options[CONF_ALERT_ACTIVE_DURATION] = 15
-    options[CONF_ALL_ALERTS_ATTRIBUTES] = True
+    options[CONF_AREAS] = ["תל אביב - כל האזורים"]
     assert result2.get("data") == options

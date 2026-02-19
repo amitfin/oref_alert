@@ -19,17 +19,15 @@ from .categories import (
     category_to_icon,
 )
 from .const import (
-    AREA_FIELD,
     ATTR_AREA,
     ATTR_EMOJI,
     ATTR_HOME_DISTANCE,
     ATTR_TYPE,
     CATEGORY_FIELD,
     CHANNEL_FIELD,
-    CONF_ALERT_ACTIVE_DURATION,
     DOMAIN,
     TITLE_FIELD,
-    AlertType,
+    RecordAndMetadata,
 )
 from .metadata.area_info import AREA_INFO
 from .metadata.areas import AREAS
@@ -53,9 +51,7 @@ class OrefAlertBusEventManager:
         """Initialize object with defaults."""
         self._hass = hass
         self._config_entry = config_entry
-        self._previous_items: TTLDeque = TTLDeque(
-            config_entry.options[CONF_ALERT_ACTIVE_DURATION]
-        )
+        self._previous_items: TTLDeque[RecordAndMetadata] = TTLDeque()
         self._unsub_update: Callable[[], None] | None = None
 
     def start(self) -> None:
@@ -74,13 +70,12 @@ class OrefAlertBusEventManager:
     @callback
     def _async_update(self) -> None:
         """Fire event bus for new records."""
-        for item in self._coordinator.data.active_items:
-            if self._is_old(item):
+        for record in self._coordinator.data.areas.values():
+            if self._is_old(record):
                 continue
-            if (area := item[AREA_FIELD]) not in AREAS:
+            if (area := record.item.data) not in AREAS:
                 continue
             area_info = AREA_INFO[area]
-            item_type = self._config_entry.runtime_data.classifier.record_type(item)
             event = {
                 ATTR_AREA: area,
                 ATTR_HOME_DISTANCE: round(
@@ -93,32 +88,30 @@ class OrefAlertBusEventManager:
                 ),
                 ATTR_LATITUDE: area_info["lat"],
                 ATTR_LONGITUDE: area_info["lon"],
-                CATEGORY_FIELD: item.get(CATEGORY_FIELD),
-                TITLE_FIELD: item.get(TITLE_FIELD),
-                ATTR_ICON: category_to_icon(item.get("category", 0)),
-                ATTR_EMOJI: category_to_emoji(item.get("category", 0)),
-                CHANNEL_FIELD: item.get(CHANNEL_FIELD),
+                CATEGORY_FIELD: record.item.category,
+                TITLE_FIELD: record.item.title,
+                ATTR_ICON: category_to_icon(record.item.category),
+                ATTR_EMOJI: category_to_emoji(record.item.category),
+                CHANNEL_FIELD: record.item.channel,
             }
             self._hass.bus.async_fire(
                 f"{DOMAIN}_event"
-                if item_type == RecordType.ALERT
+                if record.record_type == RecordType.ALERT
                 else f"{DOMAIN}_update_event",
                 event,
             )
             self._hass.bus.async_fire(
-                f"{DOMAIN}_record", {**event, ATTR_TYPE: item_type}
+                f"{DOMAIN}_record", {**event, ATTR_TYPE: record.record_type}
             )
-            self._previous_items.add(item)
+            self._previous_items.add(record)
 
-    def _is_old(self, item: AlertType) -> bool:
+    def _is_old(self, record: RecordAndMetadata) -> bool:
         """Check if the item is in the previous list."""
         for previous in self._previous_items.items():
-            for field in (AREA_FIELD, CATEGORY_FIELD):
-                if item.get(field) != previous.get(field):
-                    break
-            else:
-                if self._config_entry.runtime_data.classifier.record_type(
-                    item
-                ) == self._config_entry.runtime_data.classifier.record_type(previous):
-                    return True
+            if (
+                record.item.data == previous.item.data
+                and record.item.category == previous.item.category
+                and record.record_type == previous.record_type
+            ):
+                return True
         return False

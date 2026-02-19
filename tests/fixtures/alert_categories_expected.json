@@ -58,5 +58,17 @@
         "title": "",
         "data": "אבירים",
         "category": 12
+    },
+    {
+        "alertDate": "2025-04-26 03:30:00",
+        "title": "",
+        "data": "אבן יהודה",
+        "category": 13
+    },
+    {
+        "alertDate": "2025-04-26 03:30:00",
+        "title": "",
+        "data": "אבן מנחם",
+        "category": 14
     }
 ]

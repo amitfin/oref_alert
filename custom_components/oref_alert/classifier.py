@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import types
 from contextlib import suppress
+from dataclasses import asdict
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Final
 
@@ -12,8 +13,11 @@ from homeassistant.core import callback
 from homeassistant.helpers import event
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from custom_components.oref_alert.const import AREA_FIELD, DATE_FIELD, IST, AlertType
-from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
+from custom_components.oref_alert.const import (
+    IST,
+    Record,
+    RecordAndMetadata,
+)
 from custom_components.oref_alert.records_schema import RecordType
 
 if TYPE_CHECKING:
@@ -22,28 +26,24 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
     from voluptuous import Schema
 
-    from custom_components.oref_alert.coordinator import OrefAlertDataUpdateCoordinator
-
 PARALLEL_UPDATES: Final = 0
 GITHUB_ROOT: Final = "https://raw.githubusercontent.com/amitfin/oref_alert/main/custom_components/oref_alert"
 RECORDS_SCHEMA_FILE_NAME: Final = "records_schema"
 RECORDS_SCHEMA_URL: Final = f"{GITHUB_ROOT}/{RECORDS_SCHEMA_FILE_NAME}.py"
-RECORDS_SCHEMA: dict[str, Schema] = {}
-RECORD_EXPIRATION_MINUTES: Final[dict[str, int]] = {
+RECORDS_SCHEMA: dict[RecordType, Schema] = {}
+RECORD_EXPIRATION_MINUTES: Final[dict[RecordType, int]] = {
     RecordType.PRE_ALERT: 20,
     RecordType.ALERT: 720,
+    RecordType.END: 10,
 }
 
 
 class Classifier:
     """Classifier processor."""
 
-    def __init__(
-        self, hass: HomeAssistant, coordinator: OrefAlertDataUpdateCoordinator
-    ) -> None:
+    def __init__(self, hass: HomeAssistant) -> None:
         """Initialize the processor."""
         self._hass = hass
-        self._coordinator: OrefAlertDataUpdateCoordinator = coordinator
         self._http_client = async_get_clientsession(hass)
         self._unsub_next_load: Callable[[], None] | None = None
 
@@ -74,40 +74,35 @@ class Classifier:
                 self._hass, self.load, dt_util.now() + timedelta(hours=6)
             )
 
-    def record_type(self, record: AlertType) -> str | None:
-        """Get record type."""
-        for record_type, schema in RECORDS_SCHEMA.items():
-            with suppress(Exception):
-                schema(record)
-                return record_type
-        return None
+    def add_metadata(
+        self, record: Record, record_expire: datetime | None = None
+    ) -> RecordAndMetadata:
+        """Get record metadata."""
+        record_time = dt_util.parse_datetime(
+            record.alertDate, raise_on_error=True
+        ).replace(tzinfo=IST)
 
-    def record_expired(self, record: AlertType, record_type: str | None = None) -> bool:
-        """Check if the record is expired."""
-        if not record_type:
-            record_type = self.record_type(record)
+        record_type = self._record_type(record)
 
         if (
-            not record_type
-            or (expiration := RECORD_EXPIRATION_MINUTES.get(record_type)) is None
+            record_expire is None
+            and record_type is not None
+            and (expiration := RECORD_EXPIRATION_MINUTES.get(record_type)) is not None
         ):
-            return False
+            record_expire = record_time + timedelta(minutes=expiration)
 
-        return (
-            dt_util.now()
-            - dt_util.parse_datetime(record[DATE_FIELD], raise_on_error=True).replace(
-                tzinfo=IST
-            )
-        ) > timedelta(minutes=expiration)
+        return RecordAndMetadata(
+            item=record,
+            record_type=record_type,
+            time=record_time,
+            expire=record_expire,
+        )
 
-    def latest_record_type(
-        self, area: str
-    ) -> tuple[str, AlertType, bool] | tuple[None, None, bool]:
-        """Get the latest record type."""
-        for record in self._coordinator.data.active_items:
-            if (
-                (record_area := record[AREA_FIELD]) == area
-                or record_area in ALL_AREAS_ALIASES
-            ) and (record_type := self.record_type(record)) is not None:
-                return record_type, record, self.record_expired(record, record_type)
-        return None, None, True
+    def _record_type(self, record: Record) -> RecordType | None:
+        """Get record type."""
+        fields = asdict(record)
+        for record_type, schema in RECORDS_SCHEMA.items():
+            with suppress(Exception):
+                schema(fields)
+                return record_type
+        return None

@@ -33,10 +33,8 @@ Once the component is installed, it's possible to control additional parameters 
 
 [![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=oref_alert)
 
-There are 3 configuration fields:
-1. **Selected area**: by default the integration finds the area based on HA's home location. There is no need to change this default. Note: it's highly discouraged to select more than a single area. `sensor.oref_alert` doesn't support more than a single area, and will not be created when choosing multiple areas. It's possible to create additional `sensor` entities by creating additional sensors (check below for more information) with a single area.
-2. **Active duration of an alert**: this field doesn't impact `sensor.oref_alert` but it's used by other entities as explained below.
-3. **Add 'All Alerts' attributes**: when it's off (the default) the attributes `Country alerts` and `Selected areas alerts` are not added to the binary sensors. These attributes hold the list of all alerts over the last 24-hours which can be long and cause performance issues on weaker systems. Both attributes are not used often and are not part of any example below.
+There is a single configuration parameter:
+**Selected area**: by default the integration finds the area based on HA's home location. There is no need to change this default. Note: it's highly discouraged to select more than a single area. `sensor.oref_alert` doesn't support more than a single area, and will not be created when choosing multiple areas. It's possible to create additional `sensor` entities by creating additional sensors (check below for more information), each with a single area.
 
 <kbd><img src="https://github.com/user-attachments/assets/960168bd-d7ad-47f6-88e7-26d216f705a9" width="400"></kbd>
 
@@ -102,17 +100,14 @@ The action `oref_alert.edit_sensor` can be used for editing an additional sensor
 
 ## Binary Sensor
 
-`binary_sensor.oref_alert` is a legacy entity. The sensor is `on` when there is an active alert in the home's area. An alert is consider active according to the specified duration in the configuration (10 minutes by default). This is not according to the new guidelines where alerts don't have a fixed duration but exist until an `end` update is announced.
+`binary_sensor.oref_alert` is `on` when there is an active alert in the home's area. However, it's better to use `sensor.oref_alert` since it's similar but indicates also `pre_alert` state. Since this is a binary sensor there are only 2 states. `off` indicating no-alert (which is also used for `pre_alert`), and `on` when there is an alert.
 
 Binary sensors have the following attributes:
 1. `Areas`: the list of areas provided by the user.
-2. `Alert active duration`: as configured by the user.
-3. `Selected areas active alerts`: when the sensor is `on`, the alerts are listed here.
-4. `Selected areas updates`: the list of updates for the selected areas.
-5. `Selected areas alerts`: active and inactive alerts in the selected areas. Exists only when the [configuration](https://my.home-assistant.io/redirect/integration/?domain=oref_alert) "Add 'All Alerts' attributes" is turned on.
-6. `Country active alerts`: all active alerts in Israel.
-7. `Country updates`: all updates in Israel.
-8. `Country alerts`: all alerts in Israel. Exists only when the [configuration](https://my.home-assistant.io/redirect/integration/?domain=oref_alert) "Add 'All Alerts' attributes" is turned on.
+2. `Selected areas active alerts`: when the sensor is `on`, the alerts are listed here.
+3. `Selected areas updates`: the list of updates for the selected areas.
+4. `Country active alerts`: all active alerts in Israel.
+5. `Country updates`: all updates in Israel.
 
 ## Time To Shelter Sensors
 

@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import asyncio
+from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
 
-import homeassistant.util.dt as dt_util
 from homeassistant.components.geo_location import ATTR_SOURCE, GeolocationEvent
 from homeassistant.const import (
     ATTR_DATE,
@@ -19,6 +18,8 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.util.location import vincenty
 
+from custom_components.oref_alert.records_schema import RecordType
+
 from .categories import (
     category_to_emoji,
     category_to_icon,
@@ -30,10 +31,10 @@ from .const import (
     CATEGORY_FIELD,
     DATE_FIELD,
     DOMAIN,
-    IST,
     LOCATION_ID_SUFFIX,
     OREF_ALERT_UNIQUE_ID,
     TITLE_FIELD,
+    RecordAndMetadata,
 )
 from .entity import OrefAlertEntity
 from .metadata.area_info import AREA_INFO
@@ -79,7 +80,7 @@ class OrefAlertLocationEvent(OrefAlertEntity, GeolocationEvent):
         hass: HomeAssistant,
         config_entry: OrefAlertConfigEntry,
         area: str,
-        attributes: dict[str, Any],
+        record: RecordAndMetadata,
     ) -> None:
         """Initialize entity."""
         super().__init__(config_entry)
@@ -95,7 +96,9 @@ class OrefAlertLocationEvent(OrefAlertEntity, GeolocationEvent):
             or 0,
             1,
         )
-        self._alert_attributes = attributes
+        self._record: RecordAndMetadata | None = None
+        self._alert_attributes: dict[str, Any] = {}
+        self._update_record(record)
 
     @property
     def suggested_object_id(self) -> str | None:
@@ -113,10 +116,25 @@ class OrefAlertLocationEvent(OrefAlertEntity, GeolocationEvent):
         self.hass.async_create_task(self.async_remove(force_remove=True))
 
     @callback
-    def async_update(self, attributes: dict[str, Any]) -> None:
-        """Update the extra attributes when needed."""
-        if attributes and attributes != self._alert_attributes:
-            self._alert_attributes = attributes
+    def _update_record(self, record: RecordAndMetadata) -> None:
+        """Update the record and attributes."""
+        self._record = record
+        attributes: dict[str, Any] = {}
+        attributes = {
+            key: value
+            for key, value in asdict(record.item).items()
+            if key not in {AREA_FIELD, DATE_FIELD}
+        }
+        attributes[ATTR_DATE] = record.time
+        attributes[ATTR_ICON] = category_to_icon(record.item.category)
+        attributes[ATTR_EMOJI] = category_to_emoji(record.item.category)
+        self._alert_attributes = attributes
+
+    @callback
+    def async_update(self, record: RecordAndMetadata) -> None:
+        """Update the record and extra attributes when needed."""
+        if record != self._record:
+            self._update_record(record)
             self.async_write_ha_state()
 
 
@@ -140,52 +158,24 @@ class OrefAlertLocationEventManager:
         self._coordinator.async_add_listener(self._async_update)
         self._async_update()
 
-    def _alert_attributes(self, area: str) -> dict[str, Any]:
-        """Return alert's attributes."""
-        attributes: dict[str, Any] = {}
-        for alert in self._coordinator.data.active_alerts:
-            if alert[AREA_FIELD] == area:
-                attributes = {
-                    key: value
-                    for key, value in alert.items()
-                    if key not in {AREA_FIELD, DATE_FIELD}
-                }
-                attributes[ATTR_DATE] = dt_util.parse_datetime(
-                    alert[DATE_FIELD], raise_on_error=True
-                ).replace(tzinfo=IST)
-                attributes[ATTR_ICON] = category_to_icon(alert[CATEGORY_FIELD])
-                attributes[ATTR_EMOJI] = category_to_emoji(alert[CATEGORY_FIELD])
-                break
-        return attributes
-
-    @callback
-    async def _cleanup_entities(self) -> None:
-        """Remove entities."""
-        await asyncio.sleep(10)  # Wait for a stable state.
-        active = {alert[AREA_FIELD] for alert in self._coordinator.data.active_alerts}
-        areas_to_delete = set(self._location_events.keys()) - active
-        for area in areas_to_delete:
-            if (entity := self._location_events.pop(area, None)) is not None:
-                entity.async_remove_self()
-
     @callback
     def _async_update(self) -> None:
-        """Add and/or remove entities according to the new active alerts list."""
-        active = {alert[AREA_FIELD] for alert in self._coordinator.data.active_alerts}
+        """Add and/or remove entities according to the new records list."""
         exists = set(self._location_events.keys())
-
-        for area in exists.intersection(active):
-            self._location_events[area].async_update(self._alert_attributes(area))
+        for area in exists:
+            if (
+                record := self._coordinator.data.areas.get(area)
+            ) and record.record_type == RecordType.ALERT:
+                self._location_events[area].async_update(record)
+            else:
+                self._location_events[area].async_remove_self()
 
         to_add = {
-            area: OrefAlertLocationEvent(
-                self._hass, self._config_entry, area, self._alert_attributes(area)
-            )
-            for area in active - exists
-            if area in AREA_INFO
+            area: OrefAlertLocationEvent(self._hass, self._config_entry, area, record)
+            for area in set(self._coordinator.data.areas.keys()) - exists
+            if (record := self._coordinator.data.areas.get(area))
+            and record.record_type == RecordType.ALERT
+            and area in AREA_INFO
         }
         self._location_events.update(to_add)
         self._async_add_entities(to_add.values())
-
-        if len(exists - active):
-            self._hass.async_create_task(self._cleanup_entities())

@@ -17,15 +17,14 @@ from .categories import (
     tzevaadom_threat_id_to_history_category,
 )
 from .const import (
-    AREA_FIELD,
     CATEGORY_FIELD,
-    CHANNEL_FIELD,
-    CONF_ALERT_ACTIVE_DURATION,
     DATE_FIELD,
     IST,
     LOGGER,
     TITLE_FIELD,
-    AlertSource,
+    Record,
+    RecordAndMetadata,
+    RecordSource,
 )
 from .metadata import TZEVAADOM_SPELLING_FIX
 from .metadata.areas import AREAS
@@ -72,10 +71,8 @@ class TzevaAdomNotifications:
         """Initialize TzevaAdomNotifications."""
         self._hass = hass
         self._config_entry = config_entry
-        self.alerts: TTLDeque = TTLDeque(
-            config_entry.options[CONF_ALERT_ACTIVE_DURATION]
-        )
-        self._ids: TTLDeque = TTLDeque(config_entry.options[CONF_ALERT_ACTIVE_DURATION])
+        self.alerts: TTLDeque[RecordAndMetadata] = TTLDeque()
+        self._ids: TTLDeque[str] = TTLDeque()
         self._http_client = async_get_clientsession(hass)
         self._ws: ClientWebSocketResponse | None = None
         self._stop = asyncio.Event()
@@ -144,7 +141,7 @@ class TzevaAdomNotifications:
                 self._stop.wait(), timeout=secrets.SystemRandom().uniform(5, 8)
             )
 
-    def _parse_message(self, message: dict[str, Any]) -> dict[str, str] | None:
+    def _parse_message(self, message: dict[str, Any]) -> dict[str, Any] | None:
         """Parse the message and return parsed/converted fields."""
         if message["type"] == MessageType.ALERT:
             if (
@@ -214,13 +211,15 @@ class TzevaAdomNotifications:
                     )
                     continue
                 self.alerts.add(
-                    {
-                        DATE_FIELD: fields[DATE_FIELD],
-                        TITLE_FIELD: fields[TITLE_FIELD],
-                        AREA_FIELD: name,
-                        CATEGORY_FIELD: fields[CATEGORY_FIELD],
-                        CHANNEL_FIELD: AlertSource.TZEVAADOM,
-                    }
+                    self._config_entry.runtime_data.classifier.add_metadata(
+                        Record(
+                            alertDate=fields[DATE_FIELD],
+                            title=fields[TITLE_FIELD],
+                            data=name,
+                            category=fields[CATEGORY_FIELD],
+                            channel=RecordSource.TZEVAADOM,
+                        )
+                    )
                 )
                 new_alert = True
 

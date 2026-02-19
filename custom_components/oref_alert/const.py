@@ -3,7 +3,13 @@
 import enum
 import logging
 import zoneinfo
-from typing import Final, TypedDict
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Final
+
+if TYPE_CHECKING:
+    from datetime import datetime
+
+    from .records_schema import RecordType
 
 DOMAIN: Final = "oref_alert"
 TITLE: Final = "Oref Alert"
@@ -12,14 +18,12 @@ IST = zoneinfo.ZoneInfo("Asia/Jerusalem")
 
 ATTR_ALERT: Final = "alert"
 ATTR_AREA: Final = "area"
-ATTR_COUNTRY_ALERTS: Final = "country_alerts"
 ATTR_COUNTRY_ACTIVE_ALERTS: Final = "country_active_alerts"
 ATTR_COUNTRY_UPDATES: Final = "country_updates"
 ATTR_DISPLAY: Final = "display"
 ATTR_EMOJI: Final = "emoji"
 ATTR_HOME_DISTANCE: Final = "home_distance"
 ATTR_RECORD: Final = "record"
-ATTR_SELECTED_AREAS_ALERTS: Final = "selected_areas_alerts"
 ATTR_SELECTED_AREAS_ACTIVE_ALERTS: Final = "selected_areas_active_alerts"
 ATTR_SELECTED_AREAS_UPDATES: Final = "selected_areas_updates"
 ATTR_TIME_TO_SHELTER: Final = "time_to_shelter"
@@ -27,13 +31,8 @@ ATTR_TYPE: Final = "type"
 
 CONF_AREA: Final = "area"
 CONF_AREAS: Final = "areas"
-CONF_ALERT_ACTIVE_DURATION: Final = "alert_active_duration"
-CONF_ALERT_MAX_AGE_DEPRECATED: Final = "alert_max_age"
-CONF_ALL_ALERTS_ATTRIBUTES: Final = "all_alerts_attributes"
 CONF_DURATION: Final = "duration"
 CONF_SENSORS: Final = "sensors"
-
-DEFAULT_ALERT_ACTIVE_DURATION: Final = 10
 
 ADD_SENSOR_ACTION: Final = "add_sensor"
 REMOVE_SENSOR_ACTION: Final = "remove_sensor"
@@ -62,17 +61,28 @@ DATE_FIELD: Final = "alertDate"
 TITLE_FIELD: Final = "title"
 
 
-class AlertType(TypedDict):
-    """Type for area info."""
+@dataclass(frozen=True)
+class Record:
+    """Record type."""
 
     data: str
     category: int
     channel: str
-    alertDate: str
+    alertDate: str  # noqa: N815
     title: str
 
 
-class AlertSource(enum.StrEnum):
+@dataclass(frozen=True)
+class RecordAndMetadata:
+    """Class for holding a record with additional metadata."""
+
+    item: Record
+    time: datetime
+    record_type: RecordType | None
+    expire: datetime | None
+
+
+class RecordSource(enum.StrEnum):
     """Enum for alert sources."""
 
     HISTORY = "website-history"

@@ -7,6 +7,7 @@ import json
 from asyncio import Event
 from collections import deque
 from contextlib import contextmanager
+from datetime import datetime
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, patch
@@ -21,11 +22,13 @@ from pytest_homeassistant_custom_component.common import (
 
 from custom_components.oref_alert.const import (
     ATTR_SELECTED_AREAS_UPDATES,
-    CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     DOMAIN,
+    IST,
     OREF_ALERT_UNIQUE_ID,
+    RecordAndMetadata,
 )
+from custom_components.oref_alert.records_schema import RecordType
 from custom_components.oref_alert.tzevaadom import TzevaAdomNotifications
 from tests.utils import load_json_fixture
 
@@ -36,7 +39,7 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
 
-DEFAULT_OPTIONS = {CONF_AREAS: ["גבעת שמואל"], CONF_ALERT_ACTIVE_DURATION: 10}
+DEFAULT_OPTIONS = {CONF_AREAS: ["גבעת שמואל"]}
 ENTITY_ID = f"{Platform.BINARY_SENSOR}.{OREF_ALERT_UNIQUE_ID}"
 
 
@@ -215,7 +218,17 @@ async def test_duplicate(hass: HomeAssistant) -> None:
     data = json.dumps(alert).encode("utf-8")
     config = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
     config.runtime_data = SimpleNamespace(
-        coordinator=SimpleNamespace(async_refresh=AsyncMock())
+        coordinator=SimpleNamespace(async_refresh=AsyncMock()),
+        classifier=SimpleNamespace(
+            add_metadata=lambda record: RecordAndMetadata(
+                item=record,
+                record_type=RecordType.ALERT,
+                time=datetime.strptime(record.alertDate, "%Y-%m-%d %H:%M:%S").replace(
+                    tzinfo=IST
+                ),
+                expire=None,
+            )
+        ),
     )
     tzevaadom = TzevaAdomNotifications(hass, config)
     with mock_ws([WSMessage(type=WSMsgType.TEXT, data=data, extra=None)] * 3) as ws:

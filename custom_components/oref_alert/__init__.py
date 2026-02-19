@@ -48,8 +48,6 @@ from .const import (
     ADD_AREAS,
     ADD_SENSOR_ACTION,
     CATEGORY_FIELD,
-    CONF_ALERT_ACTIVE_DURATION,
-    CONF_ALERT_MAX_AGE_DEPRECATED,
     CONF_AREA,
     CONF_AREAS,
     CONF_DURATION,
@@ -284,13 +282,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
     """Set up entity from a config entry."""
     entry.async_on_unload(entry.add_update_listener(config_entry_update_listener))
 
-    if CONF_ALERT_MAX_AGE_DEPRECATED in entry.options:
-        options = {**entry.options}
-        options[CONF_ALERT_ACTIVE_DURATION] = options.pop(CONF_ALERT_MAX_AGE_DEPRECATED)
-        hass.config_entries.async_update_entry(entry, options=options)
-        # config_entry_update_listener will be called and trigger a reload.
-        return True
-
     sensor_key_renamed = False
     sensors = {**entry.options.get(CONF_SENSORS, {})}
     sensor_names = set(sensors.keys())
@@ -337,7 +328,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
         await inject_template_extensions(hass),
         pushy,
         tzevaadom,
-        Classifier(hass, coordinator),
+        Classifier(hass),
         OrefAlertBusEventManager(hass, entry),
     )
 

@@ -27,7 +27,6 @@ from pytest_homeassistant_custom_component.common import (
 from custom_components.oref_alert.const import (
     ATTR_EMOJI,
     ATTR_HOME_DISTANCE,
-    CONF_ALERT_ACTIVE_DURATION,
     CONF_AREAS,
     DOMAIN,
     LOCATION_ID_SUFFIX,
@@ -43,7 +42,7 @@ if TYPE_CHECKING:
         AiohttpClientMocker,
     )
 
-DEFAULT_OPTIONS = {CONF_AREAS: ["בארי"], CONF_ALERT_ACTIVE_DURATION: 10}
+DEFAULT_OPTIONS = {CONF_AREAS: ["בארי"]}
 ENTITY_ID = f"{Platform.GEO_LOCATION}.{OREF_ALERT_UNIQUE_ID}_{LOCATION_ID_SUFFIX}"
 
 
@@ -120,19 +119,11 @@ async def test_add_remove(
         entry.domain == Platform.GEO_LOCATION
         for entry in er.async_entries_for_config_entry(er.async_get(hass), config_id)
     )
-    mock_urls(aioclient_mock, None, None)
+    mock_urls(aioclient_mock, None, "multi_alerts_history_end.json")
     freezer.tick(2)
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 0
-    mock_urls(aioclient_mock, None, "single_alert_history.json")
-    freezer.tick()
-    async_fire_time_changed(hass)
-    await refresh_coordinator(hass, config_id)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    assert {
-        state.entity_id for state in hass.states.async_all(Platform.GEO_LOCATION)
-    } == {ENTITY_ID}
     await async_shutdown(hass, config_id)
 
 

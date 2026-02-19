@@ -3,53 +3,37 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from datetime import datetime, timedelta
-from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, cast
+from datetime import timedelta
+from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
 import homeassistant.util.dt as dt_util
-import pytest
 
-from custom_components.oref_alert import categories, classifier, records_schema
+from custom_components.oref_alert import categories, classifier
 from custom_components.oref_alert.classifier import Classifier
 from custom_components.oref_alert.const import (
-    AREA_FIELD,
     CATEGORY_FIELD,
-    DATE_FIELD,
-    IST,
+    Record,
 )
-from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
-from custom_components.oref_alert.records_schema import RecordType
 
 if TYPE_CHECKING:
+    from freezegun.api import FrozenDateTimeFactory
     from homeassistant.core import HomeAssistant
 
-    from custom_components.oref_alert.coordinator import OrefAlertDataUpdateCoordinator
 
-
-def _make_classifier(
-    hass: HomeAssistant, active_items: list[dict[str, str]]
-) -> Classifier:
-    coordinator = SimpleNamespace(data=SimpleNamespace(active_items=active_items))
-    return Classifier(hass, cast("OrefAlertDataUpdateCoordinator", coordinator))
-
-
-async def test_load_sets_schema_and_schedules(hass: HomeAssistant) -> None:
-    """Test classifier schema load updates the schema and schedules a reload."""
-    record_manager = _make_classifier(hass, [])
-
-    now = datetime(2024, 1, 1, 12, 0, 0, tzinfo=dt_util.UTC)
+async def test_load_sets_schema_and_schedules(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    """Test classifier_test schema load updates the schema and schedules a reload."""
+    freezer.move_to("2023-10-07 06:30:00+03:00")
+    classifier_test = Classifier(hass)
     unsub = Mock()
 
-    with (
-        patch("custom_components.oref_alert.classifier.dt_util.now", return_value=now),
-        patch(
-            "custom_components.oref_alert.classifier.event.async_track_point_in_time",
-            return_value=unsub,
-        ) as track_point,
-    ):
-        await record_manager.load()
+    with patch(
+        "custom_components.oref_alert.classifier.event.async_track_point_in_time",
+        return_value=unsub,
+    ) as track_point:
+        await classifier_test.load()
 
     assert {str(key) for key in classifier.RECORDS_SCHEMA} == {
         "pre_alert",
@@ -68,148 +52,30 @@ async def test_load_sets_schema_and_schedules(hass: HomeAssistant) -> None:
     assert _schema_accepts({CATEGORY_FIELD: categories.END_ALERT_CATEGORY})
     assert _schema_accepts({CATEGORY_FIELD: 1})
 
-    track_point.assert_called_once_with(
-        hass, record_manager.load, now + timedelta(hours=6)
-    )
-    record_manager.stop()
+    track_point.assert_called_once()
+    assert track_point.call_args.args[1] == classifier_test.load
+    assert track_point.call_args.args[2] - dt_util.now() == timedelta(hours=6)
+    classifier_test.stop()
     unsub.assert_called_once()
 
 
 def test_stop_noop_without_schedule(hass: HomeAssistant) -> None:
     """Test stop is safe when no schedule exists."""
-    record_manager = _make_classifier(hass, [])
-    record_manager.stop()
+    classifier_test = Classifier(hass)
+    classifier_test.stop()
 
 
-def test_get_last_record_matches_area_and_skips_invalid(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Test area matching and invalid record handling."""
-    monkeypatch.setattr(classifier, "RECORDS_SCHEMA", records_schema.RECORDS_SCHEMA)
-    monkeypatch.setattr(
-        classifier.dt_util,
-        "now",
-        lambda: datetime(2025, 1, 1, 12, 0, 0, tzinfo=IST),
-    )
-
-    invalid_record = {AREA_FIELD: "Area 1"}
-    valid_record = {
-        AREA_FIELD: "Area 1",
-        CATEGORY_FIELD: categories.PRE_ALERT_CATEGORY,
-        DATE_FIELD: "2025-01-01 11:59:30",
-    }
-    record_manager = _make_classifier(hass, [invalid_record, valid_record])
-
-    record_type, record, record_expired = record_manager.latest_record_type("Area 1")
-
-    assert str(record_type) == "pre_alert"
-    assert record == valid_record
-    assert record_expired is False
-
-
-def test_get_last_record_accepts_alias(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Test alias areas are accepted even without a direct match."""
-    monkeypatch.setattr(classifier, "RECORDS_SCHEMA", records_schema.RECORDS_SCHEMA)
-
-    alias = next(iter(ALL_AREAS_ALIASES))
-    valid_record = {
-        AREA_FIELD: alias,
-        CATEGORY_FIELD: categories.END_ALERT_CATEGORY,
-    }
-    record_manager = _make_classifier(hass, [valid_record])
-
-    record_type, record, record_expired = record_manager.latest_record_type("Area 2")
-
-    assert str(record_type) == "end"
-    assert record == valid_record
-    assert record_expired is False
-
-
-def test_get_last_record_returns_none(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Test no match returns (None, None)."""
-    monkeypatch.setattr(classifier, "RECORDS_SCHEMA", records_schema.RECORDS_SCHEMA)
-
-    record = {AREA_FIELD: "Area B", CATEGORY_FIELD: categories.PRE_ALERT_CATEGORY}
-    record_manager = _make_classifier(hass, [record])
-
-    record_type, record, record_expired = record_manager.latest_record_type("Area A")
-
-    assert record_type is None
-    assert record is None
-    assert record_expired is True
-
-
-def test_record_type_returns_match(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Test record_type returns a matching schema type."""
-    monkeypatch.setattr(classifier, "RECORDS_SCHEMA", records_schema.RECORDS_SCHEMA)
-
-    record_manager = _make_classifier(hass, [])
-    record: Any = {CATEGORY_FIELD: categories.END_ALERT_CATEGORY}
-
-    record_type = record_manager.record_type(record)
-
-    assert str(record_type) == "end"
-
-
-def test_record_type_returns_none_on_invalid(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Test record_type returns None for invalid records."""
-    monkeypatch.setattr(classifier, "RECORDS_SCHEMA", records_schema.RECORDS_SCHEMA)
-
-    record_manager = _make_classifier(hass, [])
-
-    record_type = record_manager.record_type(cast("Any", {}))
-
-    assert record_type is None
-
-
-@pytest.mark.parametrize(
-    ("record", "record_type", "expected"),
-    [
-        (
-            {DATE_FIELD: "2025-01-01 11:39:00"},
-            RecordType.PRE_ALERT,
-            True,
-        ),
-        (
-            {DATE_FIELD: "2025-01-01 11:50:00"},
-            RecordType.PRE_ALERT,
-            False,
-        ),
-        (
-            {DATE_FIELD: "2025-01-01 01:00:00"},
-            RecordType.END,
-            False,
-        ),
-        (
-            {
-                CATEGORY_FIELD: categories.PRE_ALERT_CATEGORY,
-                DATE_FIELD: "2025-01-01 11:39:00",
-            },
-            None,
-            True,
-        ),
-    ],
-)
-def test_record_expired(
-    hass: HomeAssistant,
-    monkeypatch: pytest.MonkeyPatch,
-    record: Any,
-    record_type: str | None,
-    expected: bool,  # noqa: FBT001
-) -> None:
-    """Test record expiration behavior across record types and inputs."""
-    monkeypatch.setattr(classifier, "RECORDS_SCHEMA", records_schema.RECORDS_SCHEMA)
-    record_manager = _make_classifier(hass, [])
-    now = datetime(2025, 1, 1, 12, 0, 0, tzinfo=IST)
-
-    monkeypatch.setattr(classifier.dt_util, "now", lambda: now)
-
-    assert record_manager.record_expired(record, record_type) is expected
+def test_add_metadata_unknown_record_type(hass: HomeAssistant) -> None:
+    """Test metadata classification fallback to None for unknown categories."""
+    classifier_test = Classifier(hass)
+    with patch.dict(classifier.RECORDS_SCHEMA, {}, clear=True):
+        metadata = classifier_test.add_metadata(
+            Record(
+                data="בארי",
+                category=999,
+                channel="website-history",
+                alertDate="2025-01-01 12:00:00",
+                title="",
+            )
+        )
+    assert metadata.record_type is None
