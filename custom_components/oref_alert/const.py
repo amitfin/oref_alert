@@ -1,5 +1,7 @@
 """Constants for the oref_alert integration."""
 
+from __future__ import annotations
+
 import enum
 import logging
 import zoneinfo
