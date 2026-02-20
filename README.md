@@ -102,6 +102,12 @@ The action `oref_alert.edit_sensor` can be used for editing an additional sensor
 
 `binary_sensor.oref_alert` is `on` when there is an active alert in the home's area. However, it's better to use `sensor.oref_alert` since it's similar but indicates also `pre_alert` state. Since this is a binary sensor there are only 2 states. `off` indicating no-alert (which is also used for `pre_alert`), and `on` when there is an alert.
 
+## All Areas Sensor
+
+`binary_sensor.oref_alert_all_areas` is an additional sensor monitoring any active alert in the country. The sensor is `on` when there is one or more active alerts in Israel.
+
+## Binary Sensors Attributes
+
 Binary sensors have the following attributes:
 1. `Areas`: the list of areas provided by the user.
 2. `Selected areas active alerts`: when the sensor is `on`, the alerts are listed here.

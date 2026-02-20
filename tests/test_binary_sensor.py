@@ -13,6 +13,7 @@ from pytest_homeassistant_custom_component.common import (
 
 from custom_components.oref_alert.const import (
     ADD_SENSOR_ACTION,
+    ALL_AREAS_ID_SUFFIX,
     ATTR_COUNTRY_ACTIVE_ALERTS,
     ATTR_COUNTRY_UPDATES,
     ATTR_SELECTED_AREAS_ACTIVE_ALERTS,
@@ -199,6 +200,26 @@ async def test_additional_sensor(
     await async_shutdown(hass, config_id)
 
 
+async def test_all_areas_sensor(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test all-areas sensor."""
+    freezer.move_to("2023-10-10 11:30:00+03:00")
+    mock_urls(aioclient_mock, None, "single_alert_random_area_history.json")
+    config_id = await async_setup(hass)
+    state = hass.states.get(f"{ENTITY_ID}_{ALL_AREAS_ID_SUFFIX}")
+    assert state is not None
+    assert state.state == STATE_ON
+    assert state.name == "Oref Alert All Areas"
+    expected_alerts = load_json_fixture(
+        "single_alert_random_area_history.json", "website-history"
+    )
+    assert state.attributes[ATTR_COUNTRY_ACTIVE_ALERTS] == expected_alerts
+    await async_shutdown(hass, config_id)
+
+
 @pytest.mark.parametrize(
     ("real_time_file", "history_file", "test_expired"),
     [
@@ -242,6 +263,10 @@ async def test_updates_attribute(  # noqa: PLR0913
             f"{ENTITY_ID}_test",
             ATTR_COUNTRY_UPDATES,
         ),
+        (
+            f"{ENTITY_ID}_{ALL_AREAS_ID_SUFFIX}",
+            ATTR_COUNTRY_UPDATES,
+        ),
     )
 
     for entity_id, attribute in entities:
@@ -265,20 +290,19 @@ async def test_updates_attribute(  # noqa: PLR0913
 
 
 @pytest.mark.parametrize(
-    ("real_time_file", "history_file", "alias"),
+    ("real_time_file", "history_file"),
     [
-        (None, "single_all_areas_alert_history.json", "כל הארץ"),
-        ("single_all_areas_alert_real_time.json", None, "כל הארץ"),
+        (None, "single_all_areas_alert_history.json"),
+        ("single_all_areas_alert_real_time.json", None),
     ],
     ids=["website-history", "real_time"],
 )
-async def test_all_areas_alert(  # noqa: PLR0913
+async def test_all_areas_alert(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
     freezer: FrozenDateTimeFactory,
     real_time_file: str | None,
     history_file: str | None,
-    alias: str,
 ) -> None:
     """Test all areas alert."""
     freezer.move_to("2025-06-13 03:00:00+03:00")
@@ -287,15 +311,20 @@ async def test_all_areas_alert(  # noqa: PLR0913
         "single_all_areas_alert_history.json",
         "website-history" if history_file else "website",
     )
-    alerts[0]["data"] = alias
 
     config_id = await async_setup(hass, {CONF_AREAS: ["פתח תקווה"]})
     await hass.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get(ENTITY_ID)
-    assert state is not None
-    assert state.state == STATE_ON
-    assert state.attributes[ATTR_SELECTED_AREAS_ACTIVE_ALERTS] == []
-    assert state.attributes[ATTR_COUNTRY_ACTIVE_ALERTS] == alerts
+    entities = (
+        (ENTITY_ID, [ATTR_SELECTED_AREAS_ACTIVE_ALERTS, ATTR_COUNTRY_ACTIVE_ALERTS]),
+        (f"{ENTITY_ID}_{ALL_AREAS_ID_SUFFIX}", [ATTR_COUNTRY_ACTIVE_ALERTS]),
+    )
+
+    for entity_id, attributes in entities:
+        state = hass.states.get(entity_id)
+        assert state is not None
+        assert state.state == STATE_ON
+        for attribute in attributes:
+            assert state.attributes[attribute] == alerts, state.attributes[attribute]
 
     await async_shutdown(hass, config_id)

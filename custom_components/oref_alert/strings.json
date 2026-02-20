@@ -33,6 +33,11 @@
         }
     },
     "entity": {
+        "binary_sensor": {
+            "all_areas": {
+                "name": "All Areas"
+            }
+        },
         "sensor": {
             "default_time_to_shelter": {
                 "name": "Time To Shelter"

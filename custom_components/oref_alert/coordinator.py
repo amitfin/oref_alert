@@ -106,8 +106,8 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 sorted(
                     {
                         record
-                        for record in self.data.areas.values()
-                        if (areas is None or record.item.data in areas)
+                        for area, record in self.data.areas.items()
+                        if (areas is None or area in areas)
                         and (record_types is None or record.record_type in record_types)
                     },
                     key=lambda record: record.item.data,

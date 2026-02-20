@@ -41,6 +41,7 @@ ADD_AREAS: Final = "add_areas"
 REMOVE_AREAS: Final = "remove_areas"
 SYNTHETIC_ALERT_ACTION: Final = "synthetic_alert"
 OREF_ALERT_UNIQUE_ID: Final = DOMAIN
+ALL_AREAS_ID_SUFFIX: Final = "all_areas"
 TIME_TO_SHELTER_ID_SUFFIX: Final = "time_to_shelter"
 LOCATION_ID_SUFFIX: Final = "location"
 AREAS_TEMPLATE_FUNCTION: Final = "oref_areas"
