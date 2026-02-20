@@ -32,6 +32,7 @@ from custom_components.oref_alert.const import (
     LOCATION_ID_SUFFIX,
     OREF_ALERT_UNIQUE_ID,
 )
+from custom_components.oref_alert.metadata.areas import AREAS
 
 from .utils import mock_urls, refresh_coordinator
 
@@ -199,4 +200,15 @@ async def test_distance_types(
             hass,
         ).async_render(parse_result=False)
     )
+    await async_shutdown(hass, config_id)
+
+
+async def test_all_areas(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """Test "all areas" create all possible entities."""
+    mock_urls(aioclient_mock, "single_all_areas_alert_real_time.json", None)
+    config_id = await async_setup(hass)
+    assert len(hass.states.async_all(Platform.GEO_LOCATION)) == len(AREAS)
     await async_shutdown(hass, config_id)

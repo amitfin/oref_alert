@@ -70,7 +70,7 @@ class OrefAlertBusEventManager:
     @callback
     def _async_update(self) -> None:
         """Fire event bus for new records."""
-        for record in self._coordinator.data.areas.values():
+        for record in set(self._coordinator.data.areas.values()):
             if self._is_old(record):
                 continue
             if (area := record.item.data) not in AREAS:
