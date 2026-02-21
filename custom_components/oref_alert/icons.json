@@ -21,12 +21,6 @@
       "named_time_to_shelter": {
         "default": "mdi:timer-sand"
       },
-      "default_end_time": {
-        "default": "mdi:timer-sand-complete"
-      },
-      "named_end_time": {
-        "default": "mdi:timer-sand-complete"
-      },
       "status": {
         "default": "mdi:check-circle-outline",
         "state": {
