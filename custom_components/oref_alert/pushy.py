@@ -24,6 +24,7 @@ from .const import (
     CONF_SENSORS,
     DOMAIN,
     LOGGER,
+    TITLE_FIELD,
     Record,
     RecordAndMetadata,
     RecordSource,
@@ -282,7 +283,7 @@ class PushyNotifications:
                         self._config_entry.runtime_data.classifier.add_metadata(
                             Record(
                                 alertDate=alert_date,
-                                title=content["title"],
+                                title=content[TITLE_FIELD],
                                 data=area,
                                 category=category,
                                 channel=RecordSource.MOBILE,
