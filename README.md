@@ -33,10 +33,9 @@ Once the component is installed, it's possible to control additional parameters 
 
 [![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=oref_alert)
 
-There is a single configuration parameter:
-**Selected area**: by default the integration finds the area based on HA's home location. There is no need to change this default. Note: it's highly discouraged to select more than a single area. `sensor.oref_alert` doesn't support more than a single area, and will not be created when choosing multiple areas. It's possible to create additional `sensor` entities by creating additional sensors (check below for more information), each with a single area.
+There is a single configuration parameter **Selected area**. By default the integration finds the area based on HA's home location. There is no need to change this default. Note: it's highly discouraged to select more than a single area. `sensor.oref_alert` doesn't support more than a single area, and will not be created when choosing multiple areas. It's possible to create additional `sensor` entities by using the action `oref_alert.add_sensor` (check below for more information), each with a single area.
 
-<kbd><img src="https://github.com/user-attachments/assets/960168bd-d7ad-47f6-88e7-26d216f705a9" width="400"></kbd>
+<kbd><img width="379" height="234" alt="image" src="https://github.com/user-attachments/assets/4dbb4a39-c9dd-47f3-8df8-685189e38bac" /></kbd>
 
 ## Record's Attribute
 
@@ -45,7 +44,7 @@ There is a single configuration parameter:
 2. `title`: e.g. `ירי רקטות וטילים`. Always in Hebrew.
 3. `data`: a single area name, e.g. `תל אביב - מרכז העיר`.
 4. `category`: an integer of the category as listed [here](https://www.oref.org.il/alerts/alertCategories.json). Categories 14 and 13 are used for `pre_alert` and `end`, respectively.
-5. `channel`: the receiving channel. Below is the ordered list of options. When the same alert is coming on multiple channels, only the higher channel will be used. The fields of the messages are normalized and have the same format regardless of the channel.
+5. `channel`: the receiving channel. Below is the list of options. When the same alert is coming on multiple channels, only the first channel to send the alert will be used and the following ones are ignored. The fields of the messages are normalized and have the same format regardless of the channel.
     1. `website-history`: the history file of the official website.
     2. `website`: the real-time file of the official website.
     3. `mobile`: the mobile notification channel of the official app.
@@ -54,17 +53,21 @@ There is a single configuration parameter:
 
 ## Automation
 
-Here are typical automation triggers:
+Here are 3 different examples of typical automation triggers:
 
 ```yaml
 triggers:
   - trigger: state
     entity_id: sensor.oref_alert
+    from: ok
     to: pre_alert
 
 triggers:
   - trigger: state
     entity_id: sensor.oref_alert
+    from:
+      - ok
+      - pre_alert
     to: alert
 
 triggers:
@@ -100,7 +103,7 @@ The action `oref_alert.edit_sensor` can be used for editing an additional sensor
 
 ## Binary Sensor
 
-`binary_sensor.oref_alert` is `on` when there is an active alert in the home's area. However, it's better to use `sensor.oref_alert` since it's similar but indicates also `pre_alert` state. Since this is a binary sensor there are only 2 states. `off` indicating no-alert (which is also used for `pre_alert`), and `on` when there is an alert.
+`binary_sensor.oref_alert` is `on` when there is an active alert in the home's area. However, it's better to use `sensor.oref_alert` since it's similar but indicates also `pre_alert` state. Since this is a binary sensor there are only 2 states: `off` indicating no-alert (which is also used for `pre_alert`), and `on` when there is an active alert.
 
 ## All Areas Sensor
 
@@ -181,7 +184,7 @@ data:
   latitude: 32.0798
   longitude: 34.7772
   category: 14
-  title: התרעה מקדימה
+  title: הנחיה מקדימה
   type: pre_alert
   icon: mdi:flash-alert
   emoji: ⚡
@@ -212,7 +215,7 @@ Synthetic alerts are useful for testing purposes. The action `oref_alert.synthet
 
 [![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.synthetic_alert)
 
-*Note: a synthetic alert is an additional alert. It doesn't override or hide any other alert. A synthetic alert disappears after the amount of seconds supplied to the action. This is different from a regular alert which disappears only after 24 hours.*
+*Note: a synthetic alert is an additional alert. A synthetic alert disappears after the amount of seconds supplied to the action. This is different from a regular alert which disappears only after 24 hours.*
 
 ## Template Functions
 
