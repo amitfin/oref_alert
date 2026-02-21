@@ -131,6 +131,15 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
 
     async def _async_update_data(self) -> OrefAlertCoordinatorData:
         """Request the data from Oref servers."""
+        # Remove expired records.
+        now = dt_util.now()
+        self._areas = {
+            area: record
+            for area, record in self._areas.items()
+            if not record.expire or record.expire > now
+        }
+
+        # Check if there are new records.
         channels_change = [channel.changed() for channel in self._channels]
         (current, current_modified), (history, history_modified) = await asyncio.gather(
             *[
@@ -154,22 +163,28 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                     channel.items() for channel in self._channels
                 ),
             ):
-                if not category_is_alert(
-                    record.raw.category
-                ) and not category_is_update(record.raw.category):
+                # Check if a valid record.
+                if (
+                    not category_is_alert(record.raw.category)
+                    and not category_is_update(record.raw.category)
+                ) or (record.expire and record.expire <= now):
                     continue
 
+                # Handle "all areas" record.
                 for area in (
                     (record.raw.data,)
                     if record.raw.data not in ALL_AREAS_ALIASES
                     else AREAS
                 ):
+                    # If we don't have anything else for this area.
                     if (current := self._areas.get(area)) is None:
                         self._areas[area] = record
                         if area not in AREAS:
                             LOGGER.error("Alert has an unrecognized area: %s", area)
+                    # If this is not a newer record.
                     elif record.time <= current.time:
                         continue
+                    # Same category records within the dedup window are ignored.
                     elif (
                         record.raw.category != current.raw.category
                         or record.time - current.time
@@ -178,14 +193,6 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                         self._areas[area] = record
 
             self._channels_change = channels_change
-
-        # Remove expired records.
-        now = dt_util.now()
-        self._areas = {
-            area: record
-            for area, record in self._areas.items()
-            if not record.expire or record.expire > now
-        }
 
         return OrefAlertCoordinatorData(self._areas)
 
