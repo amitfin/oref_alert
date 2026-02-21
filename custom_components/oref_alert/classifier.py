@@ -92,7 +92,7 @@ class Classifier:
             record_expire = record_time + timedelta(minutes=expiration)
 
         return RecordAndMetadata(
-            item=record,
+            raw=record,
             record_type=record_type,
             time=record_time,
             expire=record_expire,

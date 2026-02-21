@@ -369,7 +369,7 @@ async def test_simple_message(
     listener.on_message(message)
     await config.runtime_data.coordinator.async_refresh()
     assert f"MQTT message: {payload}" in caplog.text
-    assert [asdict(item.item) for item in listener.alerts.items()] == load_json_fixture(
+    assert [asdict(item.raw) for item in listener.alerts.items()] == load_json_fixture(
         "pushy_alerts_as_history.json"
     )
     state = hass.states.get(ENTITY_ID)

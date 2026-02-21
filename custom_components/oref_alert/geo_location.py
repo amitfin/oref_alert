@@ -122,12 +122,12 @@ class OrefAlertLocationEvent(OrefAlertEntity, GeolocationEvent):
         attributes: dict[str, Any] = {}
         attributes = {
             key: value
-            for key, value in asdict(record.item).items()
+            for key, value in asdict(record.raw).items()
             if key not in {AREA_FIELD, DATE_FIELD}
         }
         attributes[ATTR_DATE] = record.time
-        attributes[ATTR_ICON] = category_to_icon(record.item.category)
-        attributes[ATTR_EMOJI] = category_to_emoji(record.item.category)
+        attributes[ATTR_ICON] = category_to_icon(record.raw.category)
+        attributes[ATTR_EMOJI] = category_to_emoji(record.raw.category)
         self._alert_attributes = attributes
 
     @callback

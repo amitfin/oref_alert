@@ -93,5 +93,5 @@ class AlertEvent(OrefAlertCoordinatorEntity, EventEntity):
             and self._record != record
         ):
             self._record = record
-            self._trigger_event(record.record_type, {ATTR_RECORD: record.item})
+            self._trigger_event(record.record_type, {ATTR_RECORD: record.raw})
             self.async_write_ha_state()

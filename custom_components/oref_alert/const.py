@@ -79,7 +79,7 @@ class Record:
 class RecordAndMetadata:
     """Class for holding a record with additional metadata."""
 
-    item: Record
+    raw: Record
     time: datetime
     record_type: RecordType | None
     expire: datetime | None

@@ -73,7 +73,7 @@ class OrefAlertBusEventManager:
         for record in set(self._coordinator.data.areas.values()):
             if self._is_old(record):
                 continue
-            if (area := record.item.data) not in AREAS:
+            if (area := record.raw.data) not in AREAS:
                 continue
             area_info = AREA_INFO[area]
             event = {
@@ -88,11 +88,11 @@ class OrefAlertBusEventManager:
                 ),
                 ATTR_LATITUDE: area_info["lat"],
                 ATTR_LONGITUDE: area_info["lon"],
-                CATEGORY_FIELD: record.item.category,
-                TITLE_FIELD: record.item.title,
-                ATTR_ICON: category_to_icon(record.item.category),
-                ATTR_EMOJI: category_to_emoji(record.item.category),
-                CHANNEL_FIELD: record.item.channel,
+                CATEGORY_FIELD: record.raw.category,
+                TITLE_FIELD: record.raw.title,
+                ATTR_ICON: category_to_icon(record.raw.category),
+                ATTR_EMOJI: category_to_emoji(record.raw.category),
+                CHANNEL_FIELD: record.raw.channel,
             }
             self._hass.bus.async_fire(
                 f"{DOMAIN}_event"
@@ -109,8 +109,8 @@ class OrefAlertBusEventManager:
         """Check if the item is in the previous list."""
         for previous in self._previous_items.items():
             if (
-                record.item.data == previous.item.data
-                and record.item.category == previous.item.category
+                record.raw.data == previous.raw.data
+                and record.raw.category == previous.raw.category
                 and record.record_type == previous.record_type
             ):
                 return True

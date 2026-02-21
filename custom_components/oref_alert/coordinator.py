@@ -101,7 +101,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
     ) -> list[dict[str, str | int]]:
         """Return the records as dict, sorted, and for the given areas and types."""
         return [
-            asdict(sorted_record.item)
+            asdict(sorted_record.raw)
             for sorted_record in sorted(
                 sorted(
                     {
@@ -110,7 +110,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                         if (areas is None or area in areas)
                         and (record_types is None or record.record_type in record_types)
                     },
-                    key=lambda record: record.item.data,
+                    key=lambda record: record.raw.data,
                 ),
                 key=lambda record: record.time,
                 reverse=True,
@@ -127,7 +127,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             record_types and record.record_type not in record_types
         ):
             return None
-        return asdict(record.item)
+        return asdict(record.raw)
 
     async def _async_update_data(self) -> OrefAlertCoordinatorData:
         """Request the data from Oref servers."""
@@ -155,13 +155,13 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 ),
             ):
                 if not category_is_alert(
-                    record.item.category
-                ) and not category_is_update(record.item.category):
+                    record.raw.category
+                ) and not category_is_update(record.raw.category):
                     continue
 
                 for area in (
-                    (record.item.data,)
-                    if record.item.data not in ALL_AREAS_ALIASES
+                    (record.raw.data,)
+                    if record.raw.data not in ALL_AREAS_ALIASES
                     else AREAS
                 ):
                     if (current := self._areas.get(area)) is None:
@@ -171,7 +171,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                     elif record.time <= current.time:
                         continue
                     elif (
-                        record.item.category != current.item.category
+                        record.raw.category != current.raw.category
                         or record.time - current.time
                         > timedelta(seconds=DEDUP_WINDOW_SECONDS)
                     ):

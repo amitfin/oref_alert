@@ -190,7 +190,7 @@ async def test_status_state_transition_and_cache(
         title="",
     )
     pre_alert_metadata = RecordAndMetadata(
-        item=pre_alert_record,
+        raw=pre_alert_record,
         time=dt_util.parse_datetime(
             pre_alert_record.alertDate, raise_on_error=True
         ).replace(tzinfo=IST),
@@ -221,7 +221,7 @@ async def test_status_state_transition_and_cache(
         title="",
     )
     alert_metadata = RecordAndMetadata(
-        item=alert_record,
+        raw=alert_record,
         time=dt_util.parse_datetime(
             alert_record.alertDate, raise_on_error=True
         ).replace(tzinfo=IST),
@@ -272,7 +272,7 @@ async def test_status_state_end_record(
         title="",
     )
     end_metadata = RecordAndMetadata(
-        item=end_record,
+        raw=end_record,
         time=dt_util.parse_datetime(end_record.alertDate, raise_on_error=True).replace(
             tzinfo=IST
         ),
@@ -315,7 +315,7 @@ async def test_status_state_expired_pre_alert(
         title="",
     )
     old_metadata = RecordAndMetadata(
-        item=old_pre_alert_record,
+        raw=old_pre_alert_record,
         time=dt_util.parse_datetime(
             old_pre_alert_record.alertDate, raise_on_error=True
         ).replace(tzinfo=IST),

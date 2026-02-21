@@ -325,7 +325,7 @@ async def test_is_synthetic_alert(
     )
     await coordinator.async_config_entry_first_refresh()
     assert coordinator.is_synthetic_alert(
-        next(iter(coordinator.data.areas.values())).item
+        next(iter(coordinator.data.areas.values())).raw
     )
     await coordinator.async_shutdown()
 
@@ -454,7 +454,7 @@ async def test_channels(
     channel: TTLDeque[RecordAndMetadata] = TTLDeque()
     channel.add(
         RecordAndMetadata(
-            item=Record(
+            raw=Record(
                 alertDate=alert["alertDate"],
                 title=alert["title"],
                 data=alert["data"],
@@ -472,7 +472,7 @@ async def test_channels(
     coordinator.async_add_listener(lambda: None)
     await coordinator.async_config_entry_first_refresh()
     assert len(coordinator.get_records()) == expected
-    assert coordinator.data.areas[alert["data"]].item.category == alert["category"]
+    assert coordinator.data.areas[alert["data"]].raw.category == alert["category"]
     await coordinator.async_shutdown()
 
 

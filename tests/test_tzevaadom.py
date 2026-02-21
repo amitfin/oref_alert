@@ -221,7 +221,7 @@ async def test_duplicate(hass: HomeAssistant) -> None:
         coordinator=SimpleNamespace(async_refresh=AsyncMock()),
         classifier=SimpleNamespace(
             add_metadata=lambda record: RecordAndMetadata(
-                item=record,
+                raw=record,
                 record_type=RecordType.ALERT,
                 time=datetime.strptime(record.alertDate, "%Y-%m-%d %H:%M:%S").replace(
                     tzinfo=IST
