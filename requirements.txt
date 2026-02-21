@@ -6,3 +6,4 @@ types-shapely
 ruff
 mypy
 prek
+pytest-skip-slow

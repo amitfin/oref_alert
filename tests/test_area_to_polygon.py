@@ -1,7 +1,5 @@
 """The tests for the area_to_polygon file."""
 
-import os
-
 import pytest
 from shapely.geometry import Polygon
 
@@ -25,10 +23,7 @@ async def test_find_area(lat: float, lon: float, area: str | None) -> None:
     assert await async_find_area(lat, lon) == area
 
 
-@pytest.mark.skipif(
-    not os.getenv("GITHUB_ACTIONS"),
-    reason="slow test; run only in GitHub Actions",
-)
+@pytest.mark.slow
 async def test_polygons_do_not_overlap() -> None:
     """Ensure no polygons overlap each other."""
     areas = list((await init_area_to_polygon()).items())

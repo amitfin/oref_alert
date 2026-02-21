@@ -289,6 +289,7 @@ async def test_updates_attribute(  # noqa: PLR0913
     await async_shutdown(hass, config_id)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     ("real_time_file", "history_file"),
     [

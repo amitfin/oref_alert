@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import homeassistant.util.dt as dt_util
+import pytest
 from homeassistant.config_entries import ConfigEntryDisabler
 from homeassistant.const import (
     ATTR_DATE,
@@ -203,6 +204,7 @@ async def test_distance_types(
     await async_shutdown(hass, config_id)
 
 
+@pytest.mark.slow
 async def test_all_areas(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,

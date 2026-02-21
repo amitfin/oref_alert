@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import homeassistant.util.dt as dt_util
+import pytest
 from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, STATE_UNKNOWN, Platform
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
@@ -409,6 +410,7 @@ async def test_remove_sensors(
     await async_shutdown(hass, config_id)
 
 
+@pytest.mark.slow
 async def test_all_areas_alert(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,

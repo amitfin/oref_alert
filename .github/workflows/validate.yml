@@ -50,4 +50,4 @@ jobs:
         run: scripts/setup
 
       - name: Run
-        run: pytest
+        run: pytest --slow
