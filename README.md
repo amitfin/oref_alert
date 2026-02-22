@@ -79,6 +79,8 @@ triggers:
     to: ok
 ```
 
+Note: if `pre_alert` doesn't change to `alert` within 20 minutes, the state is getting reverted back to `ok`.
+
 ## Additional Sensors
 
 It's possible to create additional entities using the action `oref_alert.add_sensor`. The action can be accessed via this My button:
