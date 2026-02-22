@@ -11,7 +11,7 @@
 The integration is used to monitor the emergency messages coming from the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud Haoref). Its main usage is via the entity `sensor.oref_alert`. The entity receives the relevant messages based on HA's home location (coordinate). `sensor.oref_alert`'s state is one of: `ok`, `pre_alert`, and `alert`.
 The integration is installed and configured via the user interface. There is no YAML or templates involved.
 
-A demo video (in Hebrew) can be found [here](https://youtu.be/xzxSxtSQIR8).
+A demo video (in Hebrew) can be found [here](https://youtu.be/p6PzAlceoSY).
 
 ## Install
 
