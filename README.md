@@ -33,7 +33,7 @@ Once the component is installed, it's possible to control additional parameters 
 
 [![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=oref_alert)
 
-There is a single configuration parameter **Selected area**. By default the integration finds the area based on HA's home location. There is no need to change this default. Note: it's highly discouraged to select more than a single area. `sensor.oref_alert` doesn't support more than a single area, and will not be created when choosing multiple areas. It's possible to create additional `sensor` entities by using the action `oref_alert.add_sensor` (check below for more information), each with a single area.
+There is a single configuration parameter **Selected area**. By default the integration finds the area based on HA's home location. There is no need to change this default. Note: it's highly discouraged to select more than a single area. `sensor.oref_alert` doesn't support more than a single area, and will not be created when choosing multiple areas or a district. It's possible to create additional `sensor` entities by using the action `oref_alert.add_sensor` (check below for more information), each with a single area.
 
 <kbd><img width="379" height="234" alt="image" src="https://github.com/user-attachments/assets/4dbb4a39-c9dd-47f3-8df8-685189e38bac" /></kbd>
 
@@ -101,7 +101,7 @@ The action `oref_alert.edit_sensor` can be used for editing an additional sensor
 
 `event.oref_alert` is an additional entity which can be used to get the messages. There are 3 type of events: `pre_alert`, `alert` and `end`.
 
-*Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the action `oref_alert.add_sensor`.*
+*Note: this sensor is not created when the configuration contains multiple areas or a district. It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the action `oref_alert.add_sensor`.*
 
 ## Binary Sensor
 
@@ -128,7 +128,7 @@ The integration creates an additional set of sensors which monitor the time to s
 3. `Alert`: the active alert (when there is such).
 4. `Display`: a user-friendly string of the time in the format of "mm:ss".
 
-*Note: this sensor is not created when the configuration contains multiple areas or groups (e.g. cities with multiple areas or districts). It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the action `oref_alert.add_sensor`.*
+*Note: this sensor is not created when the configuration contains multiple areas or a district. It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the action `oref_alert.add_sensor`.*
 
 ## Geo Location Entities
 
@@ -225,7 +225,7 @@ The integration adds the following template helper functions:
 
 ### `oref_areas`
 
-Returns the list of areas. By default, group of areas (like districts and cities' "all areas" for cities with multiple areas) are not included. It's possible to set the 1st parameter (`groups`) to `True` to include them.
+Returns the list of areas. Districts are not included by default. It's possible to set the 1st parameter (`groups`) to `True` to include them.
 
 `{{ oref_areas() }}`
 

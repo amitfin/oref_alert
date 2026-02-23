@@ -29,7 +29,6 @@ from metadata import (  # pyright: ignore[reportMissingImports]
 RELATIVE_OUTPUT_DIRECTORY = "custom_components/oref_alert/metadata/"
 AREAS_OUTPUT = "areas.py"
 AREAS_AND_GROUPS_OUTPUT = "areas_and_groups.py"
-CITY_ALL_AREAS_OUTPUT = "city_all_areas.py"
 AREA_TO_MIGUN_TIME_OUTPUT = "area_to_migun_time.py"
 DISTRICT_TO_AREAS_OUTPUT = "district_to_areas.py"
 AREA_TO_DISTRICT_OUTPUT = "area_to_district.py"
@@ -89,15 +88,12 @@ class OrefMetadata:
                 self._backend_areas,
             )
         )
-        self._city_to_areas: dict[str, list[str]] = self._city_to_areas_map()
         self._area_to_migun_time: dict[str, int] = self._area_to_migun_time_map()
         self._districts = await self._get_districts()
         self._district_to_areas = self._district_to_areas_map()
         self._area_to_district = self._area_to_district_map()
-        self._areas_and_groups = (
-            self._areas_no_group
-            + list(self._city_to_areas.keys())
-            + list(self._district_to_areas.keys())
+        self._areas_and_groups = self._areas_no_group + list(
+            self._district_to_areas.keys()
         )
         self._areas_and_groups.sort()
         assert len(self._areas_and_groups) == len(set(self._areas_and_groups))
@@ -144,31 +140,6 @@ class OrefMetadata:
         areas.sort()
         return areas
 
-    def _get_cities_with_all_areas(self) -> list[str]:
-        """Return the list of cities with 'all area'."""
-        cities = [
-            area.replace(CITY_ALL_AREAS_SUFFIX, "")
-            for area in filter(
-                lambda area: area.endswith(CITY_ALL_AREAS_SUFFIX), self._backend_areas
-            )
-        ]
-        cities.sort()
-        return cities
-
-    def _city_to_areas_map(self) -> dict[str, list[str]]:
-        """Build the map between cities and their sub areas."""
-        city_to_areas = {}
-        for city in self._get_cities_with_all_areas():
-            city_areas = []
-            for area in self._areas_no_group:
-                if area.startswith(city):
-                    assert area in self._areas_no_group
-                    city_areas.append(area)
-            city_areas = list(set(city_areas))
-            city_areas.sort()
-            city_to_areas[city + CITY_ALL_AREAS_SUFFIX] = city_areas
-        return city_to_areas
-
     def _area_to_migun_time_map(self) -> dict[str, int]:
         """Build a mpa between a city and the migun time."""
         migun_time = {
@@ -199,17 +170,14 @@ class OrefMetadata:
         district_names = list({district["areaname"] for district in self._districts})
         district_names.sort()
         for district in district_names:
-            district_areas = []
-            for area in self._districts:
-                if (
-                    area["areaname"] == district
+            district_to_areas[DISTRICT_PREFIX + district] = sorted(
+                {
+                    area["label"]
+                    for area in self._districts
+                    if area["areaname"] == district
                     and area["label"] in self._areas_no_group
-                ):
-                    assert area["label"] not in self._city_to_areas
-                    district_areas.append(area["label"])
-            district_areas = list(set(district_areas))
-            district_areas.sort()
-            district_to_areas[DISTRICT_PREFIX + district] = district_areas
+                }
+            )
         return district_to_areas
 
     def _area_to_district_map(self) -> dict[str, str]:
@@ -318,11 +286,6 @@ class OrefMetadata:
                 AREAS_AND_GROUPS_OUTPUT,
                 "AREAS_AND_GROUPS: list[str]",
                 self._areas_and_groups,
-            ),
-            (
-                CITY_ALL_AREAS_OUTPUT,
-                "CITY_ALL_AREAS: dict[str, list[str]]",
-                self._city_to_areas,
             ),
             (
                 AREA_TO_MIGUN_TIME_OUTPUT,

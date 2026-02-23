@@ -86,17 +86,12 @@ async def test_state(
     await async_shutdown(hass, config_id)
 
 
-@pytest.mark.parametrize(
-    "areas",
-    ["תל אביב - כל האזורים", "מחוז דן"],
-    ids=("City all areas", "District"),
-)
 async def test_real_time_alert_area_expansion(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, areas: str
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test real time alert and city expansion."""
     mock_urls(aioclient_mock, "single_alert_real_time.json", None)
-    config_id = await async_setup(hass, {CONF_AREAS: [areas]})
+    config_id = await async_setup(hass, {CONF_AREAS: ["מחוז דן"]})
     state = hass.states.get(ENTITY_ID)
     assert state is not None
     assert state.state == STATE_ON
@@ -189,7 +184,7 @@ async def test_additional_sensor(
     await hass.services.async_call(
         DOMAIN,
         ADD_SENSOR_ACTION,
-        {CONF_NAME: "Test", CONF_AREAS: ["תל אביב - כל האזורים"]},
+        {CONF_NAME: "Test", CONF_AREAS: ["תל אביב - מרכז העיר"]},
         blocking=True,
     )
     await hass.async_block_till_done(wait_background_tasks=True)
