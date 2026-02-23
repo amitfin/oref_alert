@@ -96,9 +96,9 @@ async def test_options_flow(hass: HomeAssistant) -> None:
         result["flow_id"],
         user_input={
             **DEFAULT_OPTIONS,
-            CONF_AREAS: ["תל אביב - כל האזורים"],
+            CONF_AREAS: ["מחוז דן"],
         },
     )
     assert result2.get("type") == FlowResultType.CREATE_ENTRY
-    options[CONF_AREAS] = ["תל אביב - כל האזורים"]
+    options[CONF_AREAS] = ["מחוז דן"]
     assert result2.get("data") == options

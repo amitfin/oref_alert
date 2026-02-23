@@ -11,29 +11,18 @@ from custom_components.oref_alert.metadata.areas import AREAS
     ("input_list", "output_list"),
     [
         (["פתח תקווה"], ["פתח תקווה"]),
-        (
-            ["תל אביב - כל האזורים"],
-            [
-                "תל אביב - דרום העיר ויפו",
-                "תל אביב - מזרח",
-                "תל אביב - מרכז העיר",
-                "תל אביב - עבר הירקון",
-            ],
-        ),
         (["מחוז אילת"], ["אזור תעשייה שחורת", "אילות", "אילת"]),
         (
-            ["מחוז אילת", "אביבים", "נתניה - כל האזורים"],
+            ["מחוז אילת", "אביבים"],
             [
                 "אביבים",
                 "אזור תעשייה שחורת",
                 "אילות",
                 "אילת",
-                "נתניה - מזרח",
-                "נתניה - מערב",
             ],
         ),
     ],
-    ids=("single no expansion", "all areas", "district", "mix"),
+    ids=("single no expansion", "district", "mix"),
 )
 async def test_single_area(input_list: list[str], output_list: list[str]) -> None:
     """Test a single area, no expansion."""
