@@ -28,10 +28,13 @@ from pytest_homeassistant_custom_component.common import (
 from custom_components.oref_alert.const import (
     ATTR_EMOJI,
     ATTR_HOME_DISTANCE,
+    CONF_AREA,
     CONF_AREAS,
+    CONF_DURATION,
     DOMAIN,
     LOCATION_ID_SUFFIX,
     OREF_ALERT_UNIQUE_ID,
+    SYNTHETIC_ALERT_ACTION,
 )
 from custom_components.oref_alert.metadata.areas import AREAS
 
@@ -109,6 +112,7 @@ async def test_add_remove(
     freezer.move_to("2023-10-07 06:30:00+03:00")
     config_id = await async_setup(hass)
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 0
+
     mock_urls(aioclient_mock, None, "multi_alerts_history.json")
     freezer.tick()
     async_fire_time_changed(hass)
@@ -117,15 +121,31 @@ async def test_add_remove(
     assert {
         state.entity_id for state in hass.states.async_all(Platform.GEO_LOCATION)
     } == {ENTITY_ID, f"{ENTITY_ID}_2"}
+    area = hass.states.async_all(Platform.GEO_LOCATION)[0].attributes["friendly_name"]
     assert not any(
         entry.domain == Platform.GEO_LOCATION
         for entry in er.async_entries_for_config_entry(er.async_get(hass), config_id)
     )
+
     mock_urls(aioclient_mock, None, "multi_alerts_history_end.json")
     freezer.tick(2)
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 0
+
+    freezer.move_to("2023-10-07 08:30:01+03:00")
+    async_fire_time_changed(hass)
+    await hass.services.async_call(
+        DOMAIN,
+        SYNTHETIC_ALERT_ACTION,
+        {CONF_AREA: area, CONF_DURATION: 20},
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert {
+        state.entity_id for state in hass.states.async_all(Platform.GEO_LOCATION)
+    } == {ENTITY_ID}
+
     await async_shutdown(hass, config_id)
 
 

@@ -168,7 +168,7 @@ class OrefAlertLocationEventManager:
             ) and record.record_type == RecordType.ALERT:
                 self._location_events[area].async_update(record)
             else:
-                self._location_events[area].async_remove_self()
+                self._location_events.pop(area).async_remove_self()
 
         to_add = {
             area: OrefAlertLocationEvent(self._hass, self._config_entry, area, record)
