@@ -354,7 +354,7 @@ async def test_http_cache(
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(coordinator.get_records()) == 2
 
-    coordinator.data.areas.clear()
+    coordinator._areas.clear()  # noqa: SLF001
     aioclient_mock.clear_requests()
     aioclient_mock.get(OREF_ALERTS_URL, text="")
     aioclient_mock.get(OREF_HISTORY_URL, status=HTTPStatus.NOT_MODIFIED)

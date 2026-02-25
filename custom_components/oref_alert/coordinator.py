@@ -8,6 +8,7 @@ import json
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from http import HTTPStatus
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
 import homeassistant.util.dt as dt_util
@@ -40,7 +41,7 @@ from .const import (
 from .metadata.areas import AREAS
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable, Iterable, Mapping
 
     from homeassistant.core import HomeAssistant
 
@@ -67,7 +68,7 @@ DEDUP_WINDOW_SECONDS = 60
 class OrefAlertCoordinatorData:
     """Class for holding coordinator data."""
 
-    areas: dict[str, RecordAndMetadata]
+    areas: Mapping[str, RecordAndMetadata]
 
 
 class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorData]):
@@ -92,7 +93,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         self._channels_change: list[datetime | None] = []
         self._synthetic_alerts: list[tuple[datetime, RecordAndMetadata]] = []
         self._areas: dict[str, RecordAndMetadata] = {}
-        self.data = OrefAlertCoordinatorData({})
+        self.data = OrefAlertCoordinatorData(MappingProxyType({}))
 
     def get_records(
         self,
@@ -194,7 +195,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
 
             self._channels_change = channels_change
 
-        return OrefAlertCoordinatorData(self._areas)
+        return OrefAlertCoordinatorData(MappingProxyType(self._areas))
 
     async def _async_fetch_url(self, url: str) -> tuple[Any, bool]:
         """Fetch data from Oref servers."""
