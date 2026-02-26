@@ -61,3 +61,4 @@ jobs:
         run: gh pr merge --auto --merge ${{ steps.pr.outputs.pull-request-number }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
