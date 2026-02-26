@@ -143,7 +143,9 @@ class OrefMetadata:
     def _area_to_migun_time_map(self) -> dict[str, int]:
         """Build a mpa between a city and the migun time."""
         migun_time = {
-            area["label"]: int(area["migun_time"]) for area in self._cities_mix
+            area["label"]: int(area["migun_time"])
+            for area in self._cities_mix
+            if area["label"] in self._areas_no_group
         }
         return {area: migun_time[area] for area in sorted(migun_time.keys())}
 
