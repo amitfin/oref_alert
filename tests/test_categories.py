@@ -58,7 +58,7 @@ def test_category_is_update() -> None:
 def test_real_time_to_history_category() -> None:
     """Test real_time_to_history_category."""
     for category, expected in enumerate(
-        [None, 1, 4, 7, 9, 11, 2, 12, None, None, None, None, None, 10, None]
+        [None, 1, None, 7, 9, 11, 2, 12, None, None, None, None, None, 10, None]
     ):
         assert real_time_to_history_category(category) == expected
 
