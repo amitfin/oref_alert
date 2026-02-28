@@ -13,6 +13,8 @@ The integration is installed and configured via the user interface. There is no 
 
 A demo video (in Hebrew) can be found [here](https://youtu.be/p6PzAlceoSY).
 
+A complementary Lovelace card is also available and can be found [here](https://github.com/amitfin/oref-alert-card).
+
 ## Install
 
 [HACS](https://hacs.xyz/) is the preferred and easier way to install the component. When HACS is installed, the integration can be installed using this My button:
