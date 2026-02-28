@@ -52,6 +52,8 @@ def test_category_is_update() -> None:
     assert category_is_update(14) is True
     assert category_is_update(12) is False
     assert category_is_update(real_time_to_history_category(13) or 0) is False
+    assert category_is_update(pushy_thread_id_to_history_category(7) or 0) is True
+    assert category_is_update(pushy_thread_id_to_history_category(8) or 0) is True
     assert category_is_update(pushy_thread_id_to_history_category(9) or 0) is False
 
 
@@ -65,9 +67,7 @@ def test_real_time_to_history_category() -> None:
 
 def test_pushy_thread_id_to_history_category() -> None:
     """Test pushy_thread_id_to_history_category."""
-    for category, expected in enumerate(
-        [1, 12, 10, 7, 11, 2, 9, None, None, 8, None, 3]
-    ):
+    for category, expected in enumerate([1, 12, 10, 7, 11, 2, 9, 14, 13, 8, None, 3]):
         assert pushy_thread_id_to_history_category(category) == expected
 
 

@@ -68,6 +68,8 @@ PUSHY_THREAD_ID_TO_HISTORY_CATEGORY: Final = {
     4: 11,  # Tsunami
     5: 2,  # AircraftPenetration
     6: 9,  # RadiologicalEvent
+    7: 14,  # Flash
+    8: 13,  # Update
     9: 8,  # Earthquake2
     11: 3,  # UnconventionalMissile
 }
