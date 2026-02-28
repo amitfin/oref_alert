@@ -15,6 +15,7 @@
     "caplog",
     "clientsession",
     "codeowners",
+    "debugpy",
     "dedup",
     "devcontainer",
     "endfor",

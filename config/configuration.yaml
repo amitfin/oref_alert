@@ -5,6 +5,9 @@ default_config:
 homeassistant:
   debug: true
 
+# https://www.home-assistant.io/integrations/debugpy/
+debugpy:
+
 # https://www.home-assistant.io/integrations/logger/
 logger:
   default: info
