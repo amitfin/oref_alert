@@ -312,23 +312,27 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         self, records: list[dict[str, Any]]
     ) -> list[RecordAndMetadata]:
         """Keep only latest record per area, add channel, and fix spelling."""
+        now = dt_util.now()
         result = []
         areas = set()
         for record in records:
             if record[AREA_FIELD] in areas:
                 continue
             areas.add(record[AREA_FIELD])
-            result.append(
-                self._config_entry.runtime_data.classifier.add_metadata(
-                    Record(
-                        alertDate=record[DATE_FIELD],
-                        title=record[TITLE_FIELD],
-                        data=self._fix_area_spelling(record[AREA_FIELD]),
-                        category=record[CATEGORY_FIELD],
-                        channel=RecordSource.HISTORY,
-                    )
+            record_meta = self._config_entry.runtime_data.classifier.add_metadata(
+                Record(
+                    alertDate=record[DATE_FIELD],
+                    title=record[TITLE_FIELD],
+                    data=self._fix_area_spelling(record[AREA_FIELD]),
+                    category=record[CATEGORY_FIELD],
+                    channel=RecordSource.HISTORY,
                 )
             )
+            result.append(record_meta)
+
+            # Post initial fetch (areas is not empty), take only recent records.
+            if self._areas and (now - record_meta.time) > timedelta(minutes=5):
+                break
         return result
 
     def _fix_area_spelling(self, area: str) -> str:
