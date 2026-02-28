@@ -53,6 +53,7 @@ OREF_ALERTS_URL = "https://www.oref.org.il/warningMessages/alert/Alerts.json"
 OREF_HISTORY_URL = (
     "https://www.oref.org.il/warningMessages/alert/History/AlertsHistory.json"
 )
+OREF_HISTORY2_URL = "https://alerts-history.oref.org.il/Shared/Ajax/GetAlarmsHistory.aspx?lang=he&mode=1"
 OREF_HEADERS = {
     "Referer": "https://www.oref.org.il/",
     "X-Requested-With": "XMLHttpRequest",
@@ -141,15 +142,20 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
 
         # Check if there are new records.
         channels_change = [channel.changed() for channel in self._channels]
-        (current, current_modified), (history, history_modified) = await asyncio.gather(
+        (
+            (current, current_modified),
+            (history, history_modified),
+            (history2, history2_modified),
+        ) = await asyncio.gather(
             *[
                 self._async_fetch_url(url)
-                for url in ((OREF_ALERTS_URL), (OREF_HISTORY_URL))
+                for url in (OREF_ALERTS_URL, OREF_HISTORY_URL, OREF_HISTORY2_URL)
             ]
         )
         if (
             current_modified
             or history_modified
+            or history2_modified
             or not self.data
             or (any(channels_change) and channels_change != self._channels_change)
             or self._synthetic_alerts
@@ -157,7 +163,8 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             # Update the latest areas' records.
             for record in itertools.chain(
                 self._get_synthetic_alerts(),
-                self._process_history_alerts(history or []),
+                self._process_history_alerts(history or [], self._history_to_record),
+                self._process_history_alerts(history2 or [], self._history2_to_record),
                 self._current_to_history_format(current),
                 itertools.chain.from_iterable(
                     channel.items() for channel in self._channels
@@ -308,8 +315,32 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         """Check if the alert is a synthetic alert."""
         return alert.channel == RecordSource.SYNTHETIC
 
+    @classmethod
+    def _history_to_record(cls, record: dict[str, Any]) -> Record:
+        """Convert history raw record to to Record."""
+        return Record(
+            alertDate=record[DATE_FIELD],
+            title=record[TITLE_FIELD],
+            data=cls._fix_area_spelling(record[AREA_FIELD]),
+            category=record[CATEGORY_FIELD],
+            channel=RecordSource.HISTORY,
+        )
+
+    @classmethod
+    def _history2_to_record(cls, record: dict[str, Any]) -> Record:
+        """Convert history2 raw record to to Record."""
+        return Record(
+            alertDate=record[DATE_FIELD].replace("T", " "),
+            title=record["category_desc"],
+            data=cls._fix_area_spelling(record[AREA_FIELD]),
+            category=record[CATEGORY_FIELD],
+            channel=RecordSource.HISTORY,
+        )
+
     def _process_history_alerts(
-        self, records: list[dict[str, Any]]
+        self,
+        records: list[dict[str, Any]],
+        payload_to_record: Callable[[dict[str, Any]], Record],
     ) -> list[RecordAndMetadata]:
         """Keep only latest record per area, add channel, and fix spelling."""
         now = dt_util.now()
@@ -320,13 +351,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 continue
             areas.add(record[AREA_FIELD])
             record_meta = self._config_entry.runtime_data.classifier.add_metadata(
-                Record(
-                    alertDate=record[DATE_FIELD],
-                    title=record[TITLE_FIELD],
-                    data=self._fix_area_spelling(record[AREA_FIELD]),
-                    category=record[CATEGORY_FIELD],
-                    channel=RecordSource.HISTORY,
-                )
+                payload_to_record(record)
             )
             result.append(record_meta)
 
@@ -335,7 +360,8 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 break
         return result
 
-    def _fix_area_spelling(self, area: str) -> str:
+    @staticmethod
+    def _fix_area_spelling(area: str) -> str:
         """Fix spelling error in area name."""
         if area[0] == "'":
             area = f"{area[1:]}'"

@@ -88,7 +88,7 @@ async def test_updates(
         await coordinator.async_refresh()
         await hass.async_block_till_done(wait_background_tasks=True)
     assert updates == 5
-    assert aioclient_mock.call_count == 10
+    assert aioclient_mock.call_count == 15
     await coordinator.async_shutdown()
 
 
@@ -156,13 +156,13 @@ async def test_request_throttling(
     coordinator = create_coordinator(hass)
     assert aioclient_mock.call_count == 0
     await coordinator.async_config_entry_first_refresh()
-    assert aioclient_mock.call_count == 2
+    assert aioclient_mock.call_count == 3
     aioclient_mock.mock_calls.clear()
     assert len(coordinator.get_records()) == 1
 
     for i in range(10):
         await coordinator.async_refresh()
-        assert aioclient_mock.call_count == 2 * (i // 2)
+        assert aioclient_mock.call_count == 3 * (i // 2)
         assert len(coordinator.get_records()) == 1
         freezer.tick(0.7)
         async_fire_time_changed(hass)
@@ -224,8 +224,33 @@ def test_process_history_alerts_skips_duplicate_area(hass: HomeAssistant) -> Non
         },
     ]
 
-    processed = coordinator._process_history_alerts(records)  # noqa: SLF001
+    processed = coordinator._process_history_alerts(  # noqa: SLF001
+        records,
+        coordinator._history_to_record,  # noqa: SLF001
+    )
     assert len(processed) == 1
+
+
+def test_history2_to_record_uses_category_desc_as_title() -> None:
+    """Test history2 payload conversion uses category_desc for title."""
+    record = OrefAlertDataUpdateCoordinator._history2_to_record(  # noqa: SLF001
+        {
+            "data": "האון",
+            "date": "28.02.2026",
+            "time": "19:00:07",
+            "alertDate": "2026-02-28T19:00:00",
+            "category": 13,
+            "category_desc": "ניתן לצאת מהמרחב המוגן אך יש להישאר בקרבתו",
+            "matrix_id": 10,
+            "rid": 262817,
+        },
+    )
+
+    assert record.alertDate == "2026-02-28 19:00:00"
+    assert record.title == "ניתן לצאת מהמרחב המוגן אך יש להישאר בקרבתו"
+    assert record.data == "האון"
+    assert record.category == 13
+    assert record.channel == "website-history"
 
 
 async def test_area_name_typo(
@@ -481,13 +506,13 @@ async def test_updater_active(
     await coordinator.async_refresh()
     updater = OrefAlertCoordinatorUpdater(hass, coordinator)
     updater.start()
-    assert aioclient_mock.call_count == 2
+    assert aioclient_mock.call_count == 3
 
     for i in range(2, 10):
         freezer.tick(timedelta(minutes=20))
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
-        assert aioclient_mock.call_count == i * 2
+        assert aioclient_mock.call_count == i * 3
 
     updater.stop()
     await coordinator.async_shutdown()
@@ -523,7 +548,7 @@ async def test_updater_previous_active(
     for i in range(2, 10):
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
-        assert aioclient_mock.call_count == min(i * 2, 10)
+        assert aioclient_mock.call_count == min(i * 3, 15)
         freezer.tick(timedelta(seconds=2))
 
     updater.stop()
@@ -540,18 +565,18 @@ async def test_updater_every_20_seconds(
     await coordinator.async_refresh()
     updater = OrefAlertCoordinatorUpdater(hass, coordinator)
     updater.start()
-    assert aioclient_mock.call_count == 2
+    assert aioclient_mock.call_count == 3
 
     for _ in range(3):
         freezer.tick(timedelta(seconds=6))
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
-        assert aioclient_mock.call_count == 2
+        assert aioclient_mock.call_count == 3
 
     freezer.tick(3)
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert aioclient_mock.call_count == 4
+    assert aioclient_mock.call_count == 6
 
     updater.stop()
     await coordinator.async_shutdown()

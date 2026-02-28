@@ -11,7 +11,11 @@ from pytest_homeassistant_custom_component.common import load_fixture
 from custom_components.oref_alert import records_schema
 from custom_components.oref_alert.areas_checker import CITIES_MIX_URL
 from custom_components.oref_alert.classifier import RECORDS_SCHEMA_URL
-from custom_components.oref_alert.coordinator import OREF_ALERTS_URL, OREF_HISTORY_URL
+from custom_components.oref_alert.coordinator import (
+    OREF_ALERTS_URL,
+    OREF_HISTORY2_URL,
+    OREF_HISTORY_URL,
+)
 from custom_components.oref_alert.pushy import API_ENDPOINT as PUSHY_API_ENDPOINT
 
 if TYPE_CHECKING:
@@ -50,6 +54,7 @@ def _mock_website_urls(
         text=load_fixture(history_fixture) if history_fixture else "",
         **kwargs,
     )
+    aioclient_mock.get(OREF_HISTORY2_URL, text="")
     aioclient_mock.get(
         CITIES_MIX_URL,
         text=load_fixture("GetCitiesMix.json"),
