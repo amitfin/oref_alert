@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
+import homeassistant.util.dt as dt_util
 from homeassistant.const import (
     ATTR_ICON,
     ATTR_LATITUDE,
@@ -107,6 +109,8 @@ class OrefAlertBusEventManager:
 
     def _is_old(self, record: RecordAndMetadata) -> bool:
         """Check if the item is in the previous list."""
+        if (dt_util.now() - record.time) > timedelta(minutes=3):
+            return True
         for previous in self._previous_items.items():
             if (
                 record.raw.data == previous.raw.data
