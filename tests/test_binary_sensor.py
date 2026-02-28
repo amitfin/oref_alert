@@ -215,29 +215,15 @@ async def test_all_areas_sensor(
     await async_shutdown(hass, config_id)
 
 
-@pytest.mark.parametrize(
-    ("real_time_file", "history_file"),
-    [
-        (None, "single_update_history.json"),
-        ("single_update_real_time.json", None),
-    ],
-    ids=["website-history", "real_time"],
-)
 async def test_updates_attribute(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
     freezer: FrozenDateTimeFactory,
-    real_time_file: str | None,
-    history_file: str | None,
 ) -> None:
     """Test updates attribute."""
     freezer.move_to("2025-04-26 03:30:00+03:00")
-    mock_urls(aioclient_mock, real_time_file, history_file)
-    alerts = load_json_fixture(
-        "single_update_history.json", "website-history" if history_file else "website"
-    )
-    if real_time_file:
-        alerts[0]["category"] = 13
+    mock_urls(aioclient_mock, None, "single_update_history.json")
+    alerts = load_json_fixture("single_update_history.json", "website-history")
 
     config_id = await async_setup(hass, {CONF_AREAS: ["תל אביב - מרכז העיר"]})
     await hass.services.async_call(

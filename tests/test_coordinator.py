@@ -169,20 +169,14 @@ async def test_request_throttling(
         await hass.async_block_till_done(wait_background_tasks=True)
 
 
-@pytest.mark.parametrize(
-    "alert_file",
-    ["single_alert_real_time.json", "single_update_real_time.json"],
-    ids=("alert", "update"),
-)
 async def test_real_time_timestamp(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
     freezer: FrozenDateTimeFactory,
-    alert_file: str,
 ) -> None:
     """Test real time timestamp."""
     freezer.move_to("2023-10-07 06:30:00+03:00")
-    mock_urls(aioclient_mock, alert_file, None)
+    mock_urls(aioclient_mock, "single_alert_real_time.json", None)
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
@@ -511,9 +505,17 @@ async def test_updater_previous_active(
     updater = OrefAlertCoordinatorUpdater(hass, coordinator)
     updater.start()
 
-    mock_urls(aioclient_mock, "single_update_real_time.json", None)
+    mock_urls(aioclient_mock, None, None)
     freezer.tick(timedelta(minutes=21))  # Set the active timestamp.
     async_fire_time_changed(hass)
+    coordinator.add_synthetic_alert(
+        {
+            CONF_AREA: ["תל אביב - מרכז העיר"],
+            CONF_DURATION: 1000,
+            "category": 13,
+            "title": "test",
+        }
+    )
     await hass.async_block_till_done(wait_background_tasks=True)
 
     # 9:53 leaves 4 additional rounds of updates till 10:00.
