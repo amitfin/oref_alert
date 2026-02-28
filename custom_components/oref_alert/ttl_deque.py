@@ -11,7 +11,7 @@ import homeassistant.util.dt as dt_util
 class TTLDeque[T]:
     """Add items to the beginning of the list and removes items when TTL expires."""
 
-    def __init__(self, ttl: int = 10) -> None:
+    def __init__(self, ttl: int = 720) -> None:
         """Initialize the deque."""
         self._ttl = timedelta(minutes=ttl)
         self._deque: deque[tuple[datetime, T]] = deque()

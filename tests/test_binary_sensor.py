@@ -216,20 +216,19 @@ async def test_all_areas_sensor(
 
 
 @pytest.mark.parametrize(
-    ("real_time_file", "history_file", "test_expired"),
+    ("real_time_file", "history_file"),
     [
-        (None, "single_update_history.json", True),
-        ("single_update_real_time.json", None, False),
+        (None, "single_update_history.json"),
+        ("single_update_real_time.json", None),
     ],
     ids=["website-history", "real_time"],
 )
-async def test_updates_attribute(  # noqa: PLR0913
+async def test_updates_attribute(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
     freezer: FrozenDateTimeFactory,
     real_time_file: str | None,
     history_file: str | None,
-    test_expired: bool,  # noqa: FBT001
 ) -> None:
     """Test updates attribute."""
     freezer.move_to("2025-04-26 03:30:00+03:00")
@@ -240,11 +239,11 @@ async def test_updates_attribute(  # noqa: PLR0913
     if real_time_file:
         alerts[0]["category"] = 13
 
-    config_id = await async_setup(hass, {CONF_AREAS: ["פתח תקווה"]})
+    config_id = await async_setup(hass, {CONF_AREAS: ["תל אביב - מרכז העיר"]})
     await hass.services.async_call(
         DOMAIN,
         ADD_SENSOR_ACTION,
-        {CONF_NAME: "test", CONF_AREAS: ["פתח תקווה"]},
+        {CONF_NAME: "test", CONF_AREAS: ["תל אביב - מרכז העיר"]},
         blocking=True,
     )
     await hass.async_block_till_done(wait_background_tasks=True)
@@ -269,17 +268,6 @@ async def test_updates_attribute(  # noqa: PLR0913
         assert state is not None
         assert state.state == STATE_OFF
         assert state.attributes[attribute] == alerts
-
-    if test_expired:
-        freezer.move_to("2025-04-26 03:40:01+03:00")
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
-
-        for entity_id, attribute in entities:
-            state = hass.states.get(entity_id)
-            assert state is not None
-            assert state.state == STATE_OFF
-            assert not state.attributes[attribute]
 
     await async_shutdown(hass, config_id)
 

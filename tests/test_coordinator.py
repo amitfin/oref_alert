@@ -505,13 +505,13 @@ async def test_updater_previous_active(
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the updater is refreshing after active."""
-    mock_urls(aioclient_mock, "single_update_real_time.json", None)
+    mock_urls(aioclient_mock, "single_alert_real_time.json", None)
     coordinator = create_coordinator(hass)
     await coordinator.async_refresh()
     updater = OrefAlertCoordinatorUpdater(hass, coordinator)
     updater.start()
 
-    mock_urls(aioclient_mock, None, None)
+    mock_urls(aioclient_mock, "single_update_real_time.json", None)
     freezer.tick(timedelta(minutes=21))  # Set the active timestamp.
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)

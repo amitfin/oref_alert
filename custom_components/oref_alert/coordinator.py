@@ -18,6 +18,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
+from custom_components.oref_alert.records_schema import RecordType
 
 from .categories import (
     category_is_alert,
@@ -44,8 +45,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
 
     from homeassistant.core import HomeAssistant
-
-    from custom_components.oref_alert.records_schema import RecordType
 
     from . import OrefAlertConfigEntry
     from .ttl_deque import TTLDeque
@@ -368,7 +367,10 @@ class OrefAlertCoordinatorUpdater:
         self._unsub_update = None
         now = dt_util.now()
         update = False
-        if self._coordinator.data.areas:
+        if any(
+            record.record_type in (RecordType.ALERT, RecordType.PRE_ALERT)
+            for record in self._coordinator.data.areas.values()
+        ):
             self._active = now
             update = True
         elif now - self._active < timedelta(

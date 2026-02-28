@@ -125,10 +125,10 @@ async def test_update_event(
 
     assert len(updates) == 1
     assert updates[0].data == {
-        "area": "פתח תקווה",
-        "home_distance": 2.5,
-        "latitude": 32.09429109811987,
-        "longitude": 34.8780320360819,
+        "area": "תל אביב - מרכז העיר",
+        "home_distance": 9.2,
+        "latitude": 32.079882706693276,
+        "longitude": 34.781624113487126,
         "category": 13,
         "title": "ניתן לצאת מהמרחב המוגן",
         "icon": "mdi:message-alert",
@@ -138,10 +138,10 @@ async def test_update_event(
 
     assert len(records) == 1
     assert records[0].data == {
-        "area": "פתח תקווה",
-        "home_distance": 2.5,
-        "latitude": 32.09429109811987,
-        "longitude": 34.8780320360819,
+        "area": "תל אביב - מרכז העיר",
+        "home_distance": 9.2,
+        "latitude": 32.079882706693276,
+        "longitude": 34.781624113487126,
         "category": 13,
         "title": "ניתן לצאת מהמרחב המוגן",
         "type": "end",

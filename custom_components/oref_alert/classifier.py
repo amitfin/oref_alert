@@ -34,7 +34,6 @@ RECORDS_SCHEMA: dict[RecordType, Schema] = {}
 RECORD_EXPIRATION_MINUTES: Final[dict[RecordType, int]] = {
     RecordType.PRE_ALERT: 20,
     RecordType.ALERT: 720,
-    RecordType.END: 10,
 }
 
 
