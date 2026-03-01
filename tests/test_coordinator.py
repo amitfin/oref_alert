@@ -15,12 +15,18 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.oref_alert import classifier, records_schema
+from custom_components.oref_alert.categories import (
+    END_ALERT_CATEGORY,
+    PRE_ALERT_CATEGORY,
+)
 from custom_components.oref_alert.classifier import Classifier
 from custom_components.oref_alert.const import (
+    AREA_FIELD,
     CONF_AREA,
     CONF_DURATION,
     DOMAIN,
     IST,
+    TITLE_FIELD,
     Record,
     RecordAndMetadata,
 )
@@ -414,6 +420,36 @@ async def test_unknown_real_time_category(
     coordinator.async_add_listener(lambda: None)
     assert coordinator.get_records() == []
     await coordinator.async_shutdown()
+
+
+@pytest.mark.parametrize(
+    ("title", "expected_category"),
+    [
+        ("ניתן לצאת מהמרחב המוגן אך יש להישאר בקרבתו", END_ALERT_CATEGORY),
+        ("בדקות הקרובות צפויות להתקבל התרעות באזורך", PRE_ALERT_CATEGORY),
+    ],
+    ids=("end_alert", "pre_alert"),
+)
+def test_current_to_history_format_real_time_message_category(
+    hass: HomeAssistant,
+    title: str,
+    expected_category: int,
+) -> None:
+    """Test cat=10 real-time message conversion to history update categories."""
+    coordinator = create_coordinator(hass)
+
+    records = coordinator._current_to_history_format(  # noqa: SLF001
+        {
+            "cat": "10",
+            TITLE_FIELD: title,
+            AREA_FIELD: ["אילת"],
+        }
+    )
+
+    assert len(records) == 1
+    assert records[0].raw.title == title
+    assert records[0].raw.data == "אילת"
+    assert records[0].raw.category == expected_category
 
 
 async def test_disable_all_alerts(

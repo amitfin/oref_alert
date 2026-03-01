@@ -43,6 +43,8 @@ PRE_ALERT_CATEGORY: Final = 14
 END_ALERT_CATEGORY: Final = 13
 UPDATE_CATEGORIES: Final = {PRE_ALERT_CATEGORY, END_ALERT_CATEGORY}
 FIRST_DRILL_CATEGORY: Final = 15
+REAL_TIME_MESSAGE_CATEGORY: Final = 10
+REAL_TIME_PRE_ALERT_WORD: Final = "בדקות"
 
 # Reverse engineered mapping from real-time to history categories.
 # Look for '"aircraftIntrusion"' in the code of https://www.oref.org.il/
@@ -113,8 +115,14 @@ def category_is_update(category: int) -> bool:
     return category in UPDATE_CATEGORIES
 
 
-def real_time_to_history_category(category: int) -> int | None:
+def real_time_to_history_category(category: int, title: str) -> int | None:
     """Return the history category for the real-time category."""
+    if category == REAL_TIME_MESSAGE_CATEGORY:
+        return (
+            PRE_ALERT_CATEGORY
+            if REAL_TIME_PRE_ALERT_WORD in title
+            else END_ALERT_CATEGORY
+        )
     return REAL_TIME_TO_HISTORY_CATEGORY.get(category)
 
 

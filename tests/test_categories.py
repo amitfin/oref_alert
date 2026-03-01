@@ -4,6 +4,8 @@ import pytest
 
 from custom_components.oref_alert.categories import (
     CATEGORY_METADATA,
+    END_ALERT_CATEGORY,
+    PRE_ALERT_CATEGORY,
     category_is_alert,
     category_is_update,
     category_to_emoji,
@@ -51,7 +53,9 @@ def test_category_is_update() -> None:
     assert category_is_update(13) is True
     assert category_is_update(14) is True
     assert category_is_update(12) is False
-    assert category_is_update(real_time_to_history_category(13) or 0) is False
+    assert category_is_update(real_time_to_history_category(10, "") or 0) is True
+    assert category_is_update(real_time_to_history_category(10, "בדקות") or 0) is True
+    assert category_is_update(real_time_to_history_category(13, "") or 0) is False
     assert category_is_update(pushy_thread_id_to_history_category(7) or 0) is True
     assert category_is_update(pushy_thread_id_to_history_category(8) or 0) is True
     assert category_is_update(pushy_thread_id_to_history_category(9) or 0) is False
@@ -60,9 +64,15 @@ def test_category_is_update() -> None:
 def test_real_time_to_history_category() -> None:
     """Test real_time_to_history_category."""
     for category, expected in enumerate(
-        [None, 1, None, 7, 9, 11, 2, 12, None, None, None, None, None, 10, None]
+        [None, 1, None, 7, 9, 11, 2, 12, None, None, 13, None, None, 10, None]
     ):
-        assert real_time_to_history_category(category) == expected
+        assert real_time_to_history_category(category, "") == expected
+
+    assert real_time_to_history_category(10, "") == END_ALERT_CATEGORY
+    assert (
+        real_time_to_history_category(10, "בדקות הקרובות צפויות להתקבל התרעות באזורך")
+        == PRE_ALERT_CATEGORY
+    )
 
 
 def test_pushy_thread_id_to_history_category() -> None:

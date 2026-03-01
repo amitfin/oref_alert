@@ -259,7 +259,11 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         """Convert current alerts payload to history format."""
         if (
             not isinstance(current, dict)
-            or (category := real_time_to_history_category(int(current.get("cat", 0))))
+            or (
+                category := real_time_to_history_category(
+                    int(current.get("cat", 0)), current[TITLE_FIELD]
+                )
+            )
             is None
         ):
             # Unknown category. Wait for the history to include it.
