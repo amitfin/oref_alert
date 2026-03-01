@@ -14,6 +14,8 @@ from aiohttp import ClientWebSocketResponse, WSMsgType
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .categories import (
+    END_ALERT_CATEGORY,
+    PRE_ALERT_CATEGORY,
     tzevaadom_threat_id_to_history_category,
 )
 from .const import (
@@ -55,6 +57,7 @@ THREAT_TITLES = {
 }
 
 PRE_ALERT_TITLE = "בדקות הקרובות צפויות להתקבל התרעות באזורך"
+END_TITLE = "הארוע הסתיים"
 
 
 class MessageType(enum.StrEnum):
@@ -62,6 +65,13 @@ class MessageType(enum.StrEnum):
 
     ALERT = "ALERT"
     SYSTEM_MESSAGE = "SYSTEM_MESSAGE"
+
+
+class SystemMessageType(enum.IntEnum):
+    """Message types for Tzeva Adom WebSocket messages."""
+
+    PRE_ALERT = 0
+    END = 1
 
 
 class TzevaAdomNotifications:
@@ -167,13 +177,24 @@ class TzevaAdomNotifications:
                 for city_id in message["data"].get("citiesIds") or []
                 if city_id in TZEVAADOM_ID_TO_AREA
             ]
-            # Filter out empty areas and ensure the message is a pre_alert.
-            if not areas or message["data"].get("instructionType") != 0:
+
+            # Filter out empty areas and ensure the message is "pre_alert" or "end".
+            if (
+                not areas
+                or (instruction := message["data"].get("instructionType")) is None
+                or instruction
+                not in (SystemMessageType.PRE_ALERT, SystemMessageType.END)
+            ):
                 return None
+
             fields = {
                 # We use the official title for pre-alerts.
-                TITLE_FIELD: PRE_ALERT_TITLE,
-                CATEGORY_FIELD: 14,  # 14 is pre_alert and 13 is post-alert.
+                TITLE_FIELD: PRE_ALERT_TITLE
+                if instruction == SystemMessageType.PRE_ALERT
+                else END_TITLE,
+                CATEGORY_FIELD: PRE_ALERT_CATEGORY
+                if instruction == SystemMessageType.PRE_ALERT
+                else END_ALERT_CATEGORY,
                 "areas": areas,
                 "id": (
                     f"{MessageType.SYSTEM_MESSAGE}_{message['data']['notificationId']}"

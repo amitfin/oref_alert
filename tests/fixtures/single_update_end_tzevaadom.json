@@ -1,0 +1,36 @@
+{
+    "type": "SYSTEM_MESSAGE",
+    "data": {
+        "id": 256,
+        "time": "1772372712",
+        "titleHe": "עדכון פיקוד העורף - סיום אירוע",
+        "titleAr": "عاجل من قيادة الجبهة الداخلية - لقد انتهى الحدث",
+        "titleEn": "Home Front Command - Incident Ended",
+        "titleEs": "Actualización del Comando del Frente Interior - Incident Ended",
+        "titleRu": "Обновление Командования тыла - Инцидент завершен",
+        "bodyHe": "אירוע חדירת כלי טיס הסתיים בפארן",
+        "bodyAr": "لقد انتهى الحدث في فارن",
+        "bodyEn": "The incident has ended at Paran",
+        "bodyEs": "El incidente terminó en Paran",
+        "bodyRu": "Инцидент завершен в Паран",
+        "forIos": true,
+        "forAndroid": true,
+        "display": true,
+        "untilVersionIos": null,
+        "untilVersionAndroid": null,
+        "instruction": false,
+        "areasIds": [
+            27
+        ],
+        "citiesIds": [
+            1319,
+            1302,
+            1292,
+            755
+        ],
+        "instructionType": 1,
+        "pinUntil": null,
+        "notificationId": "48b33f29-d89f-463d-86c7-359ed49c6e05",
+        "instructionReadingDescName": "9"
+    }
+}

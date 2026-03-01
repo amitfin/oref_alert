@@ -1,12 +1,36 @@
 {
   "type": "SYSTEM_MESSAGE",
   "data": {
-    "notificationId": 100,
-    "time": 1751284800,
+    "id": 257,
+    "time": "1772376313",
     "titleHe": "מבזק פיקוד העורף - התרעה מקדימה",
-    "bodyHe": "בעקבות זיהוי שיגורים, בדקות הקרובות צפויות להתקבל התרעות באזורים: ...",
+    "titleAr": "عاجل من قيادة الجبهة الداخلية - الإنذار المبكر",
+    "titleEn": "Home Front Command - Early Warning",
+    "titleEs": "Actualización del Comando del Frente Interior - Early Warning",
+    "titleRu": "Срочное сообщение Командования тыла - Раннее предупреждение",
+    "bodyHe": "בעקבות זיהוי שיגורים, בדקות הקרובות צפויות להתקבל התרעות באזור בקעת בית שאן. לרשימת הישובים המלאה",
+    "bodyAr": "نظرًا لرصد إطلاق صواريخ، من المحتمل تفعيل الإنذارات خلال الدقائق القادمة في في غوربيت شان. القائمة الكاملة للمدن",
+    "bodyEn": "Due to the detection of missile launches, alerts may be activated in the coming minutes at Beit Sha'an Valley areas. To the full cities",
+    "bodyEs": "Debido a la detección de lanzamientos de misiles, es posible que se activen alertas en los próximos minutos en Valle de Beit Shean. Lista completa de ciudades",
+    "bodyRu": "После обнаружения запусков в сторону Израиля в ближайшие минуты могут быть активированы оповещения в районах: Долина Бейт Шеана. Полный список населенных пунктов",
+    "forIos": true,
+    "forAndroid": true,
+    "display": true,
+    "untilVersionIos": null,
+    "untilVersionAndroid": null,
+    "instruction": true,
+    "areasIds": [
+      25
+    ],
+    "citiesIds": [
+      1319,
+      1302,
+      1292,
+      755
+    ],
     "instructionType": 0,
-    "areasIds": [19, 5, 15],
-    "citiesIds": [1319, 1302, 1292, 755]
+    "pinUntil": 1772376733,
+    "notificationId": "37a4156e-4e8c-4b5f-8ed4-1902dfd2ed6b",
+    "instructionReadingDescName": "11"
   }
 }

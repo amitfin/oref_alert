@@ -14,14 +14,14 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from aiohttp import WSMessage, WSMsgType
-from homeassistant.const import STATE_OFF, STATE_ON, Platform
+from homeassistant.const import STATE_OK, Platform
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
 )
 
 from custom_components.oref_alert.const import (
-    ATTR_SELECTED_AREAS_UPDATES,
+    ATTR_RECORD,
     CONF_AREAS,
     DOMAIN,
     IST,
@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 DEFAULT_OPTIONS = {CONF_AREAS: ["גבעת שמואל"]}
-ENTITY_ID = f"{Platform.BINARY_SENSOR}.{OREF_ALERT_UNIQUE_ID}"
+ENTITY_ID = f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}"
 
 
 @contextmanager
@@ -96,45 +96,64 @@ async def test_lifecycle(hass: HomeAssistant) -> None:
 
 @pytest.mark.allowed_logs(["Unknown area 'dummy'"])
 @pytest.mark.parametrize(
-    ("alert", "overrides", "expected_state", "expected_updates"),
+    ("file", "overrides", "expected_state", "expected_record"),
     [
-        (True, {}, STATE_ON, []),
-        (True, {"isDrill": True}, STATE_OFF, []),
-        (True, {"cities": ["dummy"]}, STATE_OFF, []),
         (
-            False,
+            "single_alert_tzevaadom.json",
             {},
-            STATE_OFF,
-            [
-                {
-                    "alertDate": "2025-06-30 15:00:00",
-                    "title": "בדקות הקרובות צפויות להתקבל התרעות באזורך",
-                    "data": "גבעת שמואל",
-                    "category": 14,
-                    "channel": "tzevaadom",
-                }
-            ],
+            RecordType.ALERT,
+            {
+                "alertDate": "2025-06-30 15:00:00",
+                "title": "חדירת כלי טיס עוין",  # noqa: RUF001
+                "data": "גבעת שמואל",
+                "category": 2,
+                "channel": "tzevaadom",
+            },
         ),
-        (False, {"citiesIds": None}, STATE_OFF, []),
+        ("single_alert_tzevaadom.json", {"isDrill": True}, STATE_OK, None),
+        ("single_alert_tzevaadom.json", {"cities": ["dummy"]}, STATE_OK, None),
+        (
+            "single_update_tzevaadom.json",
+            {},
+            RecordType.PRE_ALERT,
+            {
+                "alertDate": "2026-03-01 16:45:13",
+                "title": "בדקות הקרובות צפויות להתקבל התרעות באזורך",
+                "data": "גבעת שמואל",
+                "category": 14,
+                "channel": "tzevaadom",
+            },
+        ),
+        (
+            "single_update_end_tzevaadom.json",
+            {},
+            STATE_OK,
+            {
+                "alertDate": "2026-03-01 15:45:12",
+                "title": "הארוע הסתיים",
+                "data": "גבעת שמואל",
+                "category": 13,
+                "channel": "tzevaadom",
+            },
+        ),
+        ("single_update_tzevaadom.json", {"citiesIds": None}, STATE_OK, None),
     ],
-    ids=("plain", "drill", "invalid area", "update", "no cities"),
+    ids=("plain", "drill", "invalid area", "pre alert", "end", "no cities"),
 )
 async def test_message(  # noqa: PLR0913
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
-    alert: bool,  # noqa: FBT001
+    file: str,
     overrides: dict,
     expected_state: str,
-    expected_updates: list[dict],
+    expected_record: dict,
 ) -> None:
     """Test tzevaadom message."""
     freezer.move_to("2025-06-30T15:00:00+0300")
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
-    message = load_json_fixture(
-        f"single_{'alert' if alert else 'update'}_tzevaadom.json"
-    )
+    message = load_json_fixture(file)
     message["data"].update(overrides)
     data = json.dumps(message).encode("utf-8")
     with mock_ws([WSMessage(type=WSMsgType.TEXT, data=data, extra=None)]) as ws:
@@ -143,7 +162,7 @@ async def test_message(  # noqa: PLR0913
         state = hass.states.get(ENTITY_ID)
         assert state is not None
         assert state.state == expected_state
-        assert state.attributes[ATTR_SELECTED_AREAS_UPDATES] == expected_updates
+        assert state.attributes[ATTR_RECORD] == expected_record
         await cleanup_test(hass, config_entry)
     assert f"WS message: {message}" in caplog.text
 
