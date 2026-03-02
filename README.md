@@ -313,17 +313,39 @@ The basic usage is to trigger an automation rule when `sensor.oref_alert` state 
 
 Below are a few more examples:
 
-### Displaying Countdown Timer
+### Displaying States
+
+Below is an example of a card with the main entities and color coding of the icons.
 
 ```
-type: entities
-entities:
-  - entity: sensor.oref_alert_time_to_shelter
-    type: attribute
-    attribute: display
+- type: entities
+  card_mod:
+    style: |
+      :host {
+        --state-binary_sensor-off-color: green;
+        --state-binary_sensor-on-color: red;
+      }
+  entities:
+    - entity: sensor.oref_alert
+      card_mod:
+        style: |
+          :host {
+            {% if is_state('sensor.oref_alert', 'ok') %}
+            --card-mod-icon-color: green;
+            {% elif is_state('sensor.oref_alert', 'pre_alert') %}
+            --card-mod-icon-color: orange;
+            {% else %}
+            --card-mod-icon-color: red;
+            {% endif %}
+          }
+    - entity: binary_sensor.oref_alert
+    - entity: binary_sensor.oref_alert_all_areas
+    - entity: sensor.oref_alert_time_to_shelter
+      type: attribute
+      attribute: display
 ```
 
-<kbd>![image](https://github.com/user-attachments/assets/bede82e5-022a-41d8-abd7-502821c7d558)</kbd>
+Note that is requires the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.
 
 ### Presenting Active Alerts in Israel
 
