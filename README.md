@@ -13,8 +13,6 @@ The integration is installed and configured via the user interface. There is no 
 
 A demo video (in Hebrew) can be found [here](https://youtu.be/p6PzAlceoSY).
 
-A complementary Lovelace card is also available and can be found [here](https://github.com/amitfin/oref-alert-card).
-
 ## Install
 
 [HACS](https://hacs.xyz/) is the preferred and easier way to install the component. When HACS is installed, the integration can be installed using this My button:
@@ -38,6 +36,22 @@ Once the component is installed, it's possible to control additional parameters 
 There is a single configuration parameter **Selected area**. By default the integration finds the area based on HA's home location. There is no need to change this default. Note: it's highly discouraged to select more than a single area. `sensor.oref_alert` doesn't support more than a single area, and will not be created when choosing multiple areas or a district. It's possible to create additional `sensor` entities by using the action `oref_alert.add_sensor` (check below for more information), each with a single area.
 
 <kbd><img width="379" height="234" alt="image" src="https://github.com/user-attachments/assets/4dbb4a39-c9dd-47f3-8df8-685189e38bac" /></kbd>
+
+## Map Card
+
+The integration adds a map card for displaying all active alerts. It's recommended to place the map card inside a [panel view](https://www.home-assistant.io/dashboards/panel/), so it can take full width and provide the best map experience:
+
+```yaml
+- type: panel
+  cards:
+    - type: custom:oref-alert-map
+```
+
+The card has no additional configuration parameters.
+
+<img width="619" height="482" alt="image" src="https://github.com/user-attachments/assets/551c0577-ecee-4fef-8c85-3bc90e60af9f" />
+
+A demo (in Hebrew) can be found [here](https://youtu.be/j5jny3WrgJk).
 
 ## Record's Attribute
 
@@ -134,7 +148,7 @@ The integration creates an additional set of sensors which monitor the time to s
 
 ## Geo Location Entities
 
-Geo-location entities are created for every active alert in Israel (regardless of the selected areas). These entities exist while the corresponding alert is active (10 minutes by default). The state of the entity is the distance in kilometers from HA home's coordinate. In addition, each entity has the following attributes:
+Geo-location entities are created for every active alert in Israel (regardless of the selected areas). These entities exist while the corresponding alert is active. The state of the entity is the distance in kilometers from HA home's coordinate. In addition, each entity has the following attributes:
 1. `friendly_name`: alert's area
 2. `latitude`
 3. `longitude`
@@ -145,21 +159,7 @@ Geo-location entities are created for every active alert in Israel (regardless o
 7. `icon`: Material icon ("mdi:xxx") based on the category
 8. `emoji`: based on the category
 
-The [map card](https://www.home-assistant.io/dashboards/map) can be used to present the entities on a map. `oref_alert` should be added to [geo_location_sources](https://www.home-assistant.io/dashboards/map/#geo_location_sources), and [auto_fit](https://www.home-assistant.io/dashboards/map/#auto_fit) should be set to true:
-
-```
-type: map
-entities: []
-auto_fit: true
-geo_location_sources:
-  - oref_alert
-```
-
-This will create a map presenting all active alerts in Israel:
-
-<kbd><img width="625" alt="image" src="https://github.com/amitfin/oref_alert/assets/19599059/6e5345c5-ba6e-45c0-a8fb-e194ba178e63"></kbd>
-
-(Below you can find a another explanation on how to add a textual element for the data.)
+These entities provide the data that powers the map card described above.
 
 ## Home Assistant Events
 

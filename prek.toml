@@ -16,5 +16,21 @@ hooks = [
     language = "system",
     pass_filenames = false,
     always_run = true
+  },
+  {
+    id = "js-lint",
+    name = "js-lint",
+    entry = "npx --yes @biomejs/biome check --write",
+    language = "system",
+    pass_filenames = false,
+    always_run = true
+  },
+  {
+    id = "test",
+    name = "test",
+    entry = "npm run test",
+    language = "system",
+    pass_filenames = false,
+    always_run = true
   }
 ]

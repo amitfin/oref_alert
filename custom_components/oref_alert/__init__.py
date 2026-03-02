@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import itertools
-from typing import TYPE_CHECKING, cast
+from pathlib import Path
+from typing import TYPE_CHECKING, Final, cast
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from attr import dataclass
+from homeassistant.components.frontend import add_extra_js_url
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, Platform
 from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
@@ -16,6 +19,7 @@ from homeassistant.helpers import entity_registry, selector
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.entity_platform import async_get_platforms
 from homeassistant.helpers.service import async_register_admin_service
+from homeassistant.loader import async_get_integration
 
 from custom_components.oref_alert.classifier import Classifier
 
@@ -65,7 +69,10 @@ from .const import (
 from .coordinator import OrefAlertCoordinatorUpdater, OrefAlertDataUpdateCoordinator
 from .metadata.areas import AREAS
 
-CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+CONFIG_SCHEMA: Final = cv.config_entry_only_config_schema(DOMAIN)
+
+FRONTEND_PATH: Final = Path(__file__).parent / "cards"
+URL_BASE: Final = f"/{DOMAIN}"
 
 PLATFORMS = (
     Platform.EVENT,
@@ -74,7 +81,7 @@ PLATFORMS = (
     Platform.GEO_LOCATION,
 )
 
-ADD_SENSOR_SCHEMA = vol.Schema(
+ADD_SENSOR_SCHEMA: Final = vol.Schema(
     {
         vol.Required(CONF_NAME): selector.TextSelector(),
         vol.Required(CONF_AREAS, default=[]): selector.SelectSelector(AREAS_CONFIG),
@@ -82,7 +89,7 @@ ADD_SENSOR_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
-EXISTING_SENSOR_SELECTOR = selector.EntitySelector(
+EXISTING_SENSOR_SELECTOR: Final = selector.EntitySelector(
     selector.EntitySelectorConfig(
         exclude_entities=[
             "binary_sensor.oref_alert",
@@ -94,14 +101,14 @@ EXISTING_SENSOR_SELECTOR = selector.EntitySelector(
     )
 )
 
-REMOVE_SENSOR_SCHEMA = vol.Schema(
+REMOVE_SENSOR_SCHEMA: Final = vol.Schema(
     {
         vol.Required(CONF_ENTITY_ID): EXISTING_SENSOR_SELECTOR,
     },
     extra=vol.ALLOW_EXTRA,
 )
 
-EDIT_SENSOR_SCHEMA = vol.Schema(
+EDIT_SENSOR_SCHEMA: Final = vol.Schema(
     {
         vol.Required(CONF_ENTITY_ID): EXISTING_SENSOR_SELECTOR,
         vol.Required(ADD_AREAS, default=[]): selector.SelectSelector(AREAS_CONFIG),
@@ -110,7 +117,7 @@ EDIT_SENSOR_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
-SYNTHETIC_ALERT_SCHEMA = vol.Schema(
+SYNTHETIC_ALERT_SCHEMA: Final = vol.Schema(
     {
         vol.Required(CONF_AREA): vol.All(
             cv.ensure_list, [vol.All(cv.string, vol.In(AREAS))]
@@ -153,8 +160,13 @@ class OrefAlertRuntimeData:
 type OrefAlertConfigEntry = ConfigEntry[OrefAlertRuntimeData]
 
 
-async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
+async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa: PLR0915
     """Set up custom actions."""
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(URL_BASE, str(FRONTEND_PATH), cache_headers=True)]
+    )
+    integration = await async_get_integration(hass, DOMAIN)
+    add_extra_js_url(hass, f"{URL_BASE}/oref-alert-map.js?v={integration.version or 0}")
 
     def get_config_entry() -> OrefAlertConfigEntry:
         """Get the integration's config first (and only) entry."""

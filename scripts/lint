@@ -12,3 +12,5 @@ else
   ruff check . --fix
 fi
 mypy --strict custom_components/oref_alert
+
+npx --yes @biomejs/biome check

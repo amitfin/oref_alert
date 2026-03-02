@@ -14,6 +14,7 @@
     "customizations": {
         "vscode": {
             "extensions": [
+                "biomejs.biome",
                 "charliermarsh.ruff",
                 "github.vscode-pull-request-github",
                 "ms-python.python",
@@ -23,7 +24,6 @@
             ],
             "settings": {
                 "files.eol": "\n",
-                "editor.tabSize": 4,
                 "python.pythonPath": "/usr/bin/python3",
                 "python.analysis.autoSearchPaths": false,
                 "python.testing.pytestArgs": [
@@ -40,12 +40,21 @@
                 "python.analysis.autoImportCompletions": true,
                 "python.defaultInterpreterPath": "/usr/local/bin/python",
                 "[python]": {
-                    "editor.defaultFormatter": "charliermarsh.ruff"
+                    "editor.defaultFormatter": "charliermarsh.ruff",
+                    "editor.tabSize": 4
+                },
+                "[javascript]": {
+                  "editor.formatOnSave": true,
+                  "editor.defaultFormatter": "biomejs.biome"
                 }
             }
         }
     },
     "containerUser": "root",
     "remoteUser": "root",
-    "features": {}
+    "features": {
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "lts"
+        }
+    }
 }

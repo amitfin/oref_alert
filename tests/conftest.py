@@ -30,6 +30,7 @@ from .utils import mock_urls
 if TYPE_CHECKING:
     from collections.abc import Generator
 
+    from homeassistant.core import HomeAssistant
     from pytest_homeassistant_custom_component.test_util.aiohttp import (
         AiohttpClientMocker,
     )
@@ -85,6 +86,14 @@ def pytest_runtest_call(item: pytest.Item) -> Any:
 def _auto_aioclient_mock(aioclient_mock: AiohttpClientMocker) -> None:
     """Mock aiohttp with empty result relevant URLs."""
     mock_urls(aioclient_mock, None, None)
+
+
+@pytest.fixture(autouse=True)
+def _mock_http(hass: HomeAssistant) -> None:
+    """Provide HTTP helper and frontend storage for component async_setup."""
+    hass.http = AsyncMock()
+    hass.http.async_register_static_paths = AsyncMock()
+    hass.data.setdefault("frontend_extra_module_url", set())
 
 
 @pytest.fixture(autouse=True)

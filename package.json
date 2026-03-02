@@ -1,0 +1,32 @@
+{
+  "name": "oref-alert",
+  "version": "1.0.0",
+  "description": "Lovelace card(s) for oref alert integration in Home Assistant",
+  "main": "custom_components/oref_alert/cards/oref-alert-map.js",
+  "scripts": {
+    "lint": "biome check --write",
+    "test": "vitest run --coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/amitfin/oref_alert.git"
+  },
+  "keywords": [
+    "home-assistant",
+    "lovelace-custom-card",
+    "hacs",
+    "lovelace"
+  ],
+  "author": "amitfin",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/amitfin/oref_alert/issues"
+  },
+  "homepage": "https://github.com/amitfin/oref_alert#readme",
+  "devDependencies": {
+    "@biomejs/biome": "^2",
+    "@vitest/coverage-v8": "^4",
+    "jsdom": "^28",
+    "vitest": "^4"
+  }
+}

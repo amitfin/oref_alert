@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import pytest
 from homeassistant.config_entries import ConfigEntryDisabler, ConfigEntryState
@@ -111,6 +112,22 @@ async def test_config_retry(
 
     assert await hass.config_entries.async_remove(config_entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
+
+
+async def test_setup_adds_versioned_js_url(hass: HomeAssistant) -> None:
+    """Test setup registers extra JS URL with integration version."""
+    config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
+    config_entry.add_to_hass(hass)
+
+    with (
+        patch("custom_components.oref_alert.add_extra_js_url") as mock_add_extra_js_url,
+    ):
+        assert await hass.config_entries.async_setup(config_entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    mock_add_extra_js_url.assert_called_once_with(
+        hass, "/oref_alert/oref-alert-map.js?v=1.0.0"
+    )
 
 
 async def test_add_remove_sensor_action(hass: HomeAssistant) -> None:

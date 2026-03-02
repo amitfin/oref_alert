@@ -1,0 +1,10 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.5/schema.json",
+  "files": {
+    "includes": ["custom_components/oref_alert/cards/*", "js-tests/*"]
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2
+  }
+}
