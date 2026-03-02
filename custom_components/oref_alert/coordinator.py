@@ -100,7 +100,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         areas: Iterable[str] | None,
         record_types: Iterable[RecordType | None] | None,
         window: int | None,
-    ) -> list[Mapping[str, str | int]]:
+    ) -> list[dict[str, str | int]]:
         """Return the records as dict, sorted, and for the given areas and types."""
         earliest = dt_util.now() - timedelta(minutes=window) if window else None
         return [
@@ -125,7 +125,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         self,
         area: str,
         record_types: Iterable[RecordType | None] | None = None,
-    ) -> Mapping[str, str | int] | None:
+    ) -> dict[str, str | int] | None:
         """Return area's record as dict if it matches the types."""
         if (record := self.data.areas.get(area)) is None or (
             record_types and record.record_type not in record_types

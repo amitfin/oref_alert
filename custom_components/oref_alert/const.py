@@ -9,7 +9,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Final
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
     from datetime import datetime
 
     from .records_schema import RecordType
@@ -75,13 +74,18 @@ class Record:
     alertDate: str  # noqa: N815
     title: str
 
+    def __post_init__(self) -> None:
+        """Convert StrEnum to plain str."""
+        if isinstance(self.channel, enum.StrEnum):
+            object.__setattr__(self, "channel", self.channel.value)
+
 
 @dataclass(frozen=True)
 class RecordAndMetadata:
     """Class for holding a record with additional metadata."""
 
     raw: Record
-    raw_dict: Mapping[str, str | int] = field(hash=False, compare=False)
+    raw_dict: dict[str, str | int] = field(hash=False, compare=False)
     time: datetime = field(hash=False, compare=False)
     record_type: RecordType | None = field(hash=False, compare=False)
     expire: datetime | None = field(hash=False, compare=False)

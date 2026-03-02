@@ -5,7 +5,7 @@ from __future__ import annotations
 from contextlib import suppress
 from dataclasses import asdict
 from datetime import datetime, timedelta
-from types import MappingProxyType, ModuleType
+from types import ModuleType
 from typing import TYPE_CHECKING, Final
 
 import homeassistant.util.dt as dt_util
@@ -77,7 +77,7 @@ class Classifier:
         self, record: Record, record_expire: datetime | None = None
     ) -> RecordAndMetadata:
         """Get record metadata."""
-        raw_dict = MappingProxyType(asdict(record))
+        raw_dict = asdict(record)
 
         record_time = dt_util.parse_datetime(
             record.alertDate, raise_on_error=True
