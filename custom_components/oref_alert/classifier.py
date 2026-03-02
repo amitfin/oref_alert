@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import types
 from contextlib import suppress
 from dataclasses import asdict
 from datetime import datetime, timedelta
+from types import MappingProxyType, ModuleType
 from typing import TYPE_CHECKING, Final
 
 import homeassistant.util.dt as dt_util
@@ -21,7 +21,7 @@ from custom_components.oref_alert.const import (
 from custom_components.oref_alert.records_schema import RecordType
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
 
     from homeassistant.core import HomeAssistant
     from voluptuous import Schema
@@ -60,7 +60,7 @@ class Classifier:
                 response.raise_for_status()
                 code = await response.text()
 
-            module = types.ModuleType(RECORDS_SCHEMA_FILE_NAME)
+            module = ModuleType(RECORDS_SCHEMA_FILE_NAME)
             exec(  # noqa: S102
                 compile(code, RECORDS_SCHEMA_URL, "exec"),
                 module.__dict__,
@@ -77,11 +77,13 @@ class Classifier:
         self, record: Record, record_expire: datetime | None = None
     ) -> RecordAndMetadata:
         """Get record metadata."""
+        raw_dict = MappingProxyType(asdict(record))
+
         record_time = dt_util.parse_datetime(
             record.alertDate, raise_on_error=True
         ).replace(tzinfo=IST)
 
-        record_type = self._record_type(record)
+        record_type = self._record_type(raw_dict)
 
         if (
             record_expire is None
@@ -92,16 +94,16 @@ class Classifier:
 
         return RecordAndMetadata(
             raw=record,
+            raw_dict=raw_dict,
             record_type=record_type,
             time=record_time,
             expire=record_expire,
         )
 
-    def _record_type(self, record: Record) -> RecordType | None:
+    def _record_type(self, record: Mapping[str, str | int]) -> RecordType | None:
         """Get record type."""
-        fields = asdict(record)
         for record_type, schema in RECORDS_SCHEMA.items():
             with suppress(Exception):
-                schema(fields)
+                schema(dict(record))
                 return record_type
         return None

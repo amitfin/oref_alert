@@ -7,6 +7,7 @@ import json
 from asyncio import Event
 from collections import deque
 from contextlib import contextmanager
+from dataclasses import asdict
 from datetime import datetime
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
@@ -241,6 +242,7 @@ async def test_duplicate(hass: HomeAssistant) -> None:
         classifier=SimpleNamespace(
             add_metadata=lambda record: RecordAndMetadata(
                 raw=record,
+                raw_dict=asdict(record),
                 record_type=RecordType.ALERT,
                 time=datetime.strptime(record.alertDate, "%Y-%m-%d %H:%M:%S").replace(
                     tzinfo=IST

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
 
 import homeassistant.util.dt as dt_util
@@ -191,6 +192,7 @@ async def test_status_state_transition_and_cache(
     )
     pre_alert_metadata = RecordAndMetadata(
         raw=pre_alert_record,
+        raw_dict=asdict(pre_alert_record),
         time=dt_util.parse_datetime(
             pre_alert_record.alertDate, raise_on_error=True
         ).replace(tzinfo=IST),
@@ -222,6 +224,7 @@ async def test_status_state_transition_and_cache(
     )
     alert_metadata = RecordAndMetadata(
         raw=alert_record,
+        raw_dict=asdict(alert_record),
         time=dt_util.parse_datetime(
             alert_record.alertDate, raise_on_error=True
         ).replace(tzinfo=IST),
@@ -273,6 +276,7 @@ async def test_status_state_end_record(
     )
     end_metadata = RecordAndMetadata(
         raw=end_record,
+        raw_dict=asdict(end_record),
         time=dt_util.parse_datetime(end_record.alertDate, raise_on_error=True).replace(
             tzinfo=IST
         ),
@@ -316,6 +320,7 @@ async def test_status_state_expired_pre_alert(
     )
     old_metadata = RecordAndMetadata(
         raw=old_pre_alert_record,
+        raw_dict=asdict(old_pre_alert_record),
         time=dt_util.parse_datetime(
             old_pre_alert_record.alertDate, raise_on_error=True
         ).replace(tzinfo=IST),

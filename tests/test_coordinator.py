@@ -1,5 +1,6 @@
 """The tests for the coordinator file."""
 
+from dataclasses import asdict
 from datetime import timedelta
 from http import HTTPStatus
 from types import SimpleNamespace
@@ -515,15 +516,17 @@ async def test_channels(
     freezer.move_to("2023-10-07 06:31:00+03:00")
     mock_urls(aioclient_mock, None, "multi_alerts_history.json")
     channel: TTLDeque[RecordAndMetadata] = TTLDeque()
+    record = Record(
+        alertDate=alert["alertDate"],
+        title=alert["title"],
+        data=alert["data"],
+        category=alert["category"],
+        channel="website-history",
+    )
     channel.add(
         RecordAndMetadata(
-            raw=Record(
-                alertDate=alert["alertDate"],
-                title=alert["title"],
-                data=alert["data"],
-                category=alert["category"],
-                channel="website-history",
-            ),
+            raw=record,
+            raw_dict=asdict(record),
             time=dt_util.parse_datetime(
                 alert["alertDate"], raise_on_error=True
             ).replace(tzinfo=IST),

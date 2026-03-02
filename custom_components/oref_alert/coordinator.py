@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import itertools
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from http import HTTPStatus
 from types import MappingProxyType
@@ -100,11 +100,11 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         areas: Iterable[str] | None,
         record_types: Iterable[RecordType | None] | None,
         window: int | None,
-    ) -> list[dict[str, str | int]]:
+    ) -> list[Mapping[str, str | int]]:
         """Return the records as dict, sorted, and for the given areas and types."""
         earliest = dt_util.now() - timedelta(minutes=window) if window else None
         return [
-            asdict(sorted_record.raw)
+            sorted_record.raw_dict
             for sorted_record in sorted(
                 sorted(
                     {
@@ -125,13 +125,13 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         self,
         area: str,
         record_types: Iterable[RecordType | None] | None = None,
-    ) -> dict[str, str | int] | None:
+    ) -> Mapping[str, str | int] | None:
         """Return area's record as dict if it matches the types."""
         if (record := self.data.areas.get(area)) is None or (
             record_types and record.record_type not in record_types
         ):
             return None
-        return asdict(record.raw)
+        return record.raw_dict
 
     async def _async_update_data(self) -> OrefAlertCoordinatorData:
         """Request the data from Oref servers."""
