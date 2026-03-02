@@ -1,6 +1,7 @@
 shapely==2.1.2
 paho-mqtt
 aiofiles
+home-assistant-frontend
 types-aiofiles
 types-shapely
 ruff

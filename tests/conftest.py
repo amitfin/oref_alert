@@ -73,6 +73,7 @@ def pytest_runtest_call(item: pytest.Item) -> Any:
                 [
                     "Pushy registration reply is invalid",
                     "We found a custom integration oref_alert",
+                    "zlib_ng and isal are not available",
                 ],
             )
         ):
