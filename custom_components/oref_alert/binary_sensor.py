@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 from homeassistant.components import binary_sensor
 from homeassistant.const import Platform
@@ -34,7 +34,8 @@ if TYPE_CHECKING:
 
     from homeassistant.core import HomeAssistant
 
-PARALLEL_UPDATES = 0
+PARALLEL_UPDATES: Final = 0
+UPDATE_RECORDS_WINDOW_MINUTES = 5
 
 
 async def async_setup_entry(
@@ -119,16 +120,18 @@ class AlertSensor(AlertSensorBase):
         return {
             CONF_AREAS: self._areas,
             ATTR_SELECTED_AREAS_ACTIVE_ALERTS: self.coordinator.get_records(
-                self._areas, {RecordType.ALERT}
+                self._areas, {RecordType.ALERT}, None
             ),
             ATTR_SELECTED_AREAS_UPDATES: self.coordinator.get_records(
-                self._areas, {RecordType.PRE_ALERT, RecordType.END}
+                self._areas, {RecordType.PRE_ALERT, RecordType.END}, None
             ),
             ATTR_COUNTRY_ACTIVE_ALERTS: self.coordinator.get_records(
-                None, {RecordType.ALERT}
+                None, {RecordType.ALERT}, None
             ),
             ATTR_COUNTRY_UPDATES: self.coordinator.get_records(
-                None, {RecordType.PRE_ALERT, RecordType.END}
+                None,
+                {RecordType.PRE_ALERT, RecordType.END},
+                UPDATE_RECORDS_WINDOW_MINUTES,
             ),
         }
 
@@ -165,9 +168,11 @@ class AlertSensorAllAreas(AlertSensorBase):
         """Return additional attributes."""
         return {
             ATTR_COUNTRY_ACTIVE_ALERTS: self.coordinator.get_records(
-                None, {RecordType.ALERT}
+                None, {RecordType.ALERT}, None
             ),
             ATTR_COUNTRY_UPDATES: self.coordinator.get_records(
-                None, {RecordType.PRE_ALERT, RecordType.END}
+                None,
+                {RecordType.PRE_ALERT, RecordType.END},
+                UPDATE_RECORDS_WINDOW_MINUTES,
             ),
         }

@@ -97,10 +97,12 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
 
     def get_records(
         self,
-        areas: Iterable[str] | None = None,
-        record_types: Iterable[RecordType | None] | None = None,
+        areas: Iterable[str] | None,
+        record_types: Iterable[RecordType | None] | None,
+        window: int | None,
     ) -> list[dict[str, str | int]]:
         """Return the records as dict, sorted, and for the given areas and types."""
+        earliest = dt_util.now() - timedelta(minutes=window) if window else None
         return [
             asdict(sorted_record.raw)
             for sorted_record in sorted(
@@ -110,6 +112,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                         for area, record in self.data.areas.items()
                         if (areas is None or area in areas)
                         and (record_types is None or record.record_type in record_types)
+                        and (earliest is None or record.time >= earliest)
                     },
                     key=lambda record: record.raw.data,
                 ),

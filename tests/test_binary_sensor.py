@@ -23,6 +23,7 @@ from custom_components.oref_alert.const import (
     CONF_DURATION,
     DOMAIN,
     OREF_ALERT_UNIQUE_ID,
+    REMOVE_SENSOR_ACTION,
     SYNTHETIC_ALERT_ACTION,
     TITLE,
 )
@@ -192,6 +193,16 @@ async def test_additional_sensor(
     assert state is not None
     assert state.state == STATE_ON
     assert state.name == f"{TITLE} Test"
+
+    await hass.services.async_call(
+        DOMAIN,
+        REMOVE_SENSOR_ACTION,
+        {"entity_id": f"{ENTITY_ID}_test"},
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert hass.states.get(f"{ENTITY_ID}_test") is None
+
     await async_shutdown(hass, config_id)
 
 
@@ -254,6 +265,19 @@ async def test_updates_attribute(
         assert state is not None
         assert state.state == STATE_OFF
         assert state.attributes[attribute] == alerts
+
+    freezer.tick(301)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    selected_state = hass.states.get(f"{ENTITY_ID}_test")
+    assert selected_state is not None
+    assert selected_state.attributes[ATTR_SELECTED_AREAS_UPDATES] == alerts
+    assert selected_state.attributes[ATTR_COUNTRY_UPDATES] == []
+
+    all_areas_state = hass.states.get(f"{ENTITY_ID}_{ALL_AREAS_ID_SUFFIX}")
+    assert all_areas_state is not None
+    assert all_areas_state.attributes[ATTR_COUNTRY_UPDATES] == []
 
     await async_shutdown(hass, config_id)
 

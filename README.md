@@ -120,7 +120,7 @@ Binary sensors have the following attributes:
 2. `Selected areas active alerts`: when the sensor is `on`, the alerts are listed here.
 3. `Selected areas updates`: the list of updates for the selected areas.
 4. `Country active alerts`: all active alerts in Israel.
-5. `Country updates`: all updates in Israel.
+5. `Country updates`: the updates in Israel over the last 5 minutes.
 
 ## Time To Shelter Sensors
 

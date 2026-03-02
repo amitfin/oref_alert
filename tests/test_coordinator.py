@@ -124,7 +124,9 @@ async def test_alerts_processing(
     )
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
-    assert coordinator.get_records() == load_json_fixture("combined_alerts.json")
+    assert coordinator.get_records(None, None, None) == load_json_fixture(
+        "combined_alerts.json"
+    )
 
 
 async def test_cached_content_on_failure(
@@ -141,7 +143,7 @@ async def test_cached_content_on_failure(
     alerts = load_json_fixture("combined_alerts.json")
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
-    assert coordinator.get_records() == alerts
+    assert coordinator.get_records(None, None, None) == alerts
 
     freezer.tick()  # Skip the throttling threshold
     async_fire_time_changed(hass)
@@ -149,7 +151,7 @@ async def test_cached_content_on_failure(
     mock_urls(aioclient_mock, None, None, exc=Exception("dummy log for testing"))
     await coordinator.async_refresh()
     assert "dummy log for testing" in caplog.text
-    assert coordinator.get_records() == alerts
+    assert coordinator.get_records(None, None, None) == alerts
 
 
 async def test_request_throttling(
@@ -164,12 +166,12 @@ async def test_request_throttling(
     await coordinator.async_config_entry_first_refresh()
     assert aioclient_mock.call_count == 3
     aioclient_mock.mock_calls.clear()
-    assert len(coordinator.get_records()) == 1
+    assert len(coordinator.get_records(None, None, None)) == 1
 
     for i in range(10):
         await coordinator.async_refresh()
         assert aioclient_mock.call_count == 3 * (i // 2)
-        assert len(coordinator.get_records()) == 1
+        assert len(coordinator.get_records(None, None, None)) == 1
         freezer.tick(0.7)
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
@@ -188,12 +190,18 @@ async def test_real_time_timestamp(
     coordinator.async_add_listener(lambda: None)
     for _ in range(5):
         # Timestamp should stay the same for the first minute.
-        assert coordinator.get_records()[0]["alertDate"] == "2023-10-07 06:30:00"
+        assert (
+            coordinator.get_records(None, None, None)[0]["alertDate"]
+            == "2023-10-07 06:30:00"
+        )
         freezer.tick(15)
         await coordinator.async_refresh()
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
-    assert coordinator.get_records()[0]["alertDate"] == "2023-10-07 06:31:15"
+    assert (
+        coordinator.get_records(None, None, None)[0]["alertDate"]
+        == "2023-10-07 06:31:15"
+    )
     await coordinator.async_shutdown()
 
 
@@ -209,7 +217,7 @@ async def test_real_time_in_history(
     )
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
-    assert len(coordinator.get_records()) == 1
+    assert len(coordinator.get_records(None, None, None)) == 1
 
 
 def test_process_history_alerts_skips_duplicate_area(hass: HomeAssistant) -> None:
@@ -273,8 +281,8 @@ async def test_area_name_typo(
     )
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
-    assert len(coordinator.get_records()) == 1
-    assert coordinator.get_records()[0]["data"] == "ביר הדאג\u0027"
+    assert len(coordinator.get_records(None, None, None)) == 1
+    assert coordinator.get_records(None, None, None)[0]["data"] == "ביר הדאג\u0027"
 
 
 @pytest.mark.allowed_logs(["Failed to fetch", "Unexpected error fetching oref_alert"])
@@ -303,7 +311,7 @@ async def test_synthetic_alert(
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
-    assert len(coordinator.get_records()) == 0
+    assert len(coordinator.get_records(None, None, None)) == 0
     synthetic_alert_time = dt_util.now(IST)
     areas = ["אילת", "קריית שמונה"]
     coordinator.add_synthetic_alert(
@@ -318,7 +326,7 @@ async def test_synthetic_alert(
     async_fire_time_changed(hass)
     await coordinator.async_refresh()
     await hass.async_block_till_done(wait_background_tasks=True)
-    records = coordinator.get_records()
+    records = coordinator.get_records(None, None, None)
     assert len(records) == 2
     for index, area in enumerate(areas):
         assert records[index]["data"] == area
@@ -331,7 +339,7 @@ async def test_synthetic_alert(
     async_fire_time_changed(hass)
     await coordinator.async_refresh()
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert len(coordinator.get_records()) == 0
+    assert len(coordinator.get_records(None, None, None)) == 0
     await coordinator.async_shutdown()
 
 
@@ -368,7 +376,7 @@ async def test_http_cache(
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
-    assert len(coordinator.get_records()) == 2
+    assert len(coordinator.get_records(None, None, None)) == 2
 
     aioclient_mock.clear_requests()
     aioclient_mock.get(OREF_ALERTS_URL, status=HTTPStatus.NOT_MODIFIED)
@@ -377,7 +385,7 @@ async def test_http_cache(
     await coordinator.async_refresh()
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert len(coordinator.get_records()) == 2
+    assert len(coordinator.get_records(None, None, None)) == 2
 
     coordinator._areas.clear()  # noqa: SLF001
     aioclient_mock.clear_requests()
@@ -387,7 +395,7 @@ async def test_http_cache(
     await coordinator.async_refresh()
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert len(coordinator.get_records()) == 1
+    assert len(coordinator.get_records(None, None, None)) == 1
 
     await coordinator.async_shutdown()
 
@@ -403,7 +411,7 @@ async def test_non_alert_category(
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
-    assert coordinator.get_records() == load_json_fixture(
+    assert coordinator.get_records(None, None, None) == load_json_fixture(
         "alert_categories_expected.json", "website-history"
     )
     await coordinator.async_shutdown()
@@ -418,7 +426,7 @@ async def test_unknown_real_time_category(
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
-    assert coordinator.get_records() == []
+    assert coordinator.get_records(None, None, None) == []
     await coordinator.async_shutdown()
 
 
@@ -463,12 +471,12 @@ async def test_disable_all_alerts(
     coordinator = create_coordinator(hass)
     coordinator.async_add_listener(lambda: None)
     await coordinator.async_config_entry_first_refresh()
-    assert len(coordinator.get_records()) == 1
+    assert len(coordinator.get_records(None, None, None)) == 1
     freezer.tick(601)
     async_fire_time_changed(hass)
     await coordinator.async_refresh()
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert len(coordinator.get_records()) == 1
+    assert len(coordinator.get_records(None, None, None)) == 1
     await coordinator.async_shutdown()
 
 
@@ -526,7 +534,7 @@ async def test_channels(
     coordinator = create_coordinator(hass, channels=[channel, channel])
     coordinator.async_add_listener(lambda: None)
     await coordinator.async_config_entry_first_refresh()
-    assert len(coordinator.get_records()) == expected
+    assert len(coordinator.get_records(None, None, None)) == expected
     assert coordinator.data.areas[alert["data"]].raw.category == alert["category"]
     await coordinator.async_shutdown()
 
