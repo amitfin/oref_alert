@@ -126,7 +126,7 @@ async def test_setup_adds_versioned_js_url(hass: HomeAssistant) -> None:
         await hass.async_block_till_done(wait_background_tasks=True)
 
     mock_add_extra_js_url.assert_called_once_with(
-        hass, "/oref_alert/oref-alert-map.js?v=1.0.0"
+        hass, "/oref_alert_internal_static/oref-alert-map.js?v=1.0.0"
     )
 
 

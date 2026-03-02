@@ -72,7 +72,7 @@ from .metadata.areas import AREAS
 CONFIG_SCHEMA: Final = cv.config_entry_only_config_schema(DOMAIN)
 
 FRONTEND_PATH: Final = Path(__file__).parent / "cards"
-URL_BASE: Final = f"/{DOMAIN}"
+URL_BASE: Final = f"/{DOMAIN}_internal_static"
 
 PLATFORMS = (
     Platform.EVENT,
