@@ -5,7 +5,10 @@
     "@amitfin"
   ],
   "config_flow": true,
-  "dependencies": ["frontend", "http"],
+  "dependencies": [
+    "frontend",
+    "http"
+  ],
   "documentation": "https://github.com/amitfin/oref_alert",
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/amitfin/oref_alert/issues",
