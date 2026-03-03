@@ -268,7 +268,7 @@ class OrefMetadata:
                     and int(data["segmentId"]) == self._area_info[area]["segment"]
                 ):
                     return area, [
-                        [round(lat, 5), round(lon, 5)]
+                        [round(lat, 8), round(lon, 8)]
                         for lat, lon in data["polygonPointList"][0]
                     ]
         msg = f"Failed to fetch polygon for area {area}"
