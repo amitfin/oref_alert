@@ -29,6 +29,7 @@ afterEach(() => {
   document.body.innerHTML = "";
   delete window.loadCardHelpers;
   delete window.L;
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -50,301 +51,11 @@ describe("oref-alert-map", () => {
     ).toBe(true);
   });
 
-  test("loads polygons for oref geo_location entities, applies layers, and removes missing entities", async () => {
+  test("creates map card and wires hass/layout getters", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
     const el = new Card();
-    const { mapCard, innerMap } = createMapCardWithInnerMap();
-    const hassSetter = vi.fn();
-    Object.defineProperty(mapCard, "hass", {
-      configurable: true,
-      set(value) {
-        hassSetter(value);
-      },
-    });
-
-    window.loadCardHelpers = vi.fn().mockResolvedValue({
-      createCardElement: vi.fn().mockResolvedValue(mapCard),
-    });
-    const createdLayers = [];
-    window.L = {
-      polygon: vi.fn().mockImplementation((points, opts) => {
-        const layer = {
-          points,
-          opts,
-          id: createdLayers.length + 1,
-          bindTooltip: vi.fn(),
-        };
-        createdLayers.push(layer);
-        return layer;
-      }),
-    };
-
-    const loadPolygonSpy = vi
-      .spyOn(el, "_loadPolygon")
-      .mockImplementation(async (area) => {
-        if (area === "Area A") {
-          return [
-            [1, 1],
-            [1, 2],
-            [2, 2],
-            [2, 1],
-          ];
-        }
-        if (area === "Area B") {
-          return [
-            [3, 3],
-            [3, 4],
-            [4, 4],
-            [4, 3],
-          ];
-        }
-        return null;
-      });
-
-    const hass1 = {
-      states: {
-        "geo_location.a": {
-          entity_id: "geo_location.a",
-          state: "ignored",
-          attributes: { source: "oref_alert", friendly_name: "Area A" },
-        },
-        "geo_location.b": {
-          entity_id: "geo_location.b",
-          state: "ignored",
-          attributes: { source: "oref_alert", friendly_name: "Area B" },
-        },
-        "geo_location.ignore_source": {
-          entity_id: "geo_location.ignore_source",
-          state: "Area C",
-          attributes: { source: "other", friendly_name: "Area C" },
-        },
-        "sensor.ignore_domain": {
-          entity_id: "sensor.ignore_domain",
-          state: "Area D",
-          attributes: { source: "oref_alert", friendly_name: "Area D" },
-        },
-      },
-      connection: {},
-    };
-    el.hass = hass1;
-    await el._mapCardPromise;
-    await waitForTasks();
-
-    expect(hassSetter).toHaveBeenCalled();
-    expect(hassSetter).toHaveBeenLastCalledWith(hass1);
-    expect(loadPolygonSpy).toHaveBeenCalledTimes(2);
-    expect(loadPolygonSpy).toHaveBeenNthCalledWith(1, "Area A");
-    expect(loadPolygonSpy).toHaveBeenNthCalledWith(2, "Area B");
-    expect(window.L.polygon).toHaveBeenCalledTimes(2);
-    expect(innerMap.layers).toHaveLength(2);
-    expect(createdLayers[0].bindTooltip).toHaveBeenCalledWith("Area A");
-    expect(createdLayers[1].bindTooltip).toHaveBeenCalledWith("Area B");
-
-    const hass2 = {
-      states: {
-        "geo_location.b": {
-          entity_id: "geo_location.b",
-          state: "ignored",
-          attributes: { source: "oref_alert", friendly_name: "Area B" },
-        },
-      },
-      connection: {},
-    };
-    el.hass = hass2;
-    await waitForTasks();
-
-    expect(loadPolygonSpy).toHaveBeenCalledTimes(3);
-    expect(loadPolygonSpy).toHaveBeenLastCalledWith("Area B");
-    expect(innerMap.layers).toHaveLength(1);
-    expect(innerMap.layers[0].points).toEqual([
-      [3, 3],
-      [3, 4],
-      [4, 4],
-      [4, 3],
-    ]);
-    expect(innerMap.layers[0].bindTooltip).toHaveBeenCalledWith("Area B");
-  });
-
-  test("loadPolygon uses cache and de-duplicates in-flight subscriptions", async () => {
-    await ensureDefined();
-    const Card = customElements.get("oref-alert-map");
-    const el = new Card();
-    const subscribers = [];
-    const unsubscribe = vi.fn();
-    const subscribeMessage = vi.fn().mockImplementation((cb) => {
-      subscribers.push(cb);
-      return Promise.resolve(unsubscribe);
-    });
-    el._hass = {
-      connection: {
-        subscribeMessage,
-      },
-    };
-
-    const p1 = el._loadPolygon("Area A");
-    const p2 = el._loadPolygon("Area A");
-    expect(subscribeMessage).toHaveBeenCalledTimes(1);
-    expect(el._polygonLoads.has("Area A")).toBe(true);
-
-    subscribers[0]({
-      result: [
-        [1, 1],
-        [1, 2],
-        [2, 2],
-        [2, 1],
-      ],
-    });
-    await expect(Promise.all([p1, p2])).resolves.toEqual([
-      [
-        [1, 1],
-        [1, 2],
-        [2, 2],
-        [2, 1],
-      ],
-      [
-        [1, 1],
-        [1, 2],
-        [2, 2],
-        [2, 1],
-      ],
-    ]);
-    await waitForTasks();
-    expect(unsubscribe).toHaveBeenCalledTimes(1);
-
-    const fromCache = await el._loadPolygon("Area A");
-    expect(subscribeMessage).toHaveBeenCalledTimes(1);
-    expect(fromCache).toEqual([
-      [1, 1],
-      [1, 2],
-      [2, 2],
-      [2, 1],
-    ]);
-
-    const p3 = el._loadPolygon("Area B");
-    subscribers[1]({
-      result: [
-        [9, 9],
-        [9, 10],
-        [10, 10],
-        [10, 9],
-      ],
-    });
-    await expect(p3).resolves.toEqual([
-      [9, 9],
-      [9, 10],
-      [10, 10],
-      [10, 9],
-    ]);
-
-    const p4 = el._loadPolygon("Area C");
-    subscribers[2](undefined);
-    await expect(p4).resolves.toBeNull();
-    const p5 = el._loadPolygon("Area C");
-    expect(subscribeMessage).toHaveBeenCalledTimes(4);
-    subscribers[3]({
-      result: [
-        [7, 7],
-        [7, 8],
-        [8, 8],
-        [8, 7],
-      ],
-    });
-    await expect(p5).resolves.toEqual([
-      [7, 7],
-      [7, 8],
-      [8, 8],
-      [8, 7],
-    ]);
-  });
-
-  test("handles map/leaflet absence and null payload safely", async () => {
-    await ensureDefined();
-    const Card = customElements.get("oref-alert-map");
-    const el = new Card();
-    const { mapCard } = createMapCardWithInnerMap();
-    mapCard.shadowRoot.innerHTML = "";
-    Object.defineProperty(mapCard, "hass", {
-      configurable: true,
-      set(_) {},
-    });
-
-    window.loadCardHelpers = vi.fn().mockResolvedValue({
-      createCardElement: vi.fn().mockResolvedValue(mapCard),
-    });
-
-    el.hass = {
-      states: {
-        "geo_location.a": {
-          entity_id: "geo_location.a",
-          state: "ignored",
-          attributes: { source: "oref_alert", friendly_name: "Area A" },
-        },
-      },
-      connection: {},
-    };
-    await el._mapCardPromise;
-    await waitForTasks();
-
-    const subscribers = [];
-    const subscribeMessage = vi.fn().mockImplementation((cb) => {
-      subscribers.push(cb);
-      return Promise.resolve(() => {});
-    });
-    el._hass = { connection: { subscribeMessage } };
-    const parsed = el._loadPolygon("Area X");
-    subscribers[0](undefined);
-    await expect(parsed).resolves.toBeNull();
-  });
-
-  test("covers stale-token exits and empty helpers", async () => {
-    await ensureDefined();
-    const Card = customElements.get("oref-alert-map");
-    const el = new Card();
-
-    el._hass = null;
-    expect(el._getOrefAreas()).toEqual([]);
-    expect(await el._createLayers()).toEqual([]);
-
-    const { mapCard, innerMap } = createMapCardWithInnerMap();
-    const hassSetter = vi.fn();
-    Object.defineProperty(mapCard, "hass", {
-      configurable: true,
-      set(value) {
-        hassSetter(value);
-      },
-    });
-    el._mapCard = mapCard;
-    el._hass = {
-      states: {
-        "geo_location.a": {
-          entity_id: "geo_location.a",
-          state: "ignored",
-          attributes: { source: "oref_alert", friendly_name: "Area A" },
-        },
-      },
-      connection: {},
-    };
-    el._updateToken = 2;
-    await el._applyHass(1);
-    expect(hassSetter).not.toHaveBeenCalled();
-
-    const createLayersSpy = vi
-      .spyOn(el, "_createLayers")
-      .mockImplementation(async () => {
-        el._updateToken = 3;
-        return [{ id: 1 }];
-      });
-    el._updateToken = 2;
-    await el._applyHass(2);
-    expect(createLayersSpy).toHaveBeenCalled();
-    expect(innerMap.layers).toBeUndefined();
-  });
-
-  test("ensureMapCard reuses in-flight promise and createLayers uses provided areas", async () => {
-    await ensureDefined();
-    const Card = customElements.get("oref-alert-map");
-    const el = new Card();
+    expect(el._map).toBeNull();
     const { mapCard } = createMapCardWithInnerMap();
     const hassSetter = vi.fn();
     Object.defineProperty(mapCard, "hass", {
@@ -353,56 +64,41 @@ describe("oref-alert-map", () => {
         hassSetter(value);
       },
     });
+
     const createCardElement = vi.fn().mockResolvedValue(mapCard);
     window.loadCardHelpers = vi.fn().mockResolvedValue({ createCardElement });
+
+    el.setConfig({ ignored: true });
     el.layout = "panel";
+    el._hass = { states: {}, connection: {} };
 
-    const p1 = el._ensureMapCard();
-    const p2 = el._ensureMapCard();
-    await Promise.all([p1, p2]);
-    expect(createCardElement).toHaveBeenCalledTimes(1);
-    expect(hassSetter).not.toHaveBeenCalled();
-    expect(await el._ensureMapCard()).toBe(mapCard);
+    expect(el.getCardSize()).toBe(7);
+    expect(el.getGridOptions()).toEqual({
+      columns: "full",
+      rows: 4,
+      min_columns: 6,
+      min_rows: 2,
+    });
+
+    const created = await el._createMapCard();
+    expect(created).toBe(mapCard);
+    expect(hassSetter).toHaveBeenCalledWith(el._hass);
     expect(mapCard.layout).toBe("panel");
+    expect(el._map).toBe(mapCard.shadowRoot.querySelector("ha-map"));
 
-    window.L = {
-      polygon: vi.fn().mockReturnValue({
-        id: 1,
-        bindTooltip: vi.fn(),
-      }),
-    };
-    vi.spyOn(el, "_loadPolygon")
-      .mockResolvedValueOnce([
-        [1, 1],
-        [1, 2],
-        [2, 2],
-        [2, 1],
-      ])
-      .mockResolvedValueOnce(null);
-    el._areas = ["A", "B"];
-    const layers = await el._createLayers(el._areas);
-    expect(layers).toHaveLength(1);
-    expect(layers[0]).toEqual(
-      expect.objectContaining({ id: 1, bindTooltip: expect.any(Function) }),
-    );
-    expect(window.L.polygon).toHaveBeenCalledTimes(1);
-  });
-
-  test("forwards layout to an existing map card", async () => {
-    await ensureDefined();
-    const Card = customElements.get("oref-alert-map");
-    const el = new Card();
-    const { mapCard } = createMapCardWithInnerMap();
-    el._mapCard = mapCard;
-
-    el.layout = "panel";
-    expect(mapCard.layout).toBe("panel");
+    expect(el.getCardSize()).toBe(3);
+    expect(el.getGridOptions()).toEqual({
+      columns: 12,
+      rows: 6,
+      min_columns: 6,
+      min_rows: 3,
+    });
 
     el.layout = "masonry";
     expect(mapCard.layout).toBe("masonry");
   });
 
-  test("ensureMapCard retries after a transient create failure", async () => {
+  test("ensureMapCard reuses in-flight promise and retries after failure", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
     const el = new Card();
@@ -412,13 +108,124 @@ describe("oref-alert-map", () => {
       .mockRejectedValueOnce(new Error("transient"))
       .mockResolvedValueOnce(mapCard);
     window.loadCardHelpers = vi.fn().mockResolvedValue({ createCardElement });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    await expect(el._ensureMapCard()).rejects.toThrow("transient");
+    const p1 = el._ensureMapCard();
+    const p2 = el._ensureMapCard();
+    await Promise.all([p1, p2]);
+
+    expect(createCardElement).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalledWith(
+      "oref-alert-map failed to create map card",
+      expect.any(Error),
+    );
+    expect(el._mapCardPromise).toBeNull();
+
+    await expect(el._ensureMapCard()).resolves.toBe(mapCard);
+    expect(createCardElement).toHaveBeenCalledTimes(2);
     await expect(el._ensureMapCard()).resolves.toBe(mapCard);
     expect(createCardElement).toHaveBeenCalledTimes(2);
   });
 
-  test("returns early when areas unchanged and throws when subscribeMessage is missing", async () => {
+  test("getPolygons caches after success and returns null after timeout", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+
+    if (!customElements.get("oref-alert-polygons")) {
+      customElements.define(
+        "oref-alert-polygons",
+        class extends HTMLElement {
+          constructor() {
+            super();
+            this.polygons = { "Area A": [[1, 1]] };
+          }
+        },
+      );
+    }
+
+    const el = new Card();
+    await expect(el._getPolygons()).resolves.toEqual({ "Area A": [[1, 1]] });
+    const createSpy = vi.spyOn(document, "createElement");
+    await expect(el._getPolygons()).resolves.toEqual({ "Area A": [[1, 1]] });
+    expect(createSpy).not.toHaveBeenCalled();
+
+    const timeoutEl = new Card();
+    vi.useFakeTimers();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const whenDefinedSpy = vi
+      .spyOn(customElements, "whenDefined")
+      .mockImplementation(() => new Promise(() => {}));
+
+    const timed = timeoutEl._getPolygons();
+    await vi.advanceTimersByTimeAsync(5000);
+    await expect(timed).resolves.toBeNull();
+    expect(whenDefinedSpy).toHaveBeenCalledWith("oref-alert-polygons");
+    expect(errorSpy).toHaveBeenCalledWith(
+      "oref-alert-map failed to load polygons module",
+      expect.any(Error),
+    );
+
+    const nullCreateEl = new Card();
+    whenDefinedSpy.mockResolvedValue(undefined);
+    const createElementSpy = vi
+      .spyOn(document, "createElement")
+      .mockReturnValue(null);
+    await expect(nullCreateEl._getPolygons()).resolves.toBeNull();
+    createElementSpy.mockRestore();
+  });
+
+  test("createLayers handles missing dependencies and creates layers", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+
+    vi.spyOn(el, "_getPolygons").mockResolvedValue({ "Area A": [[1, 1]] });
+    await expect(el._createLayers(["Area A"])).resolves.toEqual([]);
+
+    window.L = { polygon: vi.fn() };
+    el._getPolygons.mockResolvedValueOnce(null);
+    await expect(el._createLayers(["Area A"])).resolves.toEqual([]);
+
+    const created = [];
+    window.L.polygon = vi.fn().mockImplementation((points, opts) => {
+      const layer = { points, opts, bindTooltip: vi.fn() };
+      created.push(layer);
+      return layer;
+    });
+    el._getPolygons.mockResolvedValueOnce({
+      "Area A": [
+        [1, 1],
+        [1, 2],
+      ],
+      "Area B": [
+        [2, 1],
+        [2, 2],
+      ],
+    });
+
+    const layers = await el._createLayers(["Area A", "Area B"]);
+    expect(layers).toHaveLength(2);
+    expect(window.L.polygon).toHaveBeenNthCalledWith(
+      1,
+      [
+        [1, 1],
+        [1, 2],
+      ],
+      { color: "#f19292" },
+    );
+    expect(window.L.polygon).toHaveBeenNthCalledWith(
+      2,
+      [
+        [2, 1],
+        [2, 2],
+      ],
+      { color: "#f19292" },
+    );
+    expect(created[0].bindTooltip).toHaveBeenCalledWith("Area A");
+    expect(created[1].bindTooltip).toHaveBeenCalledWith("Area B");
+  });
+
+  test("applyHass handles stale token, unchanged areas, and map assignment", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
     const el = new Card();
@@ -427,31 +234,63 @@ describe("oref-alert-map", () => {
       configurable: true,
       set(_) {},
     });
-    el._mapCard = mapCard;
-    el._hass = {
-      states: {
-        "geo_location.a": {
-          entity_id: "geo_location.a",
-          state: "ignored",
-          attributes: { source: "oref_alert", friendly_name: "Area A" },
-        },
+
+    el._hass = null;
+    expect(el._getOrefAreas()).toEqual([]);
+
+    const states = {
+      "geo_location.b": {
+        entity_id: "geo_location.b",
+        attributes: { source: "oref_alert", friendly_name: "Area B" },
       },
-      connection: {},
+      "geo_location.a": {
+        entity_id: "geo_location.a",
+        attributes: { source: "oref_alert", friendly_name: "Area A" },
+      },
+      "geo_location.x": {
+        entity_id: "geo_location.x",
+        attributes: { source: "other", friendly_name: "Area X" },
+      },
+      "sensor.y": {
+        entity_id: "sensor.y",
+        attributes: { source: "oref_alert", friendly_name: "Area Y" },
+      },
     };
-    el._areas = ["Area A"];
-    const createLayersSpy = vi.spyOn(el, "_createLayers");
-    el._updateToken = 1;
+
+    el._hass = { states, connection: {} };
+    expect(el._getOrefAreas()).toEqual(["Area A", "Area B"]);
+
+    el._updateToken = 2;
     await el._applyHass(1);
+
+    vi.spyOn(el, "_ensureMapCard").mockResolvedValue(null);
+    await el._applyHass(2);
+
+    el._mapCard = mapCard;
+    el._ensureMapCard.mockResolvedValue(mapCard);
+    el._areas = ["Area A", "Area B"];
+    const createLayersSpy = vi.spyOn(el, "_createLayers");
+    await el._applyHass(2);
     expect(createLayersSpy).not.toHaveBeenCalled();
     expect(innerMap.layers).toBeUndefined();
 
-    el._hass = { connection: {} };
-    await expect(
-      el._loadPolygon(`Area Missing Subscribe ${Date.now()}`),
-    ).rejects.toThrow(TypeError);
+    el._areas = [];
+    createLayersSpy.mockImplementation(async () => {
+      el._updateToken = 3;
+      return [{ id: 1 }];
+    });
+    el._updateToken = 2;
+    await el._applyHass(2);
+    expect(innerMap.layers).toBeUndefined();
+
+    createLayersSpy.mockResolvedValue([{ id: 2 }]);
+    el._updateToken = 4;
+    await el._applyHass(4);
+    expect(innerMap.layers).toEqual([{ id: 2 }]);
+    expect(el._areas).toEqual(["Area A", "Area B"]);
   });
 
-  test("set hass catches update errors and logs them", async () => {
+  test("hass setter catches errors from applyHass", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
     const el = new Card();
@@ -468,73 +307,13 @@ describe("oref-alert-map", () => {
     );
   });
 
-  test("createLayers skips null polygons and warns when layer creation fails", async () => {
+  test("define guard prevents duplicate registration", async () => {
     await ensureDefined();
-    const Card = customElements.get("oref-alert-map");
-    const el = new Card();
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    window.L = {
-      polygon: vi
-        .fn()
-        .mockImplementationOnce(() => {
-          throw new Error("bad layer");
-        })
-        .mockImplementationOnce(() => ({
-          id: 2,
-          bindTooltip: vi.fn(),
-        })),
-    };
-    vi.spyOn(el, "_loadPolygon")
-      .mockResolvedValueOnce([
-        [1, 1],
-        [1, 2],
-        [2, 2],
-        [2, 1],
-      ])
-      .mockResolvedValueOnce([
-        [3, 3],
-        [3, 4],
-        [4, 4],
-        [4, 3],
-      ])
-      .mockResolvedValueOnce(null);
-
-    const layers = await el._createLayers(["Area A", "Area B", "Area C"]);
-    expect(window.L.polygon).toHaveBeenCalledTimes(2);
-    expect(layers).toHaveLength(1);
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0][0]).toContain("Area A");
-  });
-
-  test("supports getCardSize/getGridOptions/setConfig and define guard", async () => {
-    await ensureDefined();
-    const Card = customElements.get("oref-alert-map");
-    const el = new Card();
-    const { mapCard } = createMapCardWithInnerMap();
-
-    expect(() => el.setConfig({ title: "ignored" })).not.toThrow();
-    expect(el.getCardSize()).toBe(7);
-    expect(el.getGridOptions()).toEqual({
-      columns: "full",
-      rows: 4,
-      min_columns: 6,
-      min_rows: 2,
-    });
-
-    el._mapCard = mapCard;
-    expect(el.getCardSize()).toBe(3);
-    expect(el.getGridOptions()).toEqual({
-      columns: 12,
-      rows: 6,
-      min_columns: 6,
-      min_rows: 3,
-    });
-
     vi.resetModules();
-    window.customCards = [];
     const defineSpy = vi.spyOn(customElements, "define");
+
     await import("../custom_components/oref_alert/cards/oref-alert-map.js");
+
     expect(defineSpy).not.toHaveBeenCalled();
   });
 });

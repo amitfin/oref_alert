@@ -98,6 +98,16 @@ def _mock_http(hass: HomeAssistant) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _disable_custom_cards_file_write() -> Generator[None]:
+    """Skip polygon card regeneration in tests to avoid file writes."""
+    with patch(
+        "custom_components.oref_alert.custom_cards._create_polygons",
+        new=AsyncMock(),
+    ):
+        yield
+
+
+@pytest.fixture(autouse=True)
 def _disable_asyncio_sleep() -> Generator[None]:
     """Disable sleep for all tests."""
     with patch("asyncio.sleep"):

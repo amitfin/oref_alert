@@ -1,5 +1,3 @@
-const polygonCache = new Map();
-
 class OrefAlertMap extends HTMLElement {
   constructor() {
     super();
@@ -8,7 +6,7 @@ class OrefAlertMap extends HTMLElement {
     this._mapCard = null;
     this._mapCardPromise = null;
     this._areas = [];
-    this._polygonLoads = new Map();
+    this._polygons = null;
     this._updateToken = 0;
   }
 
@@ -50,6 +48,9 @@ class OrefAlertMap extends HTMLElement {
     }
 
     const mapCard = await this._ensureMapCard();
+    if (!mapCard) {
+      return;
+    }
     mapCard.hass = this._hass;
 
     const areas = this._getOrefAreas();
@@ -61,17 +62,12 @@ class OrefAlertMap extends HTMLElement {
     }
 
     const layers = await this._createLayers(areas);
-    if (token !== this._updateToken) {
-      return;
-    }
-
     const map = this._map;
-    if (!map) {
-      return;
-    }
 
-    map.layers = layers;
-    this._areas = areas;
+    if (token === this._updateToken && map) {
+      map.layers = layers;
+      this._areas = areas;
+    }
   }
 
   _getOrefAreas() {
@@ -90,33 +86,19 @@ class OrefAlertMap extends HTMLElement {
   }
 
   async _createLayers(areas) {
+    const polygons = await this._getPolygons();
     const createPolygon = window.L?.polygon;
-    if (!createPolygon) {
+    if (!createPolygon || !polygons) {
       return [];
     }
 
-    const polygons = await Promise.all(
-      areas.map((area) => this._loadPolygon(area)),
-    );
-
     const layers = [];
-    for (const [index, area] of areas.entries()) {
-      const polygon = polygons[index];
-      if (!polygon) {
-        continue;
-      }
-      try {
-        const layer = createPolygon(polygon, {
-          color: "#f19292",
-        });
-        layer.bindTooltip(area);
-        layers.push(layer);
-      } catch (error) {
-        console.warn(
-          `oref-alert-map: failed creating layer for ${area}`,
-          error,
-        );
-      }
+    for (const area of areas) {
+      const layer = createPolygon(polygons[area], {
+        color: "#f19292",
+      });
+      layer.bindTooltip(area);
+      layers.push(layer);
     }
     return layers;
   }
@@ -127,8 +109,8 @@ class OrefAlertMap extends HTMLElement {
     }
     if (!this._mapCardPromise) {
       this._mapCardPromise = this._createMapCard().catch((error) => {
+        console.error("oref-alert-map failed to create map card", error);
         this._mapCardPromise = null;
-        throw error;
       });
     }
     return this._mapCardPromise;
@@ -149,7 +131,7 @@ class OrefAlertMap extends HTMLElement {
       mapCard.layout = this._layout;
     }
     this._mapCard = mapCard;
-    this.appendChild(mapCard);
+    this.replaceChildren(mapCard);
     return mapCard;
   }
 
@@ -157,45 +139,38 @@ class OrefAlertMap extends HTMLElement {
     return this._mapCard?.shadowRoot?.querySelector("ha-map") ?? null;
   }
 
-  async _loadPolygon(area) {
-    const connection = this._hass.connection;
-    const subscribeMessage = connection.subscribeMessage;
+  async _getPolygons() {
+    if (!this._polygons) {
+      const polygonsTag = "oref-alert-polygons";
+      const timeoutMs = 5000;
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(
+          () =>
+            reject(
+              new Error(
+                `Timed out waiting for custom element ${polygonsTag} after ${timeoutMs}ms`,
+              ),
+            ),
+          timeoutMs,
+        );
+      });
 
-    if (polygonCache.has(area)) {
-      return polygonCache.get(area);
-    }
-    if (this._polygonLoads.has(area)) {
-      return this._polygonLoads.get(area);
-    }
+      try {
+        await Promise.race([
+          customElements.whenDefined(polygonsTag),
+          timeoutPromise,
+        ]);
+      } catch (error) {
+        console.error("oref-alert-map failed to load polygons module", error);
+        return null;
+      }
 
-    const loadPromise = new Promise((resolve, reject) => {
-      let unsubscribePromise;
-      unsubscribePromise = subscribeMessage
-        .call(
-          connection,
-          (payload) => {
-            const polygon = payload?.result ?? null;
-            if (polygon) {
-              polygonCache.set(area, polygon);
-            }
-            resolve(polygon);
-            void unsubscribePromise.then((unsubscribe) => unsubscribe());
-          },
-          {
-            type: "render_template",
-            template: "{{ oref_polygon(area) }}",
-            variables: { area },
-          },
-        )
-        .catch(reject);
-    });
-
-    this._polygonLoads.set(area, loadPromise);
-    try {
-      return await loadPromise;
-    } finally {
-      this._polygonLoads.delete(area);
+      const card = document.createElement(polygonsTag);
+      if (card) {
+        this._polygons = card.polygons;
+      }
     }
+    return this._polygons;
   }
 }
 
