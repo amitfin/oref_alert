@@ -32,9 +32,13 @@ class OrefAlertPolygons extends HTMLElement {
   }
 }
 
-if (!customElements.get("oref-alert-polygons")) {
-  customElements.define("oref-alert-polygons", OrefAlertPolygons);
-}
+const elementTag = "oref-alert-polygons";
+customElements.define(elementTag, OrefAlertPolygons);
+customElements.whenDefined("home-assistant").then(() => {
+  if (!customElements.get(elementTag)) {
+    customElements.define(elementTag, OrefAlertPolygons);
+  }
+});
 """
 
 
@@ -67,5 +71,6 @@ async def publish_cards(hass: HomeAssistant) -> None:
         ),
         async_get_integration(hass, DOMAIN),
     )
+
     for file_name in (POLYGONS_CARD_FILE, MAP_CARD_FILE):
         add_extra_js_url(hass, f"{URL_BASE}/{file_name}?v={integration.version or 0}")

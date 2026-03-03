@@ -174,13 +174,18 @@ class OrefAlertMap extends HTMLElement {
   }
 }
 
-if (!customElements.get("oref-alert-map")) {
-  customElements.define("oref-alert-map", OrefAlertMap);
-}
+const elementTag = "oref-alert-map";
+customElements.define(elementTag, OrefAlertMap);
+customElements.whenDefined("home-assistant").then(() => {
+  if (!customElements.get(elementTag)) {
+    customElements.define(elementTag, OrefAlertMap);
+  }
+});
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "oref-alert-map",
+  type: elementTag,
   name: "Oref Alert",
   description: "Map card for Oref Alert integration.",
   documentationURL: "https://github.com/amitfin/oref_alert",
+  preview: true,
 });

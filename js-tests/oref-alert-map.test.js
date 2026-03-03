@@ -307,13 +307,43 @@ describe("oref-alert-map", () => {
     );
   });
 
-  test("define guard prevents duplicate registration", async () => {
+  test("re-import throws on duplicate custom element registration", async () => {
     await ensureDefined();
     vi.resetModules();
-    const defineSpy = vi.spyOn(customElements, "define");
+    await expect(
+      import("../custom_components/oref_alert/cards/oref-alert-map.js"),
+    ).rejects.toThrow();
+  });
+
+  test("home-assistant callback re-defines when tag is missing", async () => {
+    vi.resetModules();
+    delete window.customCards;
+    const defineSpy = vi
+      .spyOn(customElements, "define")
+      .mockImplementation(() => {});
+    vi.spyOn(customElements, "get").mockImplementation(() => undefined);
+    vi.spyOn(customElements, "whenDefined").mockResolvedValue(undefined);
 
     await import("../custom_components/oref_alert/cards/oref-alert-map.js");
+    await waitForTasks();
 
-    expect(defineSpy).not.toHaveBeenCalled();
+    expect(defineSpy).toHaveBeenCalledTimes(2);
+  });
+
+  test("home-assistant callback skips re-define when tag exists", async () => {
+    vi.resetModules();
+    delete window.customCards;
+    const defineSpy = vi
+      .spyOn(customElements, "define")
+      .mockImplementation(() => {});
+    vi.spyOn(customElements, "get").mockImplementation(
+      () => function MockCard() {},
+    );
+    vi.spyOn(customElements, "whenDefined").mockResolvedValue(undefined);
+
+    await import("../custom_components/oref_alert/cards/oref-alert-map.js");
+    await waitForTasks();
+
+    expect(defineSpy).toHaveBeenCalledTimes(1);
   });
 });
