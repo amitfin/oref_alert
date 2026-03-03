@@ -33,7 +33,7 @@ RECORDS_SCHEMA_URL: Final = f"{GITHUB_ROOT}/{RECORDS_SCHEMA_FILE_NAME}.py"
 RECORDS_SCHEMA: dict[RecordType, Schema] = {}
 RECORD_EXPIRATION_MINUTES: Final[dict[RecordType, int]] = {
     RecordType.PRE_ALERT: 20,
-    RecordType.ALERT: 720,
+    RecordType.ALERT: 180,
 }
 
 

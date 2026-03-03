@@ -32,7 +32,7 @@ from custom_components.oref_alert.const import (
 from custom_components.oref_alert.coordinator import OrefAlertCoordinatorData
 from custom_components.oref_alert.records_schema import RecordType
 
-from .utils import load_json_fixture, mock_urls
+from .utils import load_json_fixture, mock_urls, refresh_coordinator
 
 if TYPE_CHECKING:
     from freezegun.api import FrozenDateTimeFactory
@@ -342,6 +342,35 @@ async def test_status_state_expired_pre_alert(
         "alertDate": "2025-01-01 11:30:00",
         "title": "",
     }
+
+    await async_shutdown(hass, config_id)
+
+
+async def test_alert_expires_after_180_minutes_end_to_end(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test alert expiration through coordinator refresh and sensor state updates."""
+    freezer.move_to("2023-10-07 06:30:00+03:00")
+    mock_urls(aioclient_mock, None, "single_alert_history.json")
+    alert = load_json_fixture("single_alert_history.json", "website-history")[0]
+
+    config_id = await async_setup(hass)
+
+    status = hass.states.get(STATUS_ENTITY_ID)
+    assert status is not None
+    assert status.state == RecordType.ALERT
+    assert status.attributes[ATTR_RECORD] == alert
+
+    freezer.tick(180 * 60 + 1)
+    await refresh_coordinator(hass, config_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    status = hass.states.get(STATUS_ENTITY_ID)
+    assert status is not None
+    assert status.state == "ok"
+    assert status.attributes[ATTR_RECORD] is None
 
     await async_shutdown(hass, config_id)
 
