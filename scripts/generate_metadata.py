@@ -267,7 +267,10 @@ class OrefMetadata:
                     data["segmentId"]
                     and int(data["segmentId"]) == self._area_info[area]["segment"]
                 ):
-                    return area, data["polygonPointList"][0]
+                    return area, [
+                        [round(lat, 5), round(lon, 5)]
+                        for lat, lon in data["polygonPointList"][0]
+                    ]
         msg = f"Failed to fetch polygon for area {area}"
         raise RuntimeError(msg)
 
@@ -361,7 +364,9 @@ class OrefMetadata:
             ) as zip_file:
                 zip_file.writestr(
                     AREA_TO_POLYGON_OUTPUT,
-                    json.dumps(self._area_to_polygon, ensure_ascii=False),
+                    json.dumps(
+                        self._area_to_polygon, separators=(",", ":"), ensure_ascii=False
+                    ),
                 )
 
         with (self._root_directory / TEST_AREAS_FIXTURE).open(
