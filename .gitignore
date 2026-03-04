@@ -20,3 +20,6 @@ coverage.xml
 # Home Assistant configuration
 config/*
 !config/configuration.yaml
+
+# Generated JS polygons card
+custom_components/oref_alert/cards/oref-alert-polygons.js

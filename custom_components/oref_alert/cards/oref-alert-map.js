@@ -2,6 +2,7 @@ class OrefAlertMap extends HTMLElement {
   constructor() {
     super();
     this._hass = null;
+    this._config = null;
     this._layout = undefined;
     this._mapCard = null;
     this._mapCardPromise = null;
@@ -18,7 +19,9 @@ class OrefAlertMap extends HTMLElement {
     });
   }
 
-  setConfig(_) {}
+  setConfig(config) {
+    this._config = config;
+  }
 
   set layout(value) {
     this._layout = value;
@@ -52,6 +55,7 @@ class OrefAlertMap extends HTMLElement {
       return;
     }
     mapCard.hass = this._hass;
+    this._setTileLayer();
 
     const areas = this._getOrefAreas();
     if (
@@ -64,7 +68,7 @@ class OrefAlertMap extends HTMLElement {
     const layers = await this._createLayers(areas);
     const map = this._map;
 
-    if (token === this._updateToken && map) {
+    if (token === this._updateToken && map && layers.length === areas.length) {
       map.layers = layers;
       this._areas = areas;
     }
@@ -87,7 +91,7 @@ class OrefAlertMap extends HTMLElement {
 
   async _createLayers(areas) {
     const polygons = await this._getPolygons();
-    const createPolygon = window.L?.polygon;
+    const createPolygon = this._map?.Leaflet?.polygon;
     if (!createPolygon || !polygons) {
       return [];
     }
@@ -149,6 +153,39 @@ class OrefAlertMap extends HTMLElement {
       }
     }
     return this._polygons;
+  }
+
+  async _setTileLayer() {
+    if (!this._config?.tileLayer) {
+      return;
+    }
+
+    const map = this._map;
+    const leafletMap = map?.leafletMap;
+    const leaflet = map?.Leaflet;
+    if (!leafletMap || !leaflet) {
+      return;
+    }
+
+    let found = false;
+    leafletMap.eachLayer((layer) => {
+      if (layer instanceof leaflet.TileLayer) {
+        if (layer._url !== this._config.tileLayer.url) {
+          leafletMap.removeLayer(layer);
+        } else {
+          found = true;
+        }
+      }
+    });
+
+    if (!found) {
+      leaflet
+        .tileLayer(
+          this._config.tileLayer.url,
+          this._config.tileLayer.options || {},
+        )
+        .addTo(leafletMap);
+    }
   }
 }
 

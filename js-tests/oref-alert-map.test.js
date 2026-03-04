@@ -175,16 +175,18 @@ describe("oref-alert-map", () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
     const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+    el._mapCard = mapCard;
 
     vi.spyOn(el, "_getPolygons").mockResolvedValue({ "Area A": [[1, 1]] });
     await expect(el._createLayers(["Area A"])).resolves.toEqual([]);
 
-    window.L = { polygon: vi.fn() };
+    innerMap.Leaflet = { polygon: vi.fn() };
     el._getPolygons.mockResolvedValueOnce(null);
     await expect(el._createLayers(["Area A"])).resolves.toEqual([]);
 
     const created = [];
-    window.L.polygon = vi.fn().mockImplementation((points, opts) => {
+    innerMap.Leaflet.polygon = vi.fn().mockImplementation((points, opts) => {
       const layer = { points, opts, bindTooltip: vi.fn() };
       created.push(layer);
       return layer;
@@ -202,7 +204,7 @@ describe("oref-alert-map", () => {
 
     const layers = await el._createLayers(["Area A", "Area B"]);
     expect(layers).toHaveLength(2);
-    expect(window.L.polygon).toHaveBeenNthCalledWith(
+    expect(innerMap.Leaflet.polygon).toHaveBeenNthCalledWith(
       1,
       [
         [1, 1],
@@ -210,7 +212,7 @@ describe("oref-alert-map", () => {
       ],
       { color: "#f19292" },
     );
-    expect(window.L.polygon).toHaveBeenNthCalledWith(
+    expect(innerMap.Leaflet.polygon).toHaveBeenNthCalledWith(
       2,
       [
         [2, 1],
@@ -280,11 +282,91 @@ describe("oref-alert-map", () => {
     await el._applyHass(2);
     expect(innerMap.layers).toBeUndefined();
 
-    createLayersSpy.mockResolvedValue([{ id: 2 }]);
+    createLayersSpy.mockResolvedValue([{ id: 2 }, { id: 3 }]);
     el._updateToken = 4;
     await el._applyHass(4);
-    expect(innerMap.layers).toEqual([{ id: 2 }]);
+    expect(innerMap.layers).toEqual([{ id: 2 }, { id: 3 }]);
     expect(el._areas).toEqual(["Area A", "Area B"]);
+  });
+
+  test("setTileLayer updates tile layers and honors options defaults", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+    el._mapCard = mapCard;
+
+    class TileLayer {}
+    const matchingLayer = new TileLayer();
+    matchingLayer._url = "https://tiles.example/{z}/{x}/{y}.png";
+    const oldLayer = new TileLayer();
+    oldLayer._url = "https://old.example/{z}/{x}/{y}.png";
+    const nonTileLayer = {};
+    const removeLayer = vi.fn();
+    const eachLayer = vi.fn((cb) => {
+      cb(nonTileLayer);
+      cb(oldLayer);
+      cb(matchingLayer);
+    });
+    const leafletMap = { eachLayer, removeLayer };
+    const addTo = vi.fn();
+    const tileLayerFactory = vi.fn(() => ({ addTo }));
+    innerMap.leafletMap = leafletMap;
+    innerMap.Leaflet = {
+      TileLayer,
+      tileLayer: tileLayerFactory,
+    };
+
+    el._config = {
+      tileLayer: {
+        url: "https://tiles.example/{z}/{x}/{y}.png",
+        options: { maxZoom: 12 },
+      },
+    };
+    await el._setTileLayer();
+    expect(removeLayer).toHaveBeenCalledTimes(1);
+    expect(removeLayer).toHaveBeenCalledWith(oldLayer);
+    expect(tileLayerFactory).not.toHaveBeenCalled();
+    expect(addTo).not.toHaveBeenCalled();
+
+    const onlyOldLayerMap = {
+      eachLayer: (cb) => cb(oldLayer),
+      removeLayer: vi.fn(),
+    };
+    innerMap.leafletMap = onlyOldLayerMap;
+    await el._setTileLayer();
+    expect(tileLayerFactory).toHaveBeenCalledWith(
+      "https://tiles.example/{z}/{x}/{y}.png",
+      { maxZoom: 12 },
+    );
+    expect(addTo).toHaveBeenCalledWith(onlyOldLayerMap);
+
+    el._config = {
+      tileLayer: {
+        url: "https://tiles2.example/{z}/{x}/{y}.png",
+      },
+    };
+    await el._setTileLayer();
+    expect(tileLayerFactory).toHaveBeenLastCalledWith(
+      "https://tiles2.example/{z}/{x}/{y}.png",
+      {},
+    );
+  });
+
+  test("setTileLayer no-ops when map prerequisites are missing", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+
+    el._config = {
+      tileLayer: { url: "https://tiles.example/{z}/{x}/{y}.png" },
+    };
+    await expect(el._setTileLayer()).resolves.toBeUndefined();
+
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+    el._mapCard = mapCard;
+    innerMap.leafletMap = { eachLayer: vi.fn(), removeLayer: vi.fn() };
+    await expect(el._setTileLayer()).resolves.toBeUndefined();
   });
 
   test("hass setter catches errors from applyHass", async () => {
