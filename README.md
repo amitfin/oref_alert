@@ -47,7 +47,16 @@ The integration adds a map card for displaying all active alerts. It's recommend
     - type: custom:oref-alert-map
 ```
 
-The card has no additional configuration parameters.
+Available map card configuration:
+
+```yaml
+- type: custom:oref-alert-map
+  auto_fit: true
+  show_home: false
+```
+
+- `auto_fit` (optional, default: `true`): automatically fit the map view to active alerts.
+- `show_home` (optional, default: `false`): show `zone.home` on the map.
 
 <img width="619" height="482" alt="image" src="https://github.com/user-attachments/assets/551c0577-ecee-4fef-8c85-3bc90e60af9f" />
 

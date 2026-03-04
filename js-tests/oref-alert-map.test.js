@@ -369,6 +369,110 @@ describe("oref-alert-map", () => {
     await expect(el._setTileLayer()).resolves.toBeUndefined();
   });
 
+  test("buildMapConfig uses defaults and show_home entity", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+
+    el._config = null;
+    expect(el._buildMapConfig()).toEqual({
+      type: "map",
+      geo_location_sources: ["dummy"],
+      entities: [],
+      auto_fit: true,
+      fit_zones: true,
+    });
+
+    el._config = { auto_fit: false, show_home: true };
+    expect(el._buildMapConfig()).toEqual({
+      type: "map",
+      geo_location_sources: ["dummy"],
+      entities: ["zone.home"],
+      auto_fit: false,
+      fit_zones: true,
+    });
+  });
+
+  test("setConfig updates map config only when built config changes", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const setConfigSpy = vi.fn();
+    el._mapCard = { setConfig: setConfigSpy };
+
+    el.setConfig({ auto_fit: true, show_home: false });
+    expect(setConfigSpy).not.toHaveBeenCalled();
+
+    el.setConfig({ auto_fit: false, show_home: false });
+    expect(setConfigSpy).toHaveBeenCalledTimes(1);
+    expect(setConfigSpy).toHaveBeenLastCalledWith({
+      type: "map",
+      geo_location_sources: ["dummy"],
+      entities: [],
+      auto_fit: false,
+      fit_zones: true,
+    });
+
+    el.setConfig({ auto_fit: false, show_home: false });
+    expect(setConfigSpy).toHaveBeenCalledTimes(1);
+
+    el.setConfig({ auto_fit: false, show_home: true });
+    expect(setConfigSpy).toHaveBeenCalledTimes(2);
+    expect(setConfigSpy).toHaveBeenLastCalledWith({
+      type: "map",
+      geo_location_sources: ["dummy"],
+      entities: ["zone.home"],
+      auto_fit: false,
+      fit_zones: true,
+    });
+  });
+
+  test("getConfigForm labels support english and hebrew", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const form = Card.getConfigForm();
+    const previousLang = document.documentElement.lang;
+
+    const homeAssistant = document.createElement("home-assistant");
+    homeAssistant.hass = { language: "he-IL" };
+    document.body.append(homeAssistant);
+    expect(form.computeLabel({ name: "auto_fit" })).toBe(
+      "התאם את המפה אוטומטית להתרעות פעילות",
+    );
+    expect(form.computeLabel({ name: "show_home" })).toBe("הצג בית");
+    homeAssistant.remove();
+
+    document.documentElement.lang = "en-US";
+    expect(form.computeLabel({ name: "auto_fit" })).toBe(
+      "Auto fit map to active alerts",
+    );
+    expect(form.computeLabel({ name: "show_home" })).toBe("Show home");
+    expect(form.computeLabel({ name: "unknown" })).toBeUndefined();
+
+    const homeAssistantNoHass = document.createElement("home-assistant");
+    document.body.append(homeAssistantNoHass);
+    document.documentElement.lang = "";
+    const navigatorLanguageGet = vi
+      .spyOn(window.navigator, "language", "get")
+      .mockReturnValue("en-US");
+    expect(form.computeLabel({ name: "show_home" })).toBe("Show home");
+
+    navigatorLanguageGet.mockReturnValue("");
+    expect(form.computeLabel({ name: "show_home" })).toBe("Show home");
+    homeAssistantNoHass.remove();
+
+    document.documentElement.lang = previousLang;
+  });
+
+  test("stub config includes defaults", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    expect(Card.getStubConfig()).toEqual({
+      auto_fit: true,
+      show_home: false,
+    });
+  });
+
   test("hass setter catches errors from applyHass", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");

@@ -1,3 +1,20 @@
+function _getUiLanguage() {
+  return (
+    document.querySelector("home-assistant")?.hass?.language ||
+    document.documentElement?.lang ||
+    navigator.language ||
+    "en"
+  );
+}
+
+function _isHebrewLanguage() {
+  return _getUiLanguage().toLowerCase().startsWith("he");
+}
+
+function _t(english, hebrew) {
+  return _isHebrewLanguage() ? hebrew : english;
+}
+
 class OrefAlertMap extends HTMLElement {
   constructor() {
     super();
@@ -20,7 +37,15 @@ class OrefAlertMap extends HTMLElement {
   }
 
   setConfig(config) {
+    const previousMapConfig = this._buildMapConfig();
     this._config = config;
+    const newMapConfig = this._buildMapConfig();
+    if (
+      this._mapCard &&
+      JSON.stringify(previousMapConfig) !== JSON.stringify(newMapConfig)
+    ) {
+      this._mapCard.setConfig(newMapConfig);
+    }
   }
 
   set layout(value) {
@@ -122,12 +147,7 @@ class OrefAlertMap extends HTMLElement {
 
   async _createMapCard() {
     const helpers = await window.loadCardHelpers();
-    const mapCard = await helpers.createCardElement({
-      type: "map",
-      geo_location_sources: ["dummy"],
-      auto_fit: true,
-      fit_zones: true,
-    });
+    const mapCard = await helpers.createCardElement(this._buildMapConfig());
     if (this._hass) {
       mapCard.hass = this._hass;
     }
@@ -138,6 +158,16 @@ class OrefAlertMap extends HTMLElement {
     this._setTileLayer();
     this.replaceChildren(mapCard);
     return mapCard;
+  }
+
+  _buildMapConfig() {
+    return {
+      type: "map",
+      geo_location_sources: ["dummy"],
+      entities: this._config?.show_home ? ["zone.home"] : [],
+      auto_fit: this._config?.auto_fit ?? true,
+      fit_zones: true,
+    };
   }
 
   get _map() {
@@ -188,6 +218,34 @@ class OrefAlertMap extends HTMLElement {
         .addTo(leafletMap);
     }
   }
+
+  static getConfigForm() {
+    return {
+      schema: [
+        { name: "auto_fit", selector: { boolean: {} } },
+        { name: "show_home", selector: { boolean: {} } },
+      ],
+      computeLabel: (schema) => {
+        if (schema.name === "auto_fit") {
+          return _t(
+            "Auto fit map to active alerts",
+            "התאם את המפה אוטומטית להתרעות פעילות",
+          );
+        }
+        if (schema.name === "show_home") {
+          return _t("Show home", "הצג בית");
+        }
+        return undefined;
+      },
+    };
+  }
+
+  static getStubConfig() {
+    return {
+      auto_fit: true,
+      show_home: false,
+    };
+  }
 }
 
 const elementTag = "oref-alert-map";
@@ -200,8 +258,12 @@ customElements.whenDefined("home-assistant").then(() => {
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: elementTag,
-  name: "Oref Alert",
-  description: "Map card for Oref Alert integration.",
+  name: _t("Oref Alert", "התרעות פיקוד העורף"),
+  description: _t(
+    "Map card for Oref Alert integration.",
+    "כרטיס מפה לאינטגרציית פיקוד העורף.",
+  ),
   documentationURL: "https://github.com/amitfin/oref_alert",
   preview: true,
+  configurable: true,
 });
