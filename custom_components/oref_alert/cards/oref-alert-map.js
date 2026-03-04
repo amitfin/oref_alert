@@ -135,6 +135,7 @@ class OrefAlertMap extends HTMLElement {
       mapCard.layout = this._layout;
     }
     this._mapCard = mapCard;
+    this._setTileLayer();
     this.replaceChildren(mapCard);
     return mapCard;
   }
