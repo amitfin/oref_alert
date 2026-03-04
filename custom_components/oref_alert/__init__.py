@@ -10,7 +10,12 @@ import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from attr import dataclass
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, Platform
+from homeassistant.const import (
+    CONF_ENTITY_ID,
+    CONF_NAME,
+    EVENT_HOMEASSISTANT_STOP,
+    Platform,
+)
 from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 from homeassistant.helpers import entity_registry, selector
 from homeassistant.helpers import issue_registry as ir
@@ -42,6 +47,7 @@ if TYPE_CHECKING:
 
 from homeassistant.core import (
     SupportsResponse,
+    callback,
 )
 
 from .config_flow import AREAS_CONFIG
@@ -145,6 +151,7 @@ class OrefAlertRuntimeData:
         self.bus_events.stop()
         self.classifier.stop()
         await asyncio.gather(
+            self.coordinator.async_save(),
             self.pushy.stop(),
             self.tzevaadom.stop(),
             return_exceptions=True,
@@ -335,6 +342,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
         OrefAlertBusEventManager(hass, entry),
     )
 
+    @callback
+    def _handle_shutdown(*_: object) -> None:
+        """Persist coordinator state on Home Assistant shutdown."""
+        hass.async_create_task(entry.runtime_data.coordinator.async_save())
+
+    entry.async_on_unload(
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _handle_shutdown)
+    )
+
     entry.runtime_data.bus_events.start()
 
     try:
@@ -342,6 +358,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
 
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+        await entry.runtime_data.coordinator.async_restore()
         await entry.runtime_data.coordinator.async_config_entry_first_refresh()
 
         await asyncio.gather(

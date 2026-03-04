@@ -5,6 +5,7 @@ from datetime import timedelta
 from http import HTTPStatus
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
+from unittest.mock import AsyncMock
 
 import homeassistant.util.dt as dt_util
 import pytest
@@ -24,6 +25,7 @@ from custom_components.oref_alert.classifier import Classifier
 from custom_components.oref_alert.const import (
     AREA_FIELD,
     CONF_AREA,
+    CONF_AREAS,
     CONF_DURATION,
     DOMAIN,
     IST,
@@ -73,6 +75,115 @@ async def test_init(hass: HomeAssistant) -> None:
     """Test initializing the coordinator."""
     await create_coordinator(hass).async_config_entry_first_refresh()
     # No pending refresh since there are no listeners
+
+
+async def test_save_and_restore_areas(hass: HomeAssistant) -> None:
+    """Test persisting raw records and restoring metadata."""
+    coordinator = create_coordinator(hass)
+    stored: dict[str, dict[str, dict[str, str | int]]] = {}
+
+    def store_data(data: dict[str, dict[str, dict[str, str | int]]]) -> None:
+        stored.update(data)
+
+    coordinator._store.async_save = AsyncMock(  # noqa: SLF001
+        side_effect=store_data
+    )
+    coordinator._store.async_load = AsyncMock(return_value=stored)  # noqa: SLF001
+    coordinator._first_update = False  # noqa: SLF001
+    record = Record(
+        alertDate=dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
+        title="ירי רקטות וטילים",
+        data="אילת",
+        category=1,
+        channel="website-history",
+    )
+    coordinator._areas = {  # noqa: SLF001
+        "אילת": coordinator._config_entry.runtime_data.classifier.add_metadata(  # noqa: SLF001
+            record
+        )
+    }
+    await coordinator.async_save()
+
+    coordinator._areas = {}  # noqa: SLF001
+    await coordinator.async_restore()
+
+    restored = coordinator._areas.get("אילת")  # noqa: SLF001
+    assert restored is not None
+    assert restored.raw.data == "אילת"
+    assert restored.raw.category == 1
+    assert restored.raw.title == "ירי רקטות וטילים"
+
+
+async def test_restore_skips_expired_records(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test restore filters out expired records."""
+    coordinator = create_coordinator(hass)
+    stored: dict[str, dict[str, dict[str, str | int]]] = {}
+
+    def store_data(data: dict[str, dict[str, dict[str, str | int]]]) -> None:
+        stored.update(data)
+
+    coordinator._store.async_save = AsyncMock(  # noqa: SLF001
+        side_effect=store_data
+    )
+    coordinator._store.async_load = AsyncMock(return_value=stored)  # noqa: SLF001
+    coordinator._first_update = False  # noqa: SLF001
+    old_record = Record(
+        alertDate="2020-01-01 12:00:00",
+        title="ירי רקטות וטילים",
+        data="אילת",
+        category=1,
+        channel="website-history",
+    )
+    coordinator._areas = {  # noqa: SLF001
+        "אילת": coordinator._config_entry.runtime_data.classifier.add_metadata(  # noqa: SLF001
+            old_record
+        )
+    }
+    await coordinator.async_save()
+
+    coordinator._areas = {}  # noqa: SLF001
+    await coordinator.async_restore()
+    assert "אילת" in coordinator._areas  # noqa: SLF001
+
+    monkeypatch.setattr(
+        coordinator,
+        "_async_fetch_url",
+        AsyncMock(return_value=(None, False)),
+    )
+    await coordinator._async_update_data()  # noqa: SLF001
+    assert "אילת" not in coordinator._areas  # noqa: SLF001
+
+
+async def test_restore_ignores_invalid_stored_record(hass: HomeAssistant) -> None:
+    """Test invalid restored records are ignored without raising."""
+    coordinator = create_coordinator(hass)
+    coordinator._store.async_load = AsyncMock(  # noqa: SLF001
+        return_value={
+            CONF_AREAS: {
+                "אילת": {
+                    "alertDate": "bad-date",
+                    "title": "ירי רקטות וטילים",
+                    "data": "אילת",
+                    "category": 1,
+                    "channel": "website-history",
+                },
+                "קריית שמונה": {
+                    "alertDate": "2025-01-01 12:00:00",
+                    "title": "ירי רקטות וטילים",
+                    "data": "קריית שמונה",
+                    "category": 1,
+                    "channel": "website-history",
+                },
+            }
+        }
+    )
+
+    await coordinator.async_restore()
+
+    assert "אילת" not in coordinator._areas  # noqa: SLF001
+    assert "קריית שמונה" in coordinator._areas  # noqa: SLF001
 
 
 async def test_updates(

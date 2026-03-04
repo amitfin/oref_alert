@@ -15,6 +15,7 @@ import homeassistant.util.dt as dt_util
 from homeassistant.core import callback
 from homeassistant.helpers import event as event_helper
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
@@ -29,6 +30,7 @@ from .const import (
     AREA_FIELD,
     CATEGORY_FIELD,
     CONF_AREA,
+    CONF_AREAS,
     CONF_DURATION,
     DATE_FIELD,
     DOMAIN,
@@ -62,6 +64,7 @@ OREF_HEADERS = {
 REQUEST_RETRIES = 3
 REQUEST_THROTTLING = 0.8
 DEDUP_WINDOW_SECONDS = 60
+STORAGE_VERSION = 1
 
 
 @dataclass(frozen=True)
@@ -92,8 +95,39 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         self._channels: list[TTLDeque[RecordAndMetadata]] = channels
         self._channels_change: list[datetime | None] = []
         self._synthetic_alerts: list[tuple[datetime, RecordAndMetadata]] = []
+        self._first_update = True
         self._areas: dict[str, RecordAndMetadata] = {}
+        self._store = Store[dict[str, Any]](hass, STORAGE_VERSION, DOMAIN)
         self.data = OrefAlertCoordinatorData(MappingProxyType({}))
+
+    async def async_restore(self) -> None:
+        """Restore cached areas from persistent storage."""
+        stored = await self._store.async_load()
+        if stored:
+            for area, raw_record in stored.get(CONF_AREAS, {}).items():
+                try:
+                    self._areas[area] = (
+                        self._config_entry.runtime_data.classifier.add_metadata(
+                            Record(**raw_record)
+                        )
+                    )
+                except Exception:  # noqa: BLE001
+                    LOGGER.debug(
+                        "Skipping invalid restored area '%s'",
+                        area,
+                        exc_info=True,
+                    )
+
+    async def async_save(self) -> None:
+        """Persist current areas to storage as raw records."""
+        if not self._first_update:
+            await self._store.async_save(
+                {
+                    CONF_AREAS: {
+                        area: record.raw_dict for area, record in self._areas.items()
+                    }
+                }
+            )
 
     def get_records(
         self,
@@ -134,7 +168,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         return record.raw_dict
 
     async def _async_update_data(self) -> OrefAlertCoordinatorData:
-        """Request the data from Oref servers."""
+        """Request the data from Oref channels."""
         # Remove expired records.
         now = dt_util.now()
         self._areas = {
@@ -203,6 +237,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                         self._areas[area] = record
 
             self._channels_change = channels_change
+            self._first_update = False
 
         return OrefAlertCoordinatorData(MappingProxyType(self._areas))
 
@@ -362,8 +397,10 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             )
             result.append(record_meta)
 
-            # Post initial fetch (areas is not empty), take only recent records.
-            if self._areas and (now - record_meta.time) > timedelta(minutes=5):
+            # Post initial fetch, take only recent records.
+            if not self._first_update and (now - record_meta.time) > timedelta(
+                minutes=5
+            ):
                 break
         return result
 

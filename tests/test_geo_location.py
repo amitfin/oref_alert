@@ -149,11 +149,11 @@ async def test_add_remove(
     await async_shutdown(hass, config_id)
 
 
-async def test_clean_start(
+async def test_restore(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
-    """Test cleaning old entities."""
+    """Test restore previous entities."""
     mock_urls(aioclient_mock, "single_alert_real_time.json", None)
     config_id = await async_setup(hass)
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 1
@@ -164,7 +164,7 @@ async def test_clean_start(
     await hass.async_block_till_done(wait_background_tasks=True)
     assert await hass.config_entries.async_set_disabled_by(config_id, None)
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 0
+    assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 1
     await async_shutdown(hass, config_id)
 
 
