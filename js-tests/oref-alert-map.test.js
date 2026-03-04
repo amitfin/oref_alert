@@ -127,7 +127,7 @@ describe("oref-alert-map", () => {
     expect(createCardElement).toHaveBeenCalledTimes(2);
   });
 
-  test("getPolygons caches after success and returns null after timeout", async () => {
+  test("getPolygons caches after success and handles unresolved/missing polygons", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
 
@@ -149,21 +149,18 @@ describe("oref-alert-map", () => {
     await expect(el._getPolygons()).resolves.toEqual({ "Area A": [[1, 1]] });
     expect(createSpy).not.toHaveBeenCalled();
 
-    const timeoutEl = new Card();
-    vi.useFakeTimers();
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const waitingEl = new Card();
     const whenDefinedSpy = vi
       .spyOn(customElements, "whenDefined")
       .mockImplementation(() => new Promise(() => {}));
 
-    const timed = timeoutEl._getPolygons();
-    await vi.advanceTimersByTimeAsync(5000);
-    await expect(timed).resolves.toBeNull();
+    let settled = false;
+    void waitingEl._getPolygons().then(() => {
+      settled = true;
+    });
+    await waitForTasks();
+    expect(settled).toBe(false);
     expect(whenDefinedSpy).toHaveBeenCalledWith("oref-alert-polygons");
-    expect(errorSpy).toHaveBeenCalledWith(
-      "oref-alert-map failed to load polygons module",
-      expect.any(Error),
-    );
 
     const nullCreateEl = new Card();
     whenDefinedSpy.mockResolvedValue(undefined);

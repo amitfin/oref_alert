@@ -142,29 +142,7 @@ class OrefAlertMap extends HTMLElement {
   async _getPolygons() {
     if (!this._polygons) {
       const polygonsTag = "oref-alert-polygons";
-      const timeoutMs = 5000;
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(
-          () =>
-            reject(
-              new Error(
-                `Timed out waiting for custom element ${polygonsTag} after ${timeoutMs}ms`,
-              ),
-            ),
-          timeoutMs,
-        );
-      });
-
-      try {
-        await Promise.race([
-          customElements.whenDefined(polygonsTag),
-          timeoutPromise,
-        ]);
-      } catch (error) {
-        console.error("oref-alert-map failed to load polygons module", error);
-        return null;
-      }
-
+      await customElements.whenDefined(polygonsTag);
       const card = document.createElement(polygonsTag);
       if (card) {
         this._polygons = card.polygons;
