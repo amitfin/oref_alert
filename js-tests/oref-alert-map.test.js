@@ -490,6 +490,121 @@ describe("oref-alert-map", () => {
     );
   });
 
+  test("empty areas refresh retries every second until areas are set", async () => {
+    await ensureDefined();
+    vi.useFakeTimers();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    document.body.append(el);
+    const applyHassSpy = vi.spyOn(el, "_applyHass").mockResolvedValue();
+
+    el._checkRefresh();
+    expect(el._refreshId).not.toBeNull();
+
+    vi.advanceTimersByTime(1000);
+    expect(applyHassSpy).toHaveBeenCalledTimes(1);
+    expect(applyHassSpy).toHaveBeenCalledWith(1);
+
+    el._areas = ["Area A"];
+    vi.advanceTimersByTime(1000);
+    expect(applyHassSpy).toHaveBeenCalledTimes(1);
+    expect(el._refreshId).toBeNull();
+  });
+
+  test("empty areas refresh is cleared on disconnect", async () => {
+    await ensureDefined();
+    vi.useFakeTimers();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    document.body.append(el);
+    const applyHassSpy = vi.spyOn(el, "_applyHass").mockResolvedValue();
+
+    el._checkRefresh();
+    expect(el._refreshId).not.toBeNull();
+
+    el.disconnectedCallback();
+    expect(el._refreshId).toBeNull();
+
+    vi.advanceTimersByTime(1000);
+    expect(applyHassSpy).not.toHaveBeenCalled();
+  });
+
+  test("empty areas refresh logs retry errors", async () => {
+    await ensureDefined();
+    vi.useFakeTimers();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    document.body.append(el);
+    const error = new Error("retry failed");
+    vi.spyOn(el, "_applyHass").mockRejectedValue(error);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    el._checkRefresh();
+    vi.advanceTimersByTime(1000);
+    await Promise.resolve();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      "oref-alert-map refresh retry failed",
+      error,
+    );
+  });
+
+  test("refresh resumes if areas become empty again within first minute", async () => {
+    await ensureDefined();
+    vi.useFakeTimers();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    document.body.append(el);
+    const applyHassSpy = vi.spyOn(el, "_applyHass").mockResolvedValue();
+
+    el._checkRefresh();
+    expect(el._refreshId).not.toBeNull();
+
+    el._areas = ["Area A"];
+    el._checkRefresh();
+    expect(el._refreshId).toBeNull();
+
+    el._areas = [];
+    el._checkRefresh();
+    expect(el._refreshId).not.toBeNull();
+
+    vi.advanceTimersByTime(1000);
+    expect(applyHassSpy).toHaveBeenCalledTimes(1);
+  });
+
+  test("bootstrap refresh stops after one minute when areas stay empty", async () => {
+    await ensureDefined();
+    vi.useFakeTimers();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    document.body.append(el);
+    const applyHassSpy = vi.spyOn(el, "_applyHass").mockResolvedValue();
+
+    el._checkRefresh();
+    expect(el._refreshId).not.toBeNull();
+
+    vi.advanceTimersByTime(60_000);
+    expect(el._refreshId).toBeNull();
+    const callsAtStop = applyHassSpy.mock.calls.length;
+
+    vi.advanceTimersByTime(5_000);
+    expect(applyHassSpy).toHaveBeenCalledTimes(callsAtStop);
+    expect(el._refreshId).toBeNull();
+  });
+
+  test("checkRefresh stops immediately once bootstrap deadline has passed", async () => {
+    await ensureDefined();
+    vi.useFakeTimers();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    document.body.append(el);
+
+    el._refreshDeadline = Date.now() - 1;
+    el._checkRefresh();
+
+    expect(el._refreshId).toBeNull();
+  });
+
   test("re-import throws on duplicate custom element registration", async () => {
     await ensureDefined();
     vi.resetModules();

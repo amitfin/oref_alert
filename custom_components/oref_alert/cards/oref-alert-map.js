@@ -26,12 +26,13 @@ class OrefAlertMap extends HTMLElement {
     this._areas = [];
     this._polygons = null;
     this._updateToken = 0;
+    this._refreshId = null;
+    this._refreshDeadline = Date.now() + 60_000;
   }
 
   set hass(hass) {
     this._hass = hass;
-    const token = ++this._updateToken;
-    void this._applyHass(token).catch((error) => {
+    void this._applyHass(++this._updateToken).catch((error) => {
       console.error("oref-alert-map update failed", error);
     });
   }
@@ -71,6 +72,8 @@ class OrefAlertMap extends HTMLElement {
   }
 
   async _applyHass(token) {
+    this._checkRefresh();
+
     if (token !== this._updateToken) {
       return;
     }
@@ -96,7 +99,12 @@ class OrefAlertMap extends HTMLElement {
     if (token === this._updateToken && map && layers.length === areas.length) {
       map.layers = layers;
       this._areas = areas;
+      this._checkRefresh();
     }
+  }
+
+  disconnectedCallback() {
+    this._stopRefresh();
   }
 
   _getOrefAreas() {
@@ -216,6 +224,46 @@ class OrefAlertMap extends HTMLElement {
           this._config.tileLayer.options || {},
         )
         .addTo(leafletMap);
+    }
+  }
+
+  _checkRefresh() {
+    if (this._areas.length > 0) {
+      this._stopRefresh();
+      return;
+    }
+
+    if (Date.now() >= this._refreshDeadline) {
+      this._stopRefresh();
+      return;
+    }
+
+    this._startRefresh();
+  }
+
+  _startRefresh() {
+    if (!this._refreshId) {
+      this._refreshId = window.setInterval(() => {
+        if (
+          !this.isConnected ||
+          this._areas.length > 0 ||
+          Date.now() >= this._refreshDeadline
+        ) {
+          this._stopRefresh();
+          return;
+        }
+        const token = ++this._updateToken;
+        void this._applyHass(token).catch((error) => {
+          console.error("oref-alert-map refresh retry failed", error);
+        });
+      }, 1000);
+    }
+  }
+
+  _stopRefresh() {
+    if (this._refreshId) {
+      window.clearInterval(this._refreshId);
+      this._refreshId = null;
     }
   }
 
