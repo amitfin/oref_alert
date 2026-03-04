@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
 import aiofiles
+import homeassistant.util.dt as dt_util
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.loader import async_get_integration
@@ -72,5 +73,10 @@ async def publish_cards(hass: HomeAssistant) -> None:
         async_get_integration(hass, DOMAIN),
     )
 
+    if integration.version and integration.version != "1.0.0":
+        version = str(integration.version)
+    else:
+        version = str(int(dt_util.now().timestamp()))
+
     for file_name in (POLYGONS_CARD_FILE, MAP_CARD_FILE):
-        add_extra_js_url(hass, f"{URL_BASE}/{file_name}?v={integration.version or 0}")
+        add_extra_js_url(hass, f"{URL_BASE}/{file_name}?v={version}")
