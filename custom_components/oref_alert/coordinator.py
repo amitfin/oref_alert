@@ -123,10 +123,13 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
     async def async_save(self) -> None:
         """Persist current areas to storage as raw records."""
         if not self._first_update:
+            cutoff = dt_util.now() - timedelta(days=1)
             await self._store.async_save(
                 {
                     CONF_AREAS: {
-                        area: record.raw_dict for area, record in self._areas.items()
+                        area: record.raw_dict
+                        for area, record in self._areas.items()
+                        if record.time > cutoff
                     }
                 }
             )

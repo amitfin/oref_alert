@@ -115,10 +115,53 @@ async def test_save_and_restore_areas(hass: HomeAssistant) -> None:
     assert restored.raw.title == "ירי רקטות וטילים"
 
 
-async def test_restore_skips_expired_records(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+async def test_save_persists_only_records_newer_than_cutoff(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
 ) -> None:
-    """Test restore filters out expired records."""
+    """Test save filters out records older than the 1-day cutoff."""
+    coordinator = create_coordinator(hass)
+    stored: dict[str, dict[str, dict[str, str | int]]] = {}
+
+    def store_data(data: dict[str, dict[str, dict[str, str | int]]]) -> None:
+        stored.update(data)
+
+    coordinator._store.async_save = AsyncMock(  # noqa: SLF001
+        side_effect=store_data
+    )
+    coordinator._first_update = False  # noqa: SLF001
+    freezer.move_to("2026-01-02 12:00:00+00:00")
+    fresh_record = Record(
+        alertDate=(dt_util.now(IST) - timedelta(hours=12)).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        ),
+        title="ירי רקטות וטילים",
+        data="אילת",
+        category=1,
+        channel="website-history",
+    )
+    old_record = Record(
+        alertDate=(dt_util.now(IST) - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S"),
+        title="ירי רקטות וטילים",
+        data="קריית שמונה",
+        category=1,
+        channel="website-history",
+    )
+    coordinator._areas = {  # noqa: SLF001
+        "אילת": coordinator._config_entry.runtime_data.classifier.add_metadata(  # noqa: SLF001
+            fresh_record
+        ),
+        "קריית שמונה": coordinator._config_entry.runtime_data.classifier.add_metadata(  # noqa: SLF001
+            old_record
+        ),
+    }
+    await coordinator.async_save()
+
+    assert "אילת" in stored[CONF_AREAS]
+    assert "קריית שמונה" not in stored[CONF_AREAS]
+
+
+async def test_restore_skips_expired_records(hass: HomeAssistant) -> None:
+    """Test old records filtered at save time are not restored."""
     coordinator = create_coordinator(hass)
     stored: dict[str, dict[str, dict[str, str | int]]] = {}
 
@@ -146,14 +189,6 @@ async def test_restore_skips_expired_records(
 
     coordinator._areas = {}  # noqa: SLF001
     await coordinator.async_restore()
-    assert "אילת" in coordinator._areas  # noqa: SLF001
-
-    monkeypatch.setattr(
-        coordinator,
-        "_async_fetch_url",
-        AsyncMock(return_value=(None, False)),
-    )
-    await coordinator._async_update_data()  # noqa: SLF001
     assert "אילת" not in coordinator._areas  # noqa: SLF001
 
 
