@@ -1,5 +1,6 @@
 """The tests for the coordinator file."""
 
+import json
 from dataclasses import asdict
 from datetime import timedelta
 from http import HTTPStatus
@@ -36,6 +37,7 @@ from custom_components.oref_alert.const import (
 )
 from custom_components.oref_alert.coordinator import (
     OREF_ALERTS_URL,
+    OREF_HISTORY2_URL,
     OREF_HISTORY_URL,
     OrefAlertCoordinatorUpdater,
     OrefAlertDataUpdateCoordinator,
@@ -366,6 +368,46 @@ async def test_real_time_in_history(
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     assert len(coordinator.get_records(None, None, None)) == 1
+
+
+async def test_not_modified_real_time_does_not_override_history_update(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test stale real-time payload does not override newer history updates."""
+    freezer.move_to("2023-10-07 06:30:00+03:00")
+    mock_urls(aioclient_mock, "single_alert_real_time.json", None)
+    coordinator = create_coordinator(hass)
+    await coordinator.async_config_entry_first_refresh()
+    assert coordinator.get_records(None, None, None)[0]["category"] == 1
+
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(OREF_ALERTS_URL, status=HTTPStatus.NOT_MODIFIED)
+    aioclient_mock.get(
+        OREF_HISTORY_URL,
+        text=json.dumps(
+            [
+                {
+                    "alertDate": "2023-10-07 06:30:30",
+                    "title": "ניתן לצאת מהמרחב המוגן",
+                    "data": "תל אביב - מרכז העיר",
+                    "category": 13,
+                }
+            ]
+        ),
+    )
+    aioclient_mock.get(OREF_HISTORY2_URL, status=HTTPStatus.NOT_MODIFIED)
+    freezer.tick(61)
+    await coordinator.async_refresh()
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert coordinator.get_records(None, None, None)[0]["category"] == 13
+    assert (
+        coordinator.get_records(None, None, None)[0]["alertDate"]
+        == "2023-10-07 06:30:30"
+    )
 
 
 def test_process_history_alerts_skips_duplicate_area(hass: HomeAssistant) -> None:

@@ -207,7 +207,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 self._get_synthetic_alerts(),
                 self._process_history_alerts(history or [], self._history_to_record),
                 self._process_history_alerts(history2 or [], self._history2_to_record),
-                self._current_to_history_format(current),
+                self._current_to_history_format(current if current_modified else None),
                 itertools.chain.from_iterable(
                     channel.items() for channel in self._channels
                 ),
