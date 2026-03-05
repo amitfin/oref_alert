@@ -340,6 +340,8 @@ class OrefMetadata:
         ]
         services["synthetic_alert"]["fields"]["area"]["selector"]["select"][
             "options"
+        ] = services["manual_event_end"]["fields"]["area"]["selector"]["select"][
+            "options"
         ] = self._areas_no_group
         with (self._root_directory / SERVICES_YAML).open(
             "w",

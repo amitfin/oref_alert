@@ -29,6 +29,7 @@ from custom_components.oref_alert.const import (
     CONF_DURATION,
     DOMAIN,
     IST,
+    MANUAL_EVENT_END_TITLE,
     TITLE_FIELD,
     Record,
     RecordAndMetadata,
@@ -473,6 +474,42 @@ async def test_is_synthetic_alert(
         next(iter(coordinator.data.areas.values())).raw
     )
     await coordinator.async_shutdown()
+
+
+def test_manual_event_end_skips_non_alert_records(hass: HomeAssistant) -> None:
+    """Test manual_event_end updates only ALERT records."""
+    coordinator = create_coordinator(hass)
+    now = dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+    pre_alert = Record(
+        alertDate=now,
+        title="pre alert",
+        data="בארי",
+        category=PRE_ALERT_CATEGORY,
+        channel="website-history",
+    )
+    alert = Record(
+        alertDate=now,
+        title="alert",
+        data="אילת",
+        category=1,
+        channel="website-history",
+    )
+    coordinator._areas = {  # noqa: SLF001
+        pre_alert.data: coordinator._config_entry.runtime_data.classifier.add_metadata(  # noqa: SLF001
+            pre_alert
+        ),
+        alert.data: coordinator._config_entry.runtime_data.classifier.add_metadata(  # noqa: SLF001
+            alert
+        ),
+    }
+
+    coordinator.add_manual_event_end([pre_alert.data, alert.data])
+
+    assert coordinator._areas[pre_alert.data].record_type == RecordType.PRE_ALERT  # noqa: SLF001
+    assert coordinator._areas[pre_alert.data].raw.title == pre_alert.title  # noqa: SLF001
+    assert coordinator._areas[alert.data].record_type == RecordType.END  # noqa: SLF001
+    assert coordinator._areas[alert.data].raw.category == END_ALERT_CATEGORY  # noqa: SLF001
+    assert coordinator._areas[alert.data].raw.title == MANUAL_EVENT_END_TITLE  # noqa: SLF001
 
 
 async def test_http_cache(

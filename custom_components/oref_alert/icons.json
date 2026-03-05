@@ -39,6 +39,7 @@
     "add_sensor": "mdi:map-marker-plus-outline",
     "remove_sensor": "mdi:map-marker-remove-outline",
     "edit_sensor": "mdi:map-marker-star-outline",
-    "synthetic_alert": "mdi:rocket-launch"
+    "synthetic_alert": "mdi:rocket-launch",
+    "manual_event_end": "mdi:check-circle-outline"
   }
 }

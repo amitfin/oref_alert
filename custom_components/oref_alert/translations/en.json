@@ -145,6 +145,16 @@
                     "description": "Alert's description"
                 }
             }
+        },
+        "manual_event_end": {
+            "name": "Mark Manual Event End",
+            "description": "Create manual event-end records for active alerts",
+            "fields": {
+                "area": {
+                    "name": "Area",
+                    "description": "Optional list of areas; only active alerts in these areas are marked as ended"
+                }
+            }
         }
     },
     "issues": {

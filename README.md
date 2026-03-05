@@ -74,7 +74,7 @@ A demo (in Hebrew) can be found [here](https://youtu.be/j5jny3WrgJk).
     2. `website`: the real-time file of the official website.
     3. `mobile`: the mobile notification channel of the official app.
     4. `tzevaadom`: the notification channel of [tzevaadom.co.il](https://www.tzevaadom.co.il/).
-    5. `synthetic`: synthetic alert for testing purposes generated via the [synthetic-alert action](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.synthetic_alert).
+    5. `synthetic`: synthetic records generated via custom actions (e.g. [synthetic alert](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.synthetic_alert) and [manual event end](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.manual_event_end)).
 
 ## Automation
 
@@ -229,6 +229,22 @@ Synthetic alerts are useful for testing purposes. The action `oref_alert.synthet
 [![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.synthetic_alert)
 
 *Note: a synthetic alert is an additional alert. A synthetic alert disappears after the amount of seconds supplied to the action. This is different from a regular alert which disappears only after 24 hours.*
+
+## Manual Event End
+
+The action `oref_alert.manual_event_end` can be used to mark active alerts as ended manually (title: `האירוע סומן כהסתיים ידנית`). The action can be accessed via this My button:
+
+[![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.manual_event_end)
+
+The optional `area` field can be used to limit this action to specific areas.
+
+```yaml
+action: oref_alert.manual_event_end
+data:
+  area:
+    - תל אביב - דרום העיר ויפו
+    - קריית שמונה
+```
 
 ## Template Functions
 

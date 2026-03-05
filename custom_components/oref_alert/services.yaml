@@ -1525,7 +1525,7 @@ synthetic_alert:
   fields:
     area:
       required: true
-      selector:
+      selector: &id003
         select:
           mode: dropdown
           multiple: true
@@ -3019,3 +3019,8 @@ synthetic_alert:
       default: התרעה סינטטית לצורכי בדיקות
       selector:
         text: null
+manual_event_end:
+  fields:
+    area:
+      required: false
+      selector: *id003

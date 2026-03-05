@@ -42,6 +42,7 @@ EDIT_SENSOR_ACTION: Final = "edit_sensor"
 ADD_AREAS: Final = "add_areas"
 REMOVE_AREAS: Final = "remove_areas"
 SYNTHETIC_ALERT_ACTION: Final = "synthetic_alert"
+MANUAL_EVENT_END_ACTION: Final = "manual_event_end"
 OREF_ALERT_UNIQUE_ID: Final = DOMAIN
 ALL_AREAS_ID_SUFFIX: Final = "all_areas"
 TIME_TO_SHELTER_ID_SUFFIX: Final = "time_to_shelter"
@@ -62,6 +63,8 @@ CATEGORY_FIELD: Final = "category"
 CHANNEL_FIELD: Final = "channel"
 DATE_FIELD: Final = "alertDate"
 TITLE_FIELD: Final = "title"
+
+MANUAL_EVENT_END_TITLE: Final = "האירוע סומן כהסתיים ידנית"
 
 
 @dataclass(frozen=True)

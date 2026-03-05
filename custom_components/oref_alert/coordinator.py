@@ -22,6 +22,7 @@ from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
 from custom_components.oref_alert.records_schema import RecordType
 
 from .categories import (
+    END_ALERT_CATEGORY,
     category_is_alert,
     category_is_update,
     real_time_to_history_category,
@@ -36,6 +37,7 @@ from .const import (
     DOMAIN,
     IST,
     LOGGER,
+    MANUAL_EVENT_END_TITLE,
     TITLE_FIELD,
     Record,
     RecordAndMetadata,
@@ -340,6 +342,24 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                         ),
                         expire,
                     ),
+                )
+            )
+
+    def add_manual_event_end(self, areas: list[str] | None = None) -> None:
+        """Set selected active alerts as manual-end records."""
+        now = dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+        for area, current in self._areas.copy().items():
+            if current.record_type != RecordType.ALERT:
+                continue
+            if areas is not None and area not in areas:
+                continue
+            self._areas[area] = self._config_entry.runtime_data.classifier.add_metadata(
+                Record(
+                    alertDate=now,
+                    title=MANUAL_EVENT_END_TITLE,
+                    data=area,
+                    category=END_ALERT_CATEGORY,
+                    channel=RecordSource.SYNTHETIC,
                 )
             )
 

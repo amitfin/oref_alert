@@ -62,6 +62,7 @@ from .const import (
     DOMAIN,
     EDIT_SENSOR_ACTION,
     LOGGER,
+    MANUAL_EVENT_END_ACTION,
     REMOVE_AREAS,
     REMOVE_SENSOR_ACTION,
     SYNTHETIC_ALERT_ACTION,
@@ -125,6 +126,15 @@ SYNTHETIC_ALERT_SCHEMA: Final = vol.Schema(
         vol.Required(CONF_DURATION, default=10): cv.positive_int,
         vol.Required(CATEGORY_FIELD, default=1): cv.positive_int,
         vol.Optional(TITLE_FIELD): cv.string,
+    },
+    extra=vol.ALLOW_EXTRA,
+)
+
+MANUAL_EVENT_END_SCHEMA: Final = vol.Schema(
+    {
+        vol.Optional(CONF_AREA): vol.All(
+            cv.ensure_list, [vol.All(cv.string, vol.In(AREAS))]
+        ),
     },
     extra=vol.ALLOW_EXTRA,
 )
@@ -283,6 +293,21 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
         SYNTHETIC_ALERT_ACTION,
         synthetic_alert,
         SYNTHETIC_ALERT_SCHEMA,
+    )
+
+    async def manual_event_end(service_call: ServiceCall) -> None:
+        """Mark active alerts as ended manually."""
+        get_config_entry().runtime_data.coordinator.add_manual_event_end(
+            service_call.data.get(CONF_AREA)
+        )
+        await get_config_entry().runtime_data.coordinator.async_refresh()
+
+    async_register_admin_service(
+        hass,
+        DOMAIN,
+        MANUAL_EVENT_END_ACTION,
+        manual_event_end,
+        MANUAL_EVENT_END_SCHEMA,
     )
 
     return True

@@ -20,9 +20,12 @@ from custom_components.oref_alert.const import (
     ATTR_DISPLAY,
     ATTR_RECORD,
     ATTR_TIME_TO_SHELTER,
+    CONF_AREA,
     CONF_AREAS,
     DOMAIN,
     IST,
+    MANUAL_EVENT_END_ACTION,
+    MANUAL_EVENT_END_TITLE,
     OREF_ALERT_UNIQUE_ID,
     REMOVE_SENSOR_ACTION,
     TIME_TO_SHELTER_ID_SUFFIX,
@@ -296,6 +299,40 @@ async def test_status_state_end_record(
         "alertDate": "2025-01-01 11:59:00",
         "title": "",
     }
+
+    await async_shutdown(hass, config_id)
+
+
+async def test_status_manual_event_end_clears_alert(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test manual event end clears an active alert."""
+    freezer.move_to("2023-10-07 06:30:00+03:00")
+    mock_urls(aioclient_mock, None, "single_alert_history.json")
+    alert = load_json_fixture("single_alert_history.json", "website-history")[0]
+
+    config_id = await async_setup(hass)
+
+    state = hass.states.get(STATUS_ENTITY_ID)
+    assert state is not None
+    assert state.state == RecordType.ALERT
+    assert state.attributes[ATTR_RECORD] == alert
+
+    await hass.services.async_call(
+        DOMAIN,
+        MANUAL_EVENT_END_ACTION,
+        {CONF_AREA: [alert["data"]]},
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    state = hass.states.get(STATUS_ENTITY_ID)
+    assert state is not None
+    assert state.state == "ok"
+    assert state.attributes[ATTR_RECORD]["title"] == MANUAL_EVENT_END_TITLE
+    assert state.attributes[ATTR_RECORD]["category"] == 13
 
     await async_shutdown(hass, config_id)
 

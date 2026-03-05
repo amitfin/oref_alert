@@ -27,12 +27,15 @@ from custom_components.oref_alert.const import (
     ADD_AREAS,
     ADD_SENSOR_ACTION,
     ATTR_COUNTRY_ACTIVE_ALERTS,
+    ATTR_COUNTRY_UPDATES,
     CONF_AREA,
     CONF_AREAS,
     CONF_DURATION,
     CONF_SENSORS,
     DOMAIN,
     EDIT_SENSOR_ACTION,
+    MANUAL_EVENT_END_ACTION,
+    MANUAL_EVENT_END_TITLE,
     OREF_ALERT_UNIQUE_ID,
     REMOVE_AREAS,
     REMOVE_SENSOR_ACTION,
@@ -251,6 +254,70 @@ async def test_synthetic_alert_action(hass: HomeAssistant, areas: str | list) ->
         assert state.attributes[ATTR_COUNTRY_ACTIVE_ALERTS][index]["data"] == area
 
 
+async def test_manual_event_end_action(hass: HomeAssistant) -> None:
+    """Test manual_event_end custom action."""
+    config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    areas = ["קריית שמונה", "תל אביב - דרום העיר ויפו"]
+    await hass.services.async_call(
+        DOMAIN,
+        SYNTHETIC_ALERT_ACTION,
+        {CONF_AREA: areas, CONF_DURATION: 20},
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    await hass.services.async_call(
+        DOMAIN,
+        MANUAL_EVENT_END_ACTION,
+        {},
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    state = hass.states.get(ENTITY_ID)
+    assert state is not None
+    assert len(state.attributes[ATTR_COUNTRY_ACTIVE_ALERTS]) == 0
+    assert len(state.attributes[ATTR_COUNTRY_UPDATES]) == len(areas)
+    for record in state.attributes[ATTR_COUNTRY_UPDATES]:
+        assert record["title"] == MANUAL_EVENT_END_TITLE
+
+
+async def test_manual_event_end_action_filtered_areas(hass: HomeAssistant) -> None:
+    """Test manual_event_end custom action with selected areas."""
+    config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    areas = ["קריית שמונה", "תל אביב - דרום העיר ויפו"]
+    await hass.services.async_call(
+        DOMAIN,
+        SYNTHETIC_ALERT_ACTION,
+        {CONF_AREA: areas, CONF_DURATION: 20},
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    await hass.services.async_call(
+        DOMAIN,
+        MANUAL_EVENT_END_ACTION,
+        {CONF_AREA: [areas[0]]},
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    state = hass.states.get(ENTITY_ID)
+    assert state is not None
+    assert len(state.attributes[ATTR_COUNTRY_ACTIVE_ALERTS]) == 1
+    assert state.attributes[ATTR_COUNTRY_ACTIVE_ALERTS][0]["data"] == areas[1]
+    assert len(state.attributes[ATTR_COUNTRY_UPDATES]) == 1
+    assert state.attributes[ATTR_COUNTRY_UPDATES][0]["data"] == areas[0]
+    assert state.attributes[ATTR_COUNTRY_UPDATES][0]["title"] == MANUAL_EVENT_END_TITLE
+
+
 async def test_sensor_name_migration(hass: HomeAssistant) -> None:
     """Test sensor name migration."""
     config_entry = MockConfigEntry(
@@ -303,6 +370,7 @@ async def test_action_without_config_entry(hass: HomeAssistant) -> None:
         REMOVE_SENSOR_ACTION,
         EDIT_SENSOR_ACTION,
         SYNTHETIC_ALERT_ACTION,
+        MANUAL_EVENT_END_ACTION,
     ]:
         assert not hass.services.has_service(DOMAIN, service)
 
