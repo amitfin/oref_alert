@@ -7,6 +7,7 @@ import hashlib
 import json
 import logging
 import ssl
+from collections import deque
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final
 
@@ -32,7 +33,6 @@ from .const import (
 from .metadata import PUSHY_TEST_SEGMENTS
 from .metadata.area_info import AREA_INFO
 from .metadata.segment_to_area import SEGMENT_TO_AREA
-from .ttl_deque import TTLDeque
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -84,7 +84,7 @@ class PushyNotifications:
         self._http_client = async_get_clientsession(hass)
         self._credentials: dict[str, str] = {}
         self._mqtt: MQTTClient | None = None
-        self.alerts: TTLDeque[RecordAndMetadata] = TTLDeque()
+        self.alerts: deque[RecordAndMetadata] = deque()
 
     async def _api_call(self, uri: str, content: Any, check: bool = True) -> Any:  # noqa: FBT001, FBT002
         """Make HTTP request to the API server."""
@@ -279,7 +279,7 @@ class PushyNotifications:
                     for segment in content["citiesIds"].split(",")
                     if int(segment) in SEGMENT_TO_AREA
                 ]:
-                    self.alerts.add(
+                    self.alerts.append(
                         self._config_entry.runtime_data.classifier.add_metadata(
                             Record(
                                 alertDate=alert_date,

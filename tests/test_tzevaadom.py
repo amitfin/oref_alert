@@ -255,5 +255,5 @@ async def test_duplicate(hass: HomeAssistant) -> None:
     with mock_ws([WSMessage(type=WSMsgType.TEXT, data=data, extra=None)] * 3) as ws:
         await tzevaadom.start()
         await ws.messages_processed()
-        assert len(tzevaadom.alerts.items()) == 1
+        assert len(tzevaadom.alerts) == 1
         await tzevaadom.stop()

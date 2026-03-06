@@ -109,7 +109,7 @@ async def test_publish_cards_uses_integration_version_when_not_dev() -> None:
             new=AsyncMock(return_value=integration),
         ),
     ):
-        await custom_cards.publish_cards(fake_hass)
+        await custom_cards.publish_cards(fake_hass)  # pyright: ignore[reportArgumentType]
 
     mock_add_extra_js_url.assert_has_calls(
         [

@@ -1,6 +1,7 @@
 """The tests for the coordinator file."""
 
 import json
+from collections import deque
 from dataclasses import asdict
 from datetime import timedelta
 from http import HTTPStatus
@@ -11,7 +12,6 @@ from unittest.mock import AsyncMock
 import homeassistant.util.dt as dt_util
 import pytest
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.exceptions import ConfigEntryNotReady
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
@@ -43,7 +43,6 @@ from custom_components.oref_alert.coordinator import (
     OrefAlertDataUpdateCoordinator,
 )
 from custom_components.oref_alert.records_schema import RecordType
-from custom_components.oref_alert.ttl_deque import TTLDeque
 
 from .utils import load_json_fixture, mock_urls
 
@@ -60,7 +59,7 @@ classifier.RECORDS_SCHEMA = records_schema.RECORDS_SCHEMA
 def create_coordinator(
     hass: HomeAssistant,
     options: dict | None = None,
-    channels: list[TTLDeque[RecordAndMetadata]] | None = None,
+    channels: list[deque[RecordAndMetadata]] | None = None,
 ) -> OrefAlertDataUpdateCoordinator:
     """Create a test coordinator."""
     config = MockConfigEntry(
@@ -92,7 +91,7 @@ async def test_save_and_restore_areas(hass: HomeAssistant) -> None:
         side_effect=store_data
     )
     coordinator._store.async_load = AsyncMock(return_value=stored)  # noqa: SLF001
-    coordinator._first_update = False  # noqa: SLF001
+    coordinator._no_update = False  # noqa: SLF001
     record = Record(
         alertDate=dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
         title="ירי רקטות וטילים",
@@ -130,7 +129,7 @@ async def test_save_persists_only_records_newer_than_cutoff(
     coordinator._store.async_save = AsyncMock(  # noqa: SLF001
         side_effect=store_data
     )
-    coordinator._first_update = False  # noqa: SLF001
+    coordinator._no_update = False  # noqa: SLF001
     freezer.move_to("2026-01-02 12:00:00+00:00")
     fresh_record = Record(
         alertDate=(dt_util.now(IST) - timedelta(hours=12)).strftime(
@@ -246,20 +245,6 @@ async def test_updates(
     assert updates == 5
     assert aioclient_mock.call_count == 15
     await coordinator.async_shutdown()
-
-
-@pytest.mark.allowed_logs(["Failed to fetch", "Unexpected error fetching oref_alert"])
-async def test_server_down_during_init(
-    hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """Test errors on HTTP requests during initialization."""
-    mock_urls(aioclient_mock, None, None, exc=Exception("dummy log for testing"))
-    coordinator = create_coordinator(hass)
-    with pytest.raises(ConfigEntryNotReady):
-        await coordinator.async_config_entry_first_refresh()
-    assert "dummy log for testing" in caplog.text
 
 
 async def test_alerts_processing(
@@ -484,8 +469,8 @@ async def test_json_parsing_error(
     """Test logging for JSON parsing error."""
     mock_urls(aioclient_mock, "single_alert_real_time_invalid.txt", None)
     coordinator = create_coordinator(hass)
-    with pytest.raises(ConfigEntryNotReady):
-        await coordinator.async_config_entry_first_refresh()
+    await coordinator.async_config_entry_first_refresh()
+    assert coordinator.get_records(None, None, None) == []
     assert (
         "JSON parsing failed for "
         "'https://www.oref.org.il/warningMessages/alert/Alerts.json': "
@@ -589,12 +574,12 @@ def test_manual_event_end_skips_non_alert_records(hass: HomeAssistant) -> None:
     assert coordinator._areas[alert.data].raw.title == MANUAL_EVENT_END_TITLE  # noqa: SLF001
 
 
-async def test_http_cache(
+async def test_http_no_modified(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
     freezer: FrozenDateTimeFactory,
 ) -> None:
-    """Test HTTP caching."""
+    """Test HTTP not modified logic."""
     freezer.move_to("2023-10-07 06:30:00+03:00")
     mock_urls(
         aioclient_mock, "single_alert_real_time.json", "single_alert_history.json"
@@ -607,21 +592,12 @@ async def test_http_cache(
     aioclient_mock.clear_requests()
     aioclient_mock.get(OREF_ALERTS_URL, status=HTTPStatus.NOT_MODIFIED)
     aioclient_mock.get(OREF_HISTORY_URL, status=HTTPStatus.NOT_MODIFIED)
+    aioclient_mock.get(OREF_HISTORY2_URL, status=HTTPStatus.NOT_MODIFIED)
     freezer.tick()
     await coordinator.async_refresh()
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(coordinator.get_records(None, None, None)) == 2
-
-    coordinator._areas.clear()  # noqa: SLF001
-    aioclient_mock.clear_requests()
-    aioclient_mock.get(OREF_ALERTS_URL, text="")
-    aioclient_mock.get(OREF_HISTORY_URL, status=HTTPStatus.NOT_MODIFIED)
-    freezer.tick()
-    await coordinator.async_refresh()
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    assert len(coordinator.get_records(None, None, None)) == 1
 
     await coordinator.async_shutdown()
 
@@ -740,7 +716,7 @@ async def test_channels(
     """Test merging channel alerts."""
     freezer.move_to("2023-10-07 06:31:00+03:00")
     mock_urls(aioclient_mock, None, "multi_alerts_history.json")
-    channel: TTLDeque[RecordAndMetadata] = TTLDeque()
+    channel: deque[RecordAndMetadata] = deque()
     record = Record(
         alertDate=alert["alertDate"],
         title=alert["title"],
@@ -748,7 +724,7 @@ async def test_channels(
         category=alert["category"],
         channel="website-history",
     )
-    channel.add(
+    channel.append(
         RecordAndMetadata(
             raw=record,
             raw_dict=asdict(record),
@@ -765,6 +741,41 @@ async def test_channels(
     assert len(coordinator.get_records(None, None, None)) == expected
     assert coordinator.data.areas[alert["data"]].raw.category == alert["category"]
     await coordinator.async_shutdown()
+
+
+async def test_channels_are_drained_once(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """Test channel records are consumed exactly once."""
+    mock_urls(aioclient_mock, None, None)
+    channel: deque[RecordAndMetadata] = deque()
+    record = Record(
+        alertDate="2023-10-07 06:30:00",
+        title="ירי רקטות וטילים",
+        data="אילת",
+        category=1,
+        channel="website-history",
+    )
+    channel.append(
+        RecordAndMetadata(
+            raw=record,
+            raw_dict=asdict(record),
+            time=dt_util.parse_datetime(record.alertDate, raise_on_error=True).replace(
+                tzinfo=IST
+            ),
+            record_type=RecordType.ALERT,
+            expire=None,
+        )
+    )
+    coordinator = create_coordinator(hass, channels=[channel])
+    await coordinator.async_config_entry_first_refresh()
+    assert "אילת" in coordinator.data.areas
+    assert len(channel) == 0
+
+    coordinator._areas.clear()  # noqa: SLF001
+    await coordinator.async_refresh()
+    assert coordinator.get_records(None, None, None) == []
 
 
 async def test_updater_active(

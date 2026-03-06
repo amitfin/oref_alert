@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import time
-from dataclasses import asdict
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
@@ -367,11 +366,12 @@ async def test_simple_message(
     payload = load_json_fixture("pushy_alert.json")
     message.payload = json.dumps(payload).encode("utf-8")
     listener.on_message(message)
-    await config.runtime_data.coordinator.async_refresh()
-    assert f"MQTT message: {payload}" in caplog.text
-    assert [asdict(item.raw) for item in listener.alerts.items()] == load_json_fixture(
+    assert [item.raw_dict for item in listener.alerts] == load_json_fixture(
         "pushy_alerts_as_history.json"
     )
+    await config.runtime_data.coordinator.async_refresh()
+    assert f"MQTT message: {payload}" in caplog.text
+    assert len(listener.alerts) == 0
     state = hass.states.get(ENTITY_ID)
     assert state is not None
     assert state.state == STATE_ON
