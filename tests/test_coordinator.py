@@ -173,7 +173,7 @@ async def test_restore_skips_expired_records(hass: HomeAssistant) -> None:
         side_effect=store_data
     )
     coordinator._store.async_load = AsyncMock(return_value=stored)  # noqa: SLF001
-    coordinator._first_update = False  # noqa: SLF001
+    coordinator._no_update = False  # noqa: SLF001
     old_record = Record(
         alertDate="2020-01-01 12:00:00",
         title="ירי רקטות וטילים",
