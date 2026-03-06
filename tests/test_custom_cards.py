@@ -16,6 +16,7 @@ from custom_components.oref_alert.const import CONF_AREAS, DOMAIN
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from freezegun.api import FrozenDateTimeFactory
     from homeassistant.core import HomeAssistant
 
 DEFAULT_OPTIONS: dict[str, list[str]] = {CONF_AREAS: []}
@@ -27,11 +28,14 @@ def _disable_custom_cards_file_write() -> None:
     return
 
 
-async def test_setup_js_url(hass: HomeAssistant) -> None:
+async def test_setup_js_url(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
     """Test setup registers extra JS URL with a deterministic cache-busting value."""
     config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
     config_entry.add_to_hass(hass)
     now = datetime(2026, 1, 1, tzinfo=UTC)
+    freezer.move_to(now)
     ts = int(now.timestamp())
 
     with (
@@ -41,10 +45,6 @@ async def test_setup_js_url(hass: HomeAssistant) -> None:
         patch(
             "custom_components.oref_alert.custom_cards._create_polygons",
             new=AsyncMock(),
-        ),
-        patch(
-            "custom_components.oref_alert.custom_cards.dt_util.now",
-            return_value=now,
         ),
     ):
         assert await hass.config_entries.async_setup(config_entry.entry_id)
