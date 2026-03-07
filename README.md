@@ -174,7 +174,7 @@ These entities provide the data that powers the map card described above.
 
 A new event is fired on HA bus for any new alert. Here are 2 examples of such an events:
 
-```
+```yaml
 event_type: oref_alert_record
 data:
   area: תל אביב - מרכז העיר
@@ -189,7 +189,7 @@ data:
   source: mobile
 ```
 
-```
+```yaml
 event_type: oref_alert_record
 data:
   area: תל אביב - מרכז העיר
@@ -208,7 +208,7 @@ In the [Mobile Notifications: Detailed Alerts](#detailed-alerts) section there i
 
 For backward compatibility, events are also fired on `oref_alert_event` and `oref_alert_update_event` for alert and update, respectively. Here is an example of such an update event:
 
-```
+```yaml
 event_type: oref_alert_update_event
 data:
   area: תל אביב - מרכז העיר
@@ -342,7 +342,7 @@ Below are a few more examples:
 
 Below is an example of a card with the main entities and color coding of the icons.
 
-```
+```yaml
 - type: entities
   card_mod:
     style: |
@@ -376,7 +376,7 @@ Note that is requires the installation of [card-mod](https://github.com/thomaslo
 
 Here is a [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting all active alerts sorted by their distance from HA's home coordinate (the list of categories is based on [this file](https://www.oref.org.il/alerts/alertCategories.json)):
 
-```
+```yaml
 type: markdown
 content: >-
   {% for alert in states.geo_location |
@@ -406,7 +406,7 @@ card_mod:
 
 Here is an automation rule for getting mobile notifications for new alerts:
 
-```
+```yaml
 alias: Oref Alert Country Notifications
 id: oref_alert_country_notifications
 triggers:
@@ -437,7 +437,7 @@ mode: queued
 
 It's possible to get only alerts which are close to home (in the example below it's 10km from home). To do that, the `current` variable should be defined as:
 
-```
+```yaml
 current: "{{ trigger.to_state.attributes.country_active_alerts | map(attribute='data') | select('oref_test_distance', 10) | list }}"
 ```
 
@@ -445,7 +445,7 @@ current: "{{ trigger.to_state.attributes.country_active_alerts | map(attribute='
 
 This is a different approach where only alerts which are either within 30km from home or 5km from Amit's current location generate notifications. However, each notification has additional information (and being sent separately):
 
-```
+```yaml
 alias: Oref Alert Country Notifications Details
 id: oref_alert_country_notifications_details
 triggers:
@@ -471,7 +471,7 @@ mode: queued
 
 It's possible to set a custom sound for a specific mobile app push notification. Here is an iOS example:
 
-```
+```yaml
 action: notify.mobile_app_amits_iphone
 data:
   title: התרעות פיקוד העורף
@@ -483,10 +483,45 @@ data:
 
 Additional information (for Android and iOS) can be found [here](https://companion.home-assistant.io/docs/notifications/notification-sounds).
 
+#### Custom Status Bar Icon
+
+As it is possible to set a custom notification icon on Android devices, the `oref_icon` helper function, which returns an MDI icon, can be used:
+
+```yaml
+action: notify.mobile_app_<<omitted-in-example>>
+data:
+  title: <<omitted-in-example>>
+  message: <<omitted-in-example>>
+  data:
+    notification_icon: "{{ oref_icon(trigger.to_state.attributes.record.category) }}"
+```
+
+Additional information (for Android only) can be found [here](https://companion.home-assistant.io/docs/notifications/notifications-basic/#notification-status-bar-icon).
+
+#### Critical Notifications
+
+For the notifications to be displayed immediately on the screen after dispatching, it is recommended to set them as critical.
+
+For example, for Android devices:
+
+```yaml
+action: notify.mobile_app_<<omitted-in-example>>
+data:
+  title: <<omitted-in-example>>
+  message: <<omitted-in-example>>
+  data:
+    priority: high
+    ttl: 0
+```
+
+This is useful as by default, notifications may not ring the device when it is stationary, or when the screen has been turned off for a prolonged period of time.
+
+Additional information (for Android and iOS) can be found [here](https://companion.home-assistant.io/docs/notifications/critical-notifications).
+
 ### Time To Shelter Countdown
 
 Here is another advanced usage for counting down (every 5 seconds) the time to shelter:
-```
+```yaml
 alias: Oref Alert Time To Shelter Countdown
 id: oref_alert_time_to_shelter_countdown
 triggers:
