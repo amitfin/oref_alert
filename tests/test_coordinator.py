@@ -520,26 +520,6 @@ async def test_synthetic_alert(
     await coordinator.async_shutdown()
 
 
-async def test_is_synthetic_alert(
-    hass: HomeAssistant,
-) -> None:
-    """Test is_synthetic_alert method."""
-    coordinator = create_coordinator(hass)
-    coordinator.add_synthetic_alert(
-        {
-            CONF_AREA: ["אליפז ומכרות תמנע"],
-            CONF_DURATION: 10,
-            "category": 2,
-            "title": "test",
-        }
-    )
-    await coordinator.async_config_entry_first_refresh()
-    assert coordinator.is_synthetic_alert(
-        next(iter(coordinator.data.areas.values())).raw
-    )
-    await coordinator.async_shutdown()
-
-
 def test_manual_event_end_skips_non_alert_records(hass: HomeAssistant) -> None:
     """Test manual_event_end updates only ALERT records."""
     coordinator = create_coordinator(hass)

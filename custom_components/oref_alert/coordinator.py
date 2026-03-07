@@ -101,7 +101,6 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         self._http_client = async_get_clientsession(hass)
         self._http_replies: dict[str, tuple[str, float]] = {}
         self._channels: list[deque[RecordAndMetadata]] = channels
-        self._synthetic_alerts: list[tuple[datetime, RecordAndMetadata]] = []
         self._no_update = True
         self._areas: dict[str, RecordAndMetadata] = {}
         self._store = Store[dict[str, Any]](hass, STORAGE_VERSION, DOMAIN)
@@ -196,7 +195,6 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
 
         # Update the latest areas' records.
         for record in itertools.chain(
-            self._get_synthetic_alerts(),
             self._process_history_alerts(history, self._history_to_record),
             self._process_history_alerts(history2, self._history2_to_record),
             self._current_to_history_format(current),
@@ -312,23 +310,17 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         now = dt_util.now(IST)
         expire = now + timedelta(seconds=details[CONF_DURATION])
         for area in details[CONF_AREA]:
-            self._synthetic_alerts.append(
-                (
-                    expire,
-                    self._config_entry.runtime_data.classifier.add_metadata(
-                        Record(
-                            alertDate=now.strftime("%Y-%m-%d %H:%M:%S"),
-                            title=details.get(
-                                TITLE_FIELD, "התרעה סינטטית לצורכי בדיקות"
-                            ),
-                            data=area,
-                            category=details[CATEGORY_FIELD],
-                            channel=RecordSource.SYNTHETIC,
-                        ),
-                        expire,
-                    ),
-                )
+            self._areas[area] = self._config_entry.runtime_data.classifier.add_metadata(
+                Record(
+                    alertDate=now.strftime("%Y-%m-%d %H:%M:%S"),
+                    title=details.get(TITLE_FIELD, "התרעה סינטטית לצורכי בדיקות"),
+                    data=area,
+                    category=details[CATEGORY_FIELD],
+                    channel=RecordSource.SYNTHETIC,
+                ),
+                expire,
             )
+            self._no_update = False
 
     def add_manual_event_end(self, areas: list[str] | None = None) -> None:
         """Set selected active alerts as manual-end records."""
@@ -348,21 +340,6 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 )
             )
             self._no_update = False
-
-    def _get_synthetic_alerts(self) -> Generator[RecordAndMetadata]:
-        """Yield synthetic alerts that have not expired."""
-        now = dt_util.now()
-        self._synthetic_alerts = [
-            (expired, alert)
-            for expired, alert in self._synthetic_alerts
-            if expired >= now
-        ]
-        for _, alert in self._synthetic_alerts:
-            yield alert
-
-    def is_synthetic_alert(self, alert: Record) -> bool:
-        """Check if the alert is a synthetic alert."""
-        return alert.channel == RecordSource.SYNTHETIC
 
     @classmethod
     def _history_to_record(cls, record: dict[str, Any]) -> Record:

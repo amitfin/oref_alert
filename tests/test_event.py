@@ -148,11 +148,11 @@ async def test_dedup(
     await async_shutdown(hass, config_id)
 
 
-async def test_synthetic_dedup(
+async def test_synthetic_no_dedup(
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
 ) -> None:
-    """Test synthetic dedup logic."""
+    """Test synthetic doesn't have a dedup logic."""
     events: list[str] = []
 
     async def event_listener(event: Event) -> None:
@@ -188,7 +188,7 @@ async def test_synthetic_dedup(
         blocking=True,
     )
     await hass.async_block_till_done()
-    assert events == [None, RecordType.ALERT]
+    assert events == [None, RecordType.ALERT, RecordType.ALERT]
 
     await async_shutdown(hass, config_id)
 
