@@ -45,20 +45,15 @@ The integration adds a map card for displaying all active alerts. It's recommend
 - type: panel
   cards:
     - type: custom:oref-alert-map
+      auto_fit: false
+      show_home: true
 ```
 
-Available map card configuration:
-
-```yaml
-- type: custom:oref-alert-map
-  auto_fit: true
-  show_home: false
-```
-
+Card configuration:
 - `auto_fit` (optional, default: `true`): automatically fit the map view to active alerts.
 - `show_home` (optional, default: `false`): show `zone.home` on the map.
 
-<img width="619" height="482" alt="image" src="https://github.com/user-attachments/assets/551c0577-ecee-4fef-8c85-3bc90e60af9f" />
+<img img width="619" height="482" alt="image" src="https://github.com/user-attachments/assets/6ea2d479-b4ea-4f91-8e1e-9cf465a53b71" />
 
 A demo (in Hebrew) can be found [here](https://youtu.be/j5jny3WrgJk).
 
@@ -130,7 +125,12 @@ The action `oref_alert.edit_sensor` can be used for editing an additional sensor
 
 ## Binary Sensor
 
-`binary_sensor.oref_alert` is `on` when there is an active alert in the home's area. However, it's better to use `sensor.oref_alert` since it's similar but indicates also `pre_alert` state. Since this is a binary sensor there are only 2 states: `off` indicating no-alert (which is also used for `pre_alert`), and `on` when there is an active alert.
+`binary_sensor.oref_alert` is `on` when there is an active alert in the Home area.
+
+| Feature | `binary_sensor.oref_alert` | `sensor.oref_alert` |
+|---------|----------------------------|---------------------|
+| `pre_alert` support | ❌ Not supported (`pre_alert` is reported as `off`) | ✅ Supported |
+| Multiple areas | ✅ Supported — state becomes `on` if **any area** has an active alert | ❌ Not supported |
 
 ## All Areas Sensor
 
