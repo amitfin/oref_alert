@@ -506,12 +506,12 @@ For example, for Android devices:
 
 ```yaml
 action: notify.mobile_app_<<omitted-in-example>>
+data:
+  title: <<omitted-in-example>>
+  message: <<omitted-in-example>>
   data:
-    title: <<omitted-in-example>>
-    message: <<omitted-in-example>>
-    data:
-      priority: high
-      ttl: 0
+    priority: high
+    ttl: 0
 ```
 
 This is useful as by default, notifications may not ring the device when it is stationary, or when the screen has been turned off for a prolonged period of time.
