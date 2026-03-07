@@ -53,7 +53,7 @@ Card configuration:
 - `auto_fit` (optional, default: `true`): automatically fit the map view to active alerts.
 - `show_home` (optional, default: `false`): show `zone.home` on the map.
 
-<img img width="619" height="482" alt="image" src="https://github.com/user-attachments/assets/6ea2d479-b4ea-4f91-8e1e-9cf465a53b71" />
+<img width="619" height="482" alt="image" src="https://github.com/user-attachments/assets/6ea2d479-b4ea-4f91-8e1e-9cf465a53b71" />
 
 A demo (in Hebrew) can be found [here](https://youtu.be/j5jny3WrgJk).
 
