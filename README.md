@@ -483,6 +483,41 @@ data:
 
 Additional information (for Android and iOS) can be found [here](https://companion.home-assistant.io/docs/notifications/notification-sounds).
 
+#### Custom Status Bar Icon
+
+As it is possible to set a custom notification icon on Android devices, the `oref_icon` helper function, which returns an MDI icon, can be used:
+
+```
+action: notify.mobile_app_<<omitted-in-example>>
+data:
+  title: <<omitted-in-example>>
+  message: <<omitted-in-example>>
+  data:
+    notification_icon: "{{ oref_icon(trigger.to_state.attributes.record.category) }}"
+```
+
+Additional information (for Android only) can be found [here](https://companion.home-assistant.io/docs/notifications/notifications-basic/#notification-status-bar-icon).
+
+#### Critical Notifications
+
+For the notifications to be displayed immediately on the screen after dispatching, it is recommended to set them as critical.
+
+For example, for Android devices:
+
+```
+action: notify.mobile_app_<<omitted-in-example>>
+  data:
+    title: <<omitted-in-example>>
+    message: <<omitted-in-example>>
+    data:
+      priority: high
+      ttl: 0
+```
+
+This is useful as by default, notifications may not ring the device when it is stationary, or when the screen has been turned off for a prolonged period of time.
+
+Additional information (for Android and iOS) can be found [here](https://companion.home-assistant.io/docs/notifications/critical-notifications).
+
 ### Time To Shelter Countdown
 
 Here is another advanced usage for counting down (every 5 seconds) the time to shelter:
