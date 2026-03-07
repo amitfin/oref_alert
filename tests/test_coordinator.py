@@ -413,9 +413,11 @@ def test_process_history_alerts_skips_duplicate_area(hass: HomeAssistant) -> Non
         },
     ]
 
-    processed = coordinator._process_history_alerts(  # noqa: SLF001
-        records,
-        coordinator._history_to_record,  # noqa: SLF001
+    processed = list(
+        coordinator._process_history_alerts(  # noqa: SLF001
+            records,
+            coordinator._history_to_record,  # noqa: SLF001
+        )
     )
     assert len(processed) == 1
 
@@ -648,12 +650,14 @@ def test_current_to_history_format_real_time_message_category(
     """Test cat=10 real-time message conversion to history update categories."""
     coordinator = create_coordinator(hass)
 
-    records = coordinator._current_to_history_format(  # noqa: SLF001
-        {
-            "cat": "10",
-            TITLE_FIELD: title,
-            AREA_FIELD: ["אילת"],
-        }
+    records = list(
+        coordinator._current_to_history_format(  # noqa: SLF001
+            {
+                "cat": "10",
+                TITLE_FIELD: title,
+                AREA_FIELD: ["אילת"],
+            }
+        )
     )
 
     assert len(records) == 1

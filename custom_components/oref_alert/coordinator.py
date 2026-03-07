@@ -282,8 +282,8 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         )
         return []
 
-    def _current_to_history_format(self, current: Any) -> list[RecordAndMetadata]:
-        """Convert current alerts payload to history format."""
+    def _current_to_history_format(self, current: Any) -> Generator[RecordAndMetadata]:
+        """Yield current alerts payload converted to history format."""
         if (
             not isinstance(current, dict)
             or (
@@ -294,10 +294,10 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             is None
         ):
             # Unknown category. Wait for the history to include it.
-            return []
+            return
         now = dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S")
-        return [
-            self._config_entry.runtime_data.classifier.add_metadata(
+        for area in current[AREA_FIELD]:
+            yield self._config_entry.runtime_data.classifier.add_metadata(
                 Record(
                     alertDate=now,
                     title=current[TITLE_FIELD],
@@ -306,8 +306,6 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                     channel=RecordSource.WEBSITE,
                 )
             )
-            for area in current[AREA_FIELD]
-        ]
 
     def add_synthetic_alert(self, details: dict[str, Any]) -> None:
         """Add a synthetic alert for testing purposes."""
@@ -351,15 +349,16 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             )
             self._no_update = False
 
-    def _get_synthetic_alerts(self) -> list[RecordAndMetadata]:
-        """Return the list of synthetic alerts."""
+    def _get_synthetic_alerts(self) -> Generator[RecordAndMetadata]:
+        """Yield synthetic alerts that have not expired."""
         now = dt_util.now()
         self._synthetic_alerts = [
             (expired, alert)
             for expired, alert in self._synthetic_alerts
             if expired >= now
         ]
-        return [alert for _, alert in self._synthetic_alerts]
+        for _, alert in self._synthetic_alerts:
+            yield alert
 
     def is_synthetic_alert(self, alert: Record) -> bool:
         """Check if the alert is a synthetic alert."""
@@ -391,10 +390,9 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         self,
         records: list[dict[str, Any]],
         payload_to_record: Callable[[dict[str, Any]], Record],
-    ) -> list[RecordAndMetadata]:
-        """Keep only latest record per area, add channel, and fix spelling."""
+    ) -> Generator[RecordAndMetadata]:
+        """Yield latest history record per area with metadata."""
         now = dt_util.now()
-        result = []
         areas = set()
         for record in records:
             if record[AREA_FIELD] in areas:
@@ -403,12 +401,11 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             record_meta = self._config_entry.runtime_data.classifier.add_metadata(
                 payload_to_record(record)
             )
-            result.append(record_meta)
+            yield record_meta
 
             # Post initial fetch, take only recent records.
             if not self._no_update and (now - record_meta.time) > timedelta(minutes=5):
                 break
-        return result
 
     @staticmethod
     def _fix_area_spelling(area: str) -> str:
