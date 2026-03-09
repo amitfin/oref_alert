@@ -414,19 +414,19 @@ async def test_real_time_timestamp(
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
-    for _ in range(5):
-        # Timestamp should stay the same for the first minute.
+    for _ in range(7):
+        # Timestamp should stay the same for the first 3 minutes.
         assert (
             coordinator.get_records(None, None, None)[0]["alertDate"]
             == "2023-10-07 06:30:00"
         )
-        freezer.tick(15)
+        freezer.tick(30)
         await coordinator.async_refresh()
         async_fire_time_changed(hass)
         await hass.async_block_till_done(wait_background_tasks=True)
     assert (
         coordinator.get_records(None, None, None)[0]["alertDate"]
-        == "2023-10-07 06:31:15"
+        == "2023-10-07 06:33:30"
     )
     await coordinator.async_shutdown()
 
