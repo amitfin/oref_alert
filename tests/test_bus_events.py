@@ -267,3 +267,48 @@ async def test_restore_ignores_invalid_records_and_unknown_area_for_alert_histor
     assert len(list(bus_events._previous_items.items())) == 1  # noqa: SLF001
 
     await async_shutdown(hass, config_id)
+
+
+async def test_restore_prevents_duplicate_event_for_same_record(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test restored records are used for de-dup on the next update."""
+    freezer.move_to("2023-10-07 06:31:00+03:00")
+    mock_urls(aioclient_mock, None, None)
+
+    alerts: list[Event] = []
+
+    async def alert_listener(event: Event) -> None:
+        alerts.append(event)
+
+    hass.bus.async_listen(f"{DOMAIN}_event", alert_listener)
+    config_id = await async_setup(hass)
+
+    config_entry = hass.config_entries.async_get_entry(config_id)
+    assert config_entry is not None
+    bus_events = config_entry.runtime_data.bus_events
+    bus_events._store.async_load = AsyncMock(  # noqa: SLF001
+        return_value={
+            "records": [
+                {
+                    "alertDate": "2023-10-07 06:30:00",
+                    "title": "ירי רקטות וטילים",
+                    "data": "בארי",
+                    "category": 1,
+                    "channel": "website-history",
+                }
+            ]
+        }
+    )
+    await bus_events.async_restore()
+
+    mock_urls(aioclient_mock, None, "single_alert_history.json")
+    freezer.tick(20)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert alerts == []
+
+    await async_shutdown(hass, config_id)

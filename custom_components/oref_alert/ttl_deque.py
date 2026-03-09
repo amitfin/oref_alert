@@ -41,3 +41,8 @@ class TTLDeque[T]:
         """Return the timestamp of the 1st (most recent) item."""
         self._prune()
         return self._deque[0][0] if self._deque else None
+
+    def __contains__(self, item: T) -> bool:
+        """Check if the item exists."""
+        self._prune()
+        return any(item == check for _, check in self._deque)

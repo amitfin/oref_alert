@@ -31,3 +31,18 @@ def test_deque(freezer: FrozenDateTimeFactory) -> None:
     assert list(deque.items()) == [{2: 2}]
     freezer.tick(timedelta(minutes=1))
     assert not list(deque.items())
+
+
+def test_contains_respects_ttl(freezer: FrozenDateTimeFactory) -> None:
+    """Test membership checks and TTL pruning."""
+    deque = TTLDeque(2)
+    value = {"id": 1}
+    deque.add(value)
+    assert value in deque
+    assert {"id": 1} in deque
+
+    freezer.tick(timedelta(minutes=1))
+    assert value in deque
+
+    freezer.tick(timedelta(minutes=1))
+    assert value not in deque

@@ -58,7 +58,7 @@ class OrefAlertBusEventManager:
         """Initialize object with defaults."""
         self._hass = hass
         self._config_entry = config_entry
-        self._previous_items: TTLDeque[RecordAndMetadata] = TTLDeque()
+        self._previous_items: TTLDeque[Record] = TTLDeque()
         self.alert_history: TTLDeque[dict[str, Any]] = TTLDeque(ttl=60 * 24)
         self._history_records: TTLDeque[RecordAndMetadata] = TTLDeque(ttl=60 * 24)
         self._store = Store[dict[str, Any]](
@@ -94,7 +94,7 @@ class OrefAlertBusEventManager:
                 record
             )
             self._history_records.add(record_metadata, record_metadata.time)
-            self._previous_items.add(record_metadata, record_metadata.time)
+            self._previous_items.add(record, record_metadata.time)
             if event := self._compose_event(record):
                 self.alert_history.add(
                     {**event, ATTR_DATE: record_metadata.time.isoformat()},
@@ -141,7 +141,9 @@ class OrefAlertBusEventManager:
         for record in self._coordinator.get_record_and_metadata(
             None, None, 3, newer_first=False
         ):
-            if self._is_old(record) or not (event := self._compose_event(record.raw)):
+            if record.raw in self._previous_items or not (
+                event := self._compose_event(record.raw)
+            ):
                 continue
             self._hass.bus.async_fire(
                 f"{DOMAIN}_event"
@@ -161,15 +163,4 @@ class OrefAlertBusEventManager:
                     {**event, ATTR_DATE: record.time.isoformat()}, record.time
                 )
                 self._history_records.add(record, record.time)
-            self._previous_items.add(record)
-
-    def _is_old(self, record: RecordAndMetadata) -> bool:
-        """Check if the item is in the previous list."""
-        for previous in self._previous_items.items():
-            if (
-                record.raw.data == previous.raw.data
-                and record.raw.category == previous.raw.category
-                and record.record_type == previous.record_type
-            ):
-                return True
-        return False
+            self._previous_items.add(record.raw, record.time)
