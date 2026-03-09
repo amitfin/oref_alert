@@ -409,19 +409,26 @@ card_mod:
 
 ### Presenting Alerts in the Last 6 Hours
 
-Here is a [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting all alerts from the last 6 hours using `oref_alerts()`:
+Here is a [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting up to 100 alerts from the last 6 hours using `oref_alerts()`:
 
 ```yaml
 type: markdown
 content: >-
   {% set cutoff = as_timestamp(now()) - 6 * 60 * 60 %}
-  {% for alert in oref_alerts() if as_timestamp(alert.date) >= cutoff %}
+  {% set ns = namespace(count=0) %}
+  {% for alert in oref_alerts() %}
+    {% if ns.count >= 100 %}
+      {% break %}
+    {% endif %}
+    {% if as_timestamp(alert.date) >= cutoff %}
     <p>
       <font color="red"><ha-icon icon="{{ alert.icon }}"></ha-icon></font>
       <a href="https://maps.google.com/?q={{ alert.latitude }},{{ alert.longitude }}">{{ alert.area }}</a>
       [{{ alert.home_distance | int }} ק״מ]
       ({{ alert.date | as_timestamp | timestamp_custom('%H:%M') }})
     </p>
+      {% set ns.count = ns.count + 1 %}
+    {% endif %}
   {% endfor %}
 card_mod:
   style: |
