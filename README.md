@@ -396,6 +396,7 @@ content: >-
       ({{ alert.attributes.date | as_timestamp | timestamp_custom('%H:%M') }})
     </p>
   {% endfor %}
+entity_id: binary_sensor.oref_alert_all_areas
 card_mod:
   style: |
     ha-card {
@@ -430,6 +431,7 @@ content: >-
       {% set ns.count = ns.count + 1 %}
     {% endif %}
   {% endfor %}
+entity_id: binary_sensor.oref_alert_all_areas
 card_mod:
   style: |
     ha-card {
