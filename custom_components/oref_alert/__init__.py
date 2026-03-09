@@ -361,7 +361,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
         coordinator,
         OrefAlertCoordinatorUpdater(hass, coordinator),
         AreasChecker(hass),
-        await inject_template_extensions(hass),
+        await inject_template_extensions(hass, entry),
         pushy,
         tzevaadom,
         Classifier(hass),

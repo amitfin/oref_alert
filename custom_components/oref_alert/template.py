@@ -7,7 +7,6 @@ from __future__ import annotations
 import inspect
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.config_entries import ConfigEntryState
 from homeassistant.helpers.template import (
     Template,
     TemplateEnvironment,
@@ -25,7 +24,6 @@ from .const import (
     DISTANCE_TEMPLATE_FUNCTION,
     DISTANCE_TEST_TEMPLATE_FUNCTION,
     DISTRICT_TEMPLATE_FUNCTION,
-    DOMAIN,
     EMOJI_TEMPLATE_FUNCTION,
     FIND_AREA_TEMPLATE_FUNCTION,
     ICON_TEMPLATE_FUNCTION,
@@ -48,12 +46,14 @@ if TYPE_CHECKING:
 
     from homeassistant.core import HomeAssistant
 
-    from . import OrefAlertRuntimeData
+    from . import OrefAlertConfigEntry
 
 _template_environment_init_signature = inspect.signature(TemplateEnvironment.__init__)
 
 
-async def inject_template_extensions(hass: HomeAssistant) -> Callable[[], None]:  # noqa: PLR0915
+async def inject_template_extensions(  # noqa: PLR0915
+    hass: HomeAssistant, config_entry: OrefAlertConfigEntry
+) -> Callable[[], None]:
     """Inject template extension to the Home Assistant instance."""
     template_environment_init = TemplateEnvironment.__init__
 
@@ -65,11 +65,7 @@ async def inject_template_extensions(hass: HomeAssistant) -> Callable[[], None]:
 
     def get_alerts() -> Generator[dict[str, Any]]:
         """Get historical alerts."""
-        if (
-            config_entries := hass.config_entries.async_entries(DOMAIN)
-        ) and config_entries[0].state is ConfigEntryState.LOADED:
-            runtime_data: OrefAlertRuntimeData = config_entries[0].runtime_data
-            yield from runtime_data.bus_events.alert_history.items()
+        yield from config_entry.runtime_data.bus_events.alert_history.items()
 
     def area_to_district(area: str) -> str:
         """Convert area to district."""
