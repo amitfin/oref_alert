@@ -5,9 +5,11 @@ from __future__ import annotations
 import json
 import logging
 import time
+from datetime import timedelta
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
+import homeassistant.util.dt as dt_util
 import pytest
 from aiohttp.client_exceptions import (
     ClientError,
@@ -37,6 +39,7 @@ from custom_components.oref_alert.metadata.segment_to_area import SEGMENT_TO_ARE
 from custom_components.oref_alert.pushy import (
     ANDROID_ID_SUFFIX,
     API_ENDPOINT,
+    ATTR_DATE,
     PushyNotifications,
     get_device_id,
 )
@@ -122,10 +125,17 @@ async def test_registration_params(
         raise AssertionError(msg)
 
 
-async def test_registration_persistency(hass: HomeAssistant) -> None:
+async def test_registration_persistency(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
     """Test registration persistency."""
+    freezer.move_to("2026-03-09T10:00:00+00:00")
+    expected_date = dt_util.now().isoformat()
     config = await setup_test(hass)
-    assert config.data["pushy_credentials"] == DEFAULT_CREDENTIALS
+    assert config.data["pushy_credentials"] == {
+        **DEFAULT_CREDENTIALS,
+        ATTR_DATE: expected_date,
+    }
     await cleanup_test(hass, config)
 
 
@@ -239,9 +249,12 @@ async def test_selective_unsubscribe(
 async def test_validation_failure(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
     exception: bool,  # noqa: FBT001
 ) -> None:
     """Test validation failure."""
+    freezer.move_to("2026-03-09T10:00:00+00:00")
+    expected_date = dt_util.now().isoformat()
 
     async def validate(method: str, url: URL, data: dict) -> AiohttpClientMockResponse:
         response = AiohttpClientMockResponse(
@@ -262,7 +275,65 @@ async def test_validation_failure(
         data={"pushy_credentials": {**DEFAULT_CREDENTIALS, "auth": "bad"}},
     )
     await cleanup_test(hass, config)
-    assert config.data["pushy_credentials"] == DEFAULT_CREDENTIALS
+    assert config.data["pushy_credentials"] == {
+        **DEFAULT_CREDENTIALS,
+        ATTR_DATE: expected_date,
+    }
+
+
+async def test_validation_failure_recent_credentials_no_cleanup(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test validation failure keeps recent credentials."""
+    freezer.move_to("2026-03-09T10:00:00+00:00")
+    mock_pushy_urls(
+        aioclient_mock,
+        lambda: aioclient_mock.post(
+            f"{API_ENDPOINT}/devices/auth", json={"success": False}
+        ),
+    )
+    now = dt_util.now()
+    credentials = {
+        **DEFAULT_CREDENTIALS,
+        "auth": "bad",
+        ATTR_DATE: (now - timedelta(minutes=30)).isoformat(),
+    }
+    config = await setup_test(hass, data={"pushy_credentials": credentials})
+    await cleanup_test(hass, config)
+    assert config.data["pushy_credentials"] == credentials
+
+
+async def test_validation_failure_old_credentials_cleanup(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test validation failure removes old credentials and re-registers."""
+    freezer.move_to("2026-03-09T10:00:00+00:00")
+    mock_pushy_urls(
+        aioclient_mock,
+        lambda: aioclient_mock.post(
+            f"{API_ENDPOINT}/devices/auth", json={"success": False}
+        ),
+    )
+    now = dt_util.now()
+    config = await setup_test(
+        hass,
+        data={
+            "pushy_credentials": {
+                **DEFAULT_CREDENTIALS,
+                "auth": "bad",
+                ATTR_DATE: (now - timedelta(hours=2)).isoformat(),
+            }
+        },
+    )
+    await cleanup_test(hass, config)
+    assert config.data["pushy_credentials"] == {
+        **DEFAULT_CREDENTIALS,
+        ATTR_DATE: now.isoformat(),
+    }
 
 
 @pytest.mark.allowed_logs([f"'{API_ENDPOINT}/devices/subscribe' failed"])
