@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from collections import deque
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
 
 import homeassistant.util.dt as dt_util
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 class TTLDeque[T]:
@@ -16,9 +20,9 @@ class TTLDeque[T]:
         self._ttl = timedelta(minutes=ttl)
         self._deque: deque[tuple[datetime, T]] = deque()
 
-    def add(self, item: T) -> None:
+    def add(self, item: T, time: datetime | None = None) -> None:
         """Add an item."""
-        self._deque.appendleft((dt_util.now(), item))
+        self._deque.appendleft((time or dt_util.now(), item))
         self._prune()
 
     def _prune(self) -> None:
@@ -27,10 +31,11 @@ class TTLDeque[T]:
         while self._deque and now - self._deque[-1][0] >= self._ttl:
             self._deque.pop()
 
-    def items(self) -> list[T]:
+    def items(self) -> Generator[T]:
         """Return the items."""
         self._prune()
-        return [item for _, item in self._deque]
+        for _, item in self._deque:
+            yield item
 
     def changed(self) -> datetime | None:
         """Return the timestamp of the 1st (most recent) item."""

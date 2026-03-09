@@ -138,29 +138,41 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 }
             )
 
+    def get_record_and_metadata(
+        self,
+        areas: Iterable[str] | None,
+        record_types: Iterable[RecordType | None] | None,
+        window: int | None,
+        newer_first: bool,  # noqa: FBT001
+    ) -> list[RecordAndMetadata]:
+        """Return the records and metadata, sorted and filtered."""
+        earliest = dt_util.now() - timedelta(minutes=window) if window else None
+        return sorted(
+            sorted(
+                {
+                    record
+                    for area, record in self.data.areas.items()
+                    if (areas is None or area in areas)
+                    and (record_types is None or record.record_type in record_types)
+                    and (earliest is None or record.time >= earliest)
+                },
+                key=lambda record: record.raw.data,
+            ),
+            key=lambda record: record.time,
+            reverse=newer_first,
+        )
+
     def get_records(
         self,
         areas: Iterable[str] | None,
         record_types: Iterable[RecordType | None] | None,
         window: int | None,
     ) -> list[dict[str, str | int]]:
-        """Return the records as dict, sorted, and for the given areas and types."""
-        earliest = dt_util.now() - timedelta(minutes=window) if window else None
+        """Get raw records, sorted from newest, and filtered."""
         return [
-            sorted_record.raw_dict
-            for sorted_record in sorted(
-                sorted(
-                    {
-                        record
-                        for area, record in self.data.areas.items()
-                        if (areas is None or area in areas)
-                        and (record_types is None or record.record_type in record_types)
-                        and (earliest is None or record.time >= earliest)
-                    },
-                    key=lambda record: record.raw.data,
-                ),
-                key=lambda record: record.time,
-                reverse=True,
+            record.raw_dict
+            for record in self.get_record_and_metadata(
+                areas, record_types, window, newer_first=True
             )
         ]
 

@@ -3,6 +3,7 @@
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from homeassistant.const import ATTR_DATE
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.template import Template
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -15,14 +16,24 @@ from custom_components.oref_alert.metadata.area_to_polygon import init_area_to_p
 from custom_components.oref_alert.metadata.areas import AREAS
 from custom_components.oref_alert.metadata.areas_and_groups import AREAS_AND_GROUPS
 
+from .utils import mock_urls
+
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
+    from freezegun.api import FrozenDateTimeFactory
     from homeassistant.core import HomeAssistant
+    from pytest_homeassistant_custom_component.test_util.aiohttp import (
+        AiohttpClientMocker,
+    )
 
 
-async def async_setup(hass: HomeAssistant) -> str:
+async def async_setup(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker | None = None
+) -> str:
     """Integration setup."""
+    if aioclient_mock:
+        mock_urls(aioclient_mock, None, "multi_alerts_history.json")
     hass.config.latitude = 32.072
     hass.config.longitude = 34.879
     config_entry = MockConfigEntry(domain=DOMAIN, options={CONF_AREAS: ["בארי"]})
@@ -39,9 +50,14 @@ async def async_shutdown(hass: HomeAssistant, config_id: str) -> None:
 
 
 @pytest.fixture
-async def load_oref_integration(hass: HomeAssistant) -> AsyncGenerator[None]:
+async def load_oref_integration(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    aioclient_mock: AiohttpClientMocker,
+) -> AsyncGenerator[None]:
     """Prepare the test environment."""
-    config_id = await async_setup(hass)
+    freezer.move_to("2023-10-07 06:30:00+03:00")
+    config_id = await async_setup(hass, aioclient_mock)
     yield
     await async_shutdown(hass, config_id)
 
@@ -54,6 +70,35 @@ async def load_oref_integration(hass: HomeAssistant) -> AsyncGenerator[None]:
         ("{{ 'test' | oref_district }}", "test"),
         ("{{ oref_areas() }}", list(AREAS)),
         ("{{ oref_areas(True) }}", AREAS_AND_GROUPS),
+        (
+            "{{ oref_alerts() | list }}",
+            [
+                {
+                    "area": "בארי",
+                    "home_distance": 80.7,
+                    "latitude": 31.423811318545116,
+                    "longitude": 34.491396100227774,
+                    "category": 1,
+                    "title": "ירי רקטות וטילים",
+                    "icon": "mdi:rocket-launch",
+                    "emoji": "🚀",
+                    "channel": "website-history",
+                    ATTR_DATE: "2023-10-07T06:30:00+03:00",
+                },
+                {
+                    "area": "נחל עוז",
+                    "home_distance": 75.7,
+                    "latitude": 31.472169943762964,
+                    "longitude": 34.4983670455394,
+                    "category": 1,
+                    "title": "ירי רקטות וטילים",
+                    "icon": "mdi:rocket-launch",
+                    "emoji": "🚀",
+                    "channel": "website-history",
+                    ATTR_DATE: "2023-10-07T06:28:00+03:00",
+                },
+            ],
+        ),
         ("{{ oref_coordinate('פתח תקווה') }}", (32.09429109811987, 34.8780320360819)),
         (
             "{{ 'תל אביב - מרכז העיר' | oref_coordinate }}",
@@ -100,6 +145,7 @@ async def load_oref_integration(hass: HomeAssistant) -> AsyncGenerator[None]:
         "district_unknown",
         "areas_list",
         "areas_with_groups",
+        "alerts",
         "coordinate_func",
         "coordinate_filter",
         "coordinate_unknown",

@@ -258,6 +258,13 @@ Returns the list of areas. Districts are not included by default. It's possible 
 
 `{{ oref_areas(True) }}`
 
+### `oref_alerts`
+
+Returns historical alerts (last 24h), sorted from newest to oldest. Each item contains:
+`area`, `home_distance`, `latitude`, `longitude`, `category`, `title`, `icon`, `emoji`, `channel`, `date`.
+
+`{{ oref_alerts() | list }}`
+
 ### `oref_district`
 
 Gets an area name and returns its district. If no mapping is found, the return value is the input area name. Can be used also as a filter.
@@ -399,6 +406,29 @@ card_mod:
 (The `card_mod` section at the bottom is only required when the language is English. It forces RTL for this element. Note that it requires the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.)
 
 <kbd><img width="310" alt="image" src="https://github.com/user-attachments/assets/21ad82ea-6ff6-43c3-8c57-a1f6b2785498"></kbd>
+
+### Presenting Alerts in the Last 6 Hours
+
+Here is a [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting all alerts from the last 6 hours using `oref_alerts()`:
+
+```yaml
+type: markdown
+content: >-
+  {% set cutoff = as_timestamp(now()) - 6 * 60 * 60 %}
+  {% for alert in oref_alerts() if as_timestamp(alert.date) >= cutoff %}
+    <p>
+      <font color="red"><ha-icon icon="{{ alert.icon }}"></ha-icon></font>
+      <a href="https://maps.google.com/?q={{ alert.latitude }},{{ alert.longitude }}">{{ alert.area }}</a>
+      [{{ alert.home_distance | int }} ק״מ]
+      ({{ alert.date | as_timestamp | timestamp_custom('%H:%M') }})
+    </p>
+  {% endfor %}
+card_mod:
+  style: |
+    ha-card {
+      direction: rtl;
+    }
+```
 
 ### Mobile Notifications
 

@@ -57,6 +57,7 @@ DISTANCE_TEMPLATE_FUNCTION: Final = "oref_distance"
 DISTANCE_TEST_TEMPLATE_FUNCTION: Final = "oref_test_distance"
 FIND_AREA_TEMPLATE_FUNCTION: Final = "oref_find_area"
 POLYGON_TEMPLATE_FUNCTION: Final = "oref_polygon"
+ALERTS_TEMPLATE_FUNCTION: Final = "oref_alerts"
 
 AREA_FIELD: Final = "data"
 CATEGORY_FIELD: Final = "category"

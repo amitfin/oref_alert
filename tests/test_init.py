@@ -77,13 +77,16 @@ async def test_save_on_homeassistant_stop(hass: HomeAssistant) -> None:
     await hass.async_block_till_done(wait_background_tasks=True)
 
     assert hasattr(config_entry, "runtime_data")
-    async_save = AsyncMock()
-    config_entry.runtime_data.coordinator.async_save = async_save
+    coordinator_async_save = AsyncMock()
+    bus_events_async_save = AsyncMock()
+    config_entry.runtime_data.coordinator.async_save = coordinator_async_save
+    config_entry.runtime_data.bus_events.async_save = bus_events_async_save
 
     hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
     await hass.async_block_till_done(wait_background_tasks=True)
 
-    async_save.assert_awaited_once()
+    coordinator_async_save.assert_awaited_once()
+    bus_events_async_save.assert_awaited_once()
 
 
 async def test_config_update(hass: HomeAssistant) -> None:

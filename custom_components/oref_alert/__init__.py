@@ -162,6 +162,7 @@ class OrefAlertRuntimeData:
         self.classifier.stop()
         await asyncio.gather(
             self.coordinator.async_save(),
+            self.bus_events.async_save(),
             self.pushy.stop(),
             self.tzevaadom.stop(),
             return_exceptions=True,
@@ -371,6 +372,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
     def _handle_shutdown(*_: object) -> None:
         """Persist coordinator state on Home Assistant shutdown."""
         hass.async_create_task(entry.runtime_data.coordinator.async_save())
+        hass.async_create_task(entry.runtime_data.bus_events.async_save())
 
     entry.async_on_unload(
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _handle_shutdown)
@@ -383,7 +385,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
 
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-        await entry.runtime_data.coordinator.async_restore()
+        await asyncio.gather(
+            entry.runtime_data.coordinator.async_restore(),
+            entry.runtime_data.bus_events.async_restore(),
+        )
         await entry.runtime_data.coordinator.async_config_entry_first_refresh()
 
         await asyncio.gather(

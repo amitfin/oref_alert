@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+from unittest.mock import AsyncMock
 
+from homeassistant.const import ATTR_DATE
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
@@ -178,5 +180,90 @@ async def test_event_fired_once(
     await hass.async_block_till_done(wait_background_tasks=True)
 
     assert len(events) == 1
+
+    await async_shutdown(hass, config_id)
+
+
+async def test_alert_history_save_restore_keeps_order(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test history save/restore preserves newest-first ordering."""
+    freezer.move_to("2023-10-07 06:30:00+03:00")
+    mock_urls(aioclient_mock, None, "multi_alerts_history.json")
+
+    config_id = await async_setup(hass)
+    config_entry = hass.config_entries.async_get_entry(config_id)
+    assert config_entry is not None
+    bus_events = config_entry.runtime_data.bus_events
+
+    saved: dict[str, list[dict[str, str | int]]] = {}
+
+    async def save_side_effect(data: dict[str, list[dict[str, str | int]]]) -> None:
+        saved.update(data)
+
+    bus_events._store.async_save = AsyncMock(side_effect=save_side_effect)  # noqa: SLF001
+    bus_events._store.async_load = AsyncMock(return_value=saved)  # noqa: SLF001
+
+    await bus_events.async_save()
+
+    # Clear in-memory state to validate restore path.
+    bus_events.alert_history = bus_events.alert_history.__class__(ttl=60 * 24)
+    bus_events._history_records = bus_events._history_records.__class__(ttl=60 * 24)  # noqa: SLF001
+    bus_events._previous_items = bus_events._previous_items.__class__()  # noqa: SLF001
+
+    await bus_events.async_restore()
+
+    restored_history = list(bus_events.alert_history.items())
+    assert [item["area"] for item in restored_history] == ["בארי", "נחל עוז"]
+    assert [item[ATTR_DATE] for item in restored_history] == [
+        "2023-10-07T06:30:00+03:00",
+        "2023-10-07T06:28:00+03:00",
+    ]
+
+    # Persisted wire format is chronological to restore deterministically.
+    assert [item["data"] for item in saved["records"]] == ["נחל עוז", "בארי"]
+
+    await async_shutdown(hass, config_id)
+
+
+async def test_restore_ignores_invalid_records_and_unknown_area_for_alert_history(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test restore robustness for invalid records and missing area metadata."""
+    freezer.move_to("2023-10-07 06:31:00+03:00")
+    mock_urls(aioclient_mock, None, None)
+    config_id = await async_setup(hass)
+    config_entry = hass.config_entries.async_get_entry(config_id)
+    assert config_entry is not None
+    bus_events = config_entry.runtime_data.bus_events
+
+    bus_events._store.async_load = AsyncMock(  # noqa: SLF001
+        return_value={
+            "records": [
+                {"bad": "record"},
+                {
+                    "alertDate": "2023-10-07 06:30:00",
+                    "title": "ירי רקטות וטילים",
+                    "data": "לא קיים",
+                    "category": 1,
+                    "channel": "website-history",
+                },
+            ]
+        }
+    )
+
+    bus_events.alert_history = bus_events.alert_history.__class__(ttl=60 * 24)
+    bus_events._history_records = bus_events._history_records.__class__(ttl=60 * 24)  # noqa: SLF001
+    bus_events._previous_items = bus_events._previous_items.__class__()  # noqa: SLF001
+
+    await bus_events.async_restore()
+
+    assert list(bus_events.alert_history.items()) == []
+    assert len(list(bus_events._history_records.items())) == 1  # noqa: SLF001
+    assert len(list(bus_events._previous_items.items())) == 1  # noqa: SLF001
 
     await async_shutdown(hass, config_id)

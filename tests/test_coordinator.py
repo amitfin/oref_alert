@@ -5,7 +5,7 @@ from collections import deque
 from dataclasses import asdict
 from datetime import timedelta
 from http import HTTPStatus
-from types import SimpleNamespace
+from types import MappingProxyType, SimpleNamespace
 from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock
 
@@ -39,6 +39,7 @@ from custom_components.oref_alert.coordinator import (
     OREF_ALERTS_URL,
     OREF_HISTORY2_URL,
     OREF_HISTORY_URL,
+    OrefAlertCoordinatorData,
     OrefAlertCoordinatorUpdater,
     OrefAlertDataUpdateCoordinator,
 )
@@ -221,6 +222,96 @@ async def test_restore_ignores_invalid_stored_record(hass: HomeAssistant) -> Non
 
     assert "אילת" not in coordinator._areas  # noqa: SLF001
     assert "קריית שמונה" in coordinator._areas  # noqa: SLF001
+
+
+async def test_get_record_and_metadata_sorting_filters_and_window(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test get_record_and_metadata sorting and filtering semantics."""
+    freezer.move_to("2026-01-02 12:00:00+00:00")
+    coordinator = create_coordinator(hass)
+    classify = coordinator._config_entry.runtime_data.classifier.add_metadata  # noqa: SLF001
+
+    # Same timestamp for two records to validate tie ordering by area.
+    same_time = "2026-01-02 13:58:00"
+    area_b = classify(
+        Record(
+            alertDate=same_time,
+            title="ירי רקטות וטילים",
+            data="בארי",
+            category=1,
+            channel="website-history",
+        )
+    )
+    area_a = classify(
+        Record(
+            alertDate=same_time,
+            title="ירי רקטות וטילים",
+            data="אילות",
+            category=1,
+            channel="website-history",
+        )
+    )
+    old_update = classify(
+        Record(
+            alertDate="2026-01-02 13:53:00",
+            title="ניתן לצאת מהמרחב המוגן",
+            data="נחל עוז",
+            category=13,
+            channel="website-history",
+        )
+    )
+
+    coordinator.data = OrefAlertCoordinatorData(
+        MappingProxyType(
+            {
+                area_b.raw.data: area_b,
+                area_a.raw.data: area_a,
+                old_update.raw.data: old_update,
+            }
+        )
+    )
+
+    oldest_first = coordinator.get_record_and_metadata(
+        areas=None,
+        record_types=None,
+        window=None,
+        newer_first=False,
+    )
+    assert [record.raw.data for record in oldest_first] == ["נחל עוז", "אילות", "בארי"]
+
+    newest_first = coordinator.get_record_and_metadata(
+        areas=None,
+        record_types=None,
+        window=None,
+        newer_first=True,
+    )
+    assert [record.raw.data for record in newest_first] == ["אילות", "בארי", "נחל עוז"]
+
+    alert_only = coordinator.get_record_and_metadata(
+        areas=None,
+        record_types=[RecordType.ALERT],
+        window=None,
+        newer_first=True,
+    )
+    assert [record.raw.data for record in alert_only] == ["אילות", "בארי"]
+
+    area_filtered = coordinator.get_record_and_metadata(
+        areas=["בארי"],
+        record_types=None,
+        window=None,
+        newer_first=False,
+    )
+    assert [record.raw.data for record in area_filtered] == ["בארי"]
+
+    window_filtered = coordinator.get_record_and_metadata(
+        areas=None,
+        record_types=None,
+        window=5,
+        newer_first=False,
+    )
+    assert [record.raw.data for record in window_filtered] == ["אילות", "בארי"]
 
 
 async def test_updates(
