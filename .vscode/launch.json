@@ -36,5 +36,27 @@
             ],
             "justMyCode": false
         },
+        {
+            // Debug by attaching to remote Home Assistant server using Remote Python Debugger.
+            // See https://www.home-assistant.io/integrations/debugpy/
+            "name": "Home Assistant: Attach Remote",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "port": 5678,
+                "host": "homeassistant.local",
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "/config"
+                },
+                {
+                    "localRoot": "/usr/local/lib/python3.14/site-packages/homeassistant",
+                    "remoteRoot": "/usr/src/homeassistant/homeassistant"
+                },
+            ],
+            "justMyCode": false
+        },
     ]
 }
