@@ -233,8 +233,11 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                     self._no_update = False
                     if area not in AREAS:
                         LOGGER.error("Alert has an unrecognized area: %s", area)
-                # If this is not a newer record.
-                elif record.time <= current.time:
+                # If this is not a newer record, or this is "pre" after "alert".
+                elif record.time <= current.time or (
+                    record.record_type == RecordType.PRE_ALERT
+                    and current.record_type == RecordType.ALERT
+                ):
                     continue
                 # Same category records within the dedup window are ignored.
                 elif (

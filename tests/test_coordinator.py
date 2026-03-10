@@ -853,6 +853,54 @@ async def test_channels_are_drained_once(
     assert coordinator.get_records(None, None, None) == []
 
 
+@pytest.mark.parametrize(
+    ("current_category", "expected_record_type"),
+    [
+        pytest.param(1, RecordType.ALERT, id="after-alert"),
+        pytest.param(END_ALERT_CATEGORY, RecordType.PRE_ALERT, id="after-end"),
+    ],
+)
+async def test_pre_alert_transition_rules(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+    current_category: int,
+    expected_record_type: RecordType,
+) -> None:
+    """Test PRE_ALERT transition behavior after alert and end states."""
+    freezer.move_to("2025-01-01 10:10:00+03:00")
+    mock_urls(aioclient_mock, None, None)
+    coordinator = create_coordinator(hass, channels=[deque()])
+    classifier = coordinator._config_entry.runtime_data.classifier  # noqa: SLF001
+    area = "בארי"
+    coordinator._areas = {  # noqa: SLF001
+        area: classifier.add_metadata(
+            Record(
+                alertDate="2025-01-01 10:00:00",
+                title="current",
+                data=area,
+                category=current_category,
+                channel="website-history",
+            )
+        )
+    }
+    coordinator._channels[0].append(  # noqa: SLF001
+        classifier.add_metadata(
+            Record(
+                alertDate="2025-01-01 10:05:00",
+                title="pre alert",
+                data=area,
+                category=PRE_ALERT_CATEGORY,
+                channel="website-history",
+            )
+        )
+    )
+
+    await coordinator.async_refresh()
+
+    assert coordinator.data.areas[area].record_type == expected_record_type
+
+
 async def test_updater_active(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
