@@ -408,30 +408,49 @@ card_mod:
 
 <kbd><img width="310" alt="image" src="https://github.com/user-attachments/assets/21ad82ea-6ff6-43c3-8c57-a1f6b2785498"></kbd>
 
-### Presenting Alerts in the Last 6 Hours
+### Presenting Last 100 Alerts
 
-Here is a [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting up to 100 alerts from the last 6 hours using `oref_alerts()`:
+Here is a [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting the last 100 alerts (in the last 24 hours) `oref_alerts()`:
 
 ```yaml
 type: markdown
 content: >-
-  {% set cutoff = as_timestamp(now()) - 6 * 60 * 60 %}
   {% set ns = namespace(count=0) %}
   {% for alert in oref_alerts() %}
     {% if ns.count >= 100 %}
       {% break %}
     {% endif %}
-    {% if as_timestamp(alert.date) >= cutoff %}
     <p>
       <font color="red"><ha-icon icon="{{ alert.icon }}"></ha-icon></font>
       <a href="https://maps.google.com/?q={{ alert.latitude }},{{ alert.longitude }}">{{ alert.area }}</a>
       [{{ alert.home_distance | int }} ק״מ]
       ({{ alert.date | as_timestamp | timestamp_custom('%H:%M') }})
     </p>
-      {% set ns.count = ns.count + 1 %}
-    {% endif %}
+    {% set ns.count = ns.count + 1 %}
   {% endfor %}
 entity_id: binary_sensor.oref_alert_all_areas
+card_mod:
+  style: |
+    ha-card {
+      direction: rtl;
+    }
+```
+
+### Presenting Alerts in the Home's Area
+
+Here is a [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting the home's alerts (in the last 24 hours):
+
+```yaml
+type: markdown
+content: >-
+  {% for alert in (oref_alerts() | selectattr('area', 'in', state_attr('binary_sensor.oref_alert', 'areas'))) %}
+    <p>
+      {{ loop.index }}.
+      {{ alert.date | as_timestamp | timestamp_custom('%H:%M') }}
+      <font color="red"><ha-icon icon="{{ alert.icon }}"></ha-icon></font>
+    </p>
+  {% endfor %}
+entity_id: binary_sensor.oref_alert
 card_mod:
   style: |
     ha-card {
