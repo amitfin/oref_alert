@@ -250,20 +250,20 @@ data:
 
 The integration adds the following template helper functions:
 
+### `oref_alerts`
+
+The historical alerts (last 24h), sorted from newest to oldest. Each item contains:
+`date`, `area`, `title`, `icon`, `emoji`, `category`, `home_distance`, `latitude`, `longitude`, `channel`.
+
+`{{ oref_alerts | list }}`
+
 ### `oref_areas`
 
 Returns the list of areas. Districts are not included by default. It's possible to set the 1st parameter (`groups`) to `True` to include them.
 
-`{{ oref_areas() }}`
+`{{ oref_areas }}`
 
 `{{ oref_areas(True) }}`
-
-### `oref_alerts`
-
-Returns historical alerts (last 24h), sorted from newest to oldest. Each item contains:
-`area`, `home_distance`, `latitude`, `longitude`, `category`, `title`, `icon`, `emoji`, `channel`, `date`.
-
-`{{ oref_alerts() | list }}`
 
 ### `oref_district`
 
@@ -410,13 +410,13 @@ card_mod:
 
 ### Presenting Last 100 Alerts
 
-Here is a [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting the last 100 alerts (in the last 24 hours) `oref_alerts()`:
+Here is a [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting the last 100 alerts (in the last 24 hours):
 
 ```yaml
 type: markdown
 content: >-
   {% set ns = namespace(count=0) %}
-  {% for alert in oref_alerts() %}
+  {% for alert in oref_alerts %}
     {% if ns.count >= 100 %}
       {% break %}
     {% endif %}
@@ -443,7 +443,7 @@ Here is a [markdown card](https://www.home-assistant.io/dashboards/markdown/) fo
 ```yaml
 type: markdown
 content: >-
-  {% for alert in (oref_alerts() | selectattr('area', 'in', state_attr('binary_sensor.oref_alert', 'areas'))) %}
+  {% for alert in (oref_alerts | selectattr('area', 'in', state_attr('binary_sensor.oref_alert', 'areas'))) %}
     <p>
       {{ loop.index }}.
       {{ alert.date | as_timestamp | timestamp_custom('%H:%M') }}

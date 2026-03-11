@@ -59,13 +59,31 @@ async def inject_template_extensions(  # noqa: PLR0915
 
     await init_area_to_polygon()
 
-    def get_areas(groups: bool = False) -> list[str]:  # noqa: FBT001, FBT002
-        """Get all areas."""
-        return list(AREAS) if not groups else AREAS_AND_GROUPS
+    class AlertsTemplateAccessor:
+        """Expose alert history as both a callable and an iterable."""
 
-    def get_alerts() -> Generator[dict[str, Any]]:
-        """Get historical alerts."""
-        yield from config_entry.runtime_data.bus_events.alert_history.items()
+        def __call__(self) -> Generator[dict[str, Any]]:
+            """Return historical alerts."""
+            yield from config_entry.runtime_data.bus_events.alert_history.items()
+
+        def __iter__(self) -> Generator[dict[str, Any]]:
+            """Iterate over historical alerts."""
+            yield from self()
+
+    get_alerts = AlertsTemplateAccessor()
+
+    class AreasTemplateAccessor:
+        """Expose areas as both a callable and an iterable."""
+
+        def __call__(self, groups: bool = False) -> list[str]:  # noqa: FBT001, FBT002
+            """Get all areas."""
+            return list(AREAS) if not groups else AREAS_AND_GROUPS
+
+        def __iter__(self) -> Generator[str]:
+            """Iterate over areas without groups by default."""
+            yield from self()
+
+    get_areas = AreasTemplateAccessor()
 
     def area_to_district(area: str) -> str:
         """Convert area to district."""

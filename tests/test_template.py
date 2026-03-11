@@ -27,6 +27,33 @@ if TYPE_CHECKING:
         AiohttpClientMocker,
     )
 
+_OREF_ALERTS = [
+    {
+        "area": "בארי",
+        "home_distance": 80.7,
+        "latitude": 31.423811318545116,
+        "longitude": 34.491396100227774,
+        "category": 1,
+        "title": "ירי רקטות וטילים",
+        "icon": "mdi:rocket-launch",
+        "emoji": "🚀",
+        "channel": "website-history",
+        ATTR_DATE: "2023-10-07T06:30:00+03:00",
+    },
+    {
+        "area": "נחל עוז",
+        "home_distance": 75.7,
+        "latitude": 31.472169943762964,
+        "longitude": 34.4983670455394,
+        "category": 1,
+        "title": "ירי רקטות וטילים",
+        "icon": "mdi:rocket-launch",
+        "emoji": "🚀",
+        "channel": "website-history",
+        ATTR_DATE: "2023-10-07T06:28:00+03:00",
+    },
+]
+
 
 async def async_setup(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker | None = None
@@ -69,36 +96,10 @@ async def load_oref_integration(
         ("{{ 'פתח תקווה' | oref_district }}", "ירקון"),
         ("{{ 'test' | oref_district }}", "test"),
         ("{{ oref_areas() }}", list(AREAS)),
+        ("{{ oref_areas | list }}", list(AREAS)),
         ("{{ oref_areas(True) }}", AREAS_AND_GROUPS),
-        (
-            "{{ oref_alerts() | list }}",
-            [
-                {
-                    "area": "בארי",
-                    "home_distance": 80.7,
-                    "latitude": 31.423811318545116,
-                    "longitude": 34.491396100227774,
-                    "category": 1,
-                    "title": "ירי רקטות וטילים",
-                    "icon": "mdi:rocket-launch",
-                    "emoji": "🚀",
-                    "channel": "website-history",
-                    ATTR_DATE: "2023-10-07T06:30:00+03:00",
-                },
-                {
-                    "area": "נחל עוז",
-                    "home_distance": 75.7,
-                    "latitude": 31.472169943762964,
-                    "longitude": 34.4983670455394,
-                    "category": 1,
-                    "title": "ירי רקטות וטילים",
-                    "icon": "mdi:rocket-launch",
-                    "emoji": "🚀",
-                    "channel": "website-history",
-                    ATTR_DATE: "2023-10-07T06:28:00+03:00",
-                },
-            ],
-        ),
+        ("{{ oref_alerts() | list }}", _OREF_ALERTS),
+        ("{{ oref_alerts | list }}", _OREF_ALERTS),
         ("{{ oref_coordinate('פתח תקווה') }}", (32.09429109811987, 34.8780320360819)),
         (
             "{{ 'תל אביב - מרכז העיר' | oref_coordinate }}",
@@ -144,7 +145,9 @@ async def load_oref_integration(
         "district_filter",
         "district_unknown",
         "areas_list",
+        "areas_iterable",
         "areas_with_groups",
+        "alerts_func",
         "alerts",
         "coordinate_func",
         "coordinate_filter",
