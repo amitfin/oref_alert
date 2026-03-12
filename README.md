@@ -597,7 +597,8 @@ actions:
       entity_id: media_player.shelter_speaker
       language: iw
       message: "{{ time_to_shelter }}"
-mode: queued
+max: 100
+mode: parallel
 ```
 
 ## Removing the Integration
