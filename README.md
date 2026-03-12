@@ -39,6 +39,8 @@ There is a single configuration parameter **Selected area**. By default the inte
 
 ## Map Card
 
+<img width="619" height="482" alt="image" src="https://github.com/user-attachments/assets/6ea2d479-b4ea-4f91-8e1e-9cf465a53b71" />
+
 The integration adds a map card for displaying all active alerts. It's recommended to place the map card inside a [panel view](https://www.home-assistant.io/dashboards/panel/), so it can take full width and provide the best map experience:
 
 ```yaml
@@ -53,7 +55,8 @@ Card configuration:
 - `auto_fit` (optional, default: `true`): automatically fit the map view to active alerts.
 - `show_home` (optional, default: `false`): show `zone.home` on the map.
 
-<img width="619" height="482" alt="image" src="https://github.com/user-attachments/assets/6ea2d479-b4ea-4f91-8e1e-9cf465a53b71" />
+| <img width="344" height="551" alt="image" src="https://github.com/user-attachments/assets/f2d17037-4e40-4edb-ae21-0375bd32f224" /> |
+|---|
 
 A demo (in Hebrew) can be found [here](https://youtu.be/j5jny3WrgJk).
 
