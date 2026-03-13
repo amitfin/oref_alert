@@ -179,11 +179,19 @@ describe("oref-alert-map", () => {
     el._mapCard = mapCard;
 
     vi.spyOn(el, "_getPolygons").mockResolvedValue({ "Area A": [[1, 1]] });
-    await expect(el._createLayers(["Area A"])).resolves.toEqual([]);
+    await expect(
+      el._createLayers([
+        { friendly_name: "Area A", date: "2026-03-13T08:05:00Z", emoji: "🚀" },
+      ]),
+    ).resolves.toEqual([]);
 
     innerMap.Leaflet = { polygon: vi.fn() };
     el._getPolygons.mockResolvedValueOnce(null);
-    await expect(el._createLayers(["Area A"])).resolves.toEqual([]);
+    await expect(
+      el._createLayers([
+        { friendly_name: "Area A", date: "2026-03-13T08:05:00Z", emoji: "🚀" },
+      ]),
+    ).resolves.toEqual([]);
 
     const created = [];
     innerMap.Leaflet.polygon = vi.fn().mockImplementation((points, opts) => {
@@ -202,7 +210,10 @@ describe("oref-alert-map", () => {
       ],
     });
 
-    const layers = await el._createLayers(["Area A", "Area B"]);
+    const layers = await el._createLayers([
+      { friendly_name: "Area A", date: "2026-03-13T08:05:00Z", emoji: "🚀" },
+      { friendly_name: "Area B", date: "2026-03-13T11:42:00Z", emoji: "✈️" },
+    ]);
     expect(layers).toHaveLength(2);
     expect(innerMap.Leaflet.polygon).toHaveBeenNthCalledWith(
       1,
@@ -220,8 +231,8 @@ describe("oref-alert-map", () => {
       ],
       { color: "#f19292" },
     );
-    expect(created[0].bindTooltip).toHaveBeenCalledWith("Area A");
-    expect(created[1].bindTooltip).toHaveBeenCalledWith("Area B");
+    expect(created[0].bindTooltip).toHaveBeenCalledWith("Area A<br />08:05 🚀");
+    expect(created[1].bindTooltip).toHaveBeenCalledWith("Area B<br />11:42 ✈️");
   });
 
   test("applyHass handles stale token, unchanged areas, and map assignment", async () => {
@@ -240,11 +251,21 @@ describe("oref-alert-map", () => {
     const states = {
       "geo_location.b": {
         entity_id: "geo_location.b",
-        attributes: { source: "oref_alert", friendly_name: "Area B" },
+        attributes: {
+          source: "oref_alert",
+          friendly_name: "Area B",
+          date: "2026-03-13T11:42:00Z",
+          emoji: "✈️",
+        },
       },
       "geo_location.a": {
         entity_id: "geo_location.a",
-        attributes: { source: "oref_alert", friendly_name: "Area A" },
+        attributes: {
+          source: "oref_alert",
+          friendly_name: "Area A",
+          date: "2026-03-13T08:05:00Z",
+          emoji: "🚀",
+        },
       },
       "geo_location.x": {
         entity_id: "geo_location.x",
@@ -257,7 +278,20 @@ describe("oref-alert-map", () => {
     };
 
     el._hass = { states, connection: {} };
-    expect(el._getOrefAreas()).toEqual(["Area A", "Area B"]);
+    expect(el._getOrefAreas()).toEqual([
+      {
+        source: "oref_alert",
+        friendly_name: "Area A",
+        date: "2026-03-13T08:05:00Z",
+        emoji: "🚀",
+      },
+      {
+        source: "oref_alert",
+        friendly_name: "Area B",
+        date: "2026-03-13T11:42:00Z",
+        emoji: "✈️",
+      },
+    ]);
 
     el._updateToken = 2;
     await el._applyHass(1);
@@ -267,7 +301,20 @@ describe("oref-alert-map", () => {
 
     el._mapCard = mapCard;
     el._ensureMapCard.mockResolvedValue(mapCard);
-    el._areas = ["Area A", "Area B"];
+    el._areas = [
+      {
+        source: "oref_alert",
+        friendly_name: "Area A",
+        date: "2026-03-13T08:05:00Z",
+        emoji: "🚀",
+      },
+      {
+        source: "oref_alert",
+        friendly_name: "Area B",
+        date: "2026-03-13T11:42:00Z",
+        emoji: "✈️",
+      },
+    ];
     const createLayersSpy = vi.spyOn(el, "_createLayers");
     await el._applyHass(2);
     expect(createLayersSpy).not.toHaveBeenCalled();
@@ -286,7 +333,20 @@ describe("oref-alert-map", () => {
     el._updateToken = 4;
     await el._applyHass(4);
     expect(innerMap.layers).toEqual([{ id: 2 }, { id: 3 }]);
-    expect(el._areas).toEqual(["Area A", "Area B"]);
+    expect(el._areas).toEqual([
+      {
+        source: "oref_alert",
+        friendly_name: "Area A",
+        date: "2026-03-13T08:05:00Z",
+        emoji: "🚀",
+      },
+      {
+        source: "oref_alert",
+        friendly_name: "Area B",
+        date: "2026-03-13T11:42:00Z",
+        emoji: "✈️",
+      },
+    ]);
   });
 
   test("setTileLayer updates tile layers and honors options defaults", async () => {

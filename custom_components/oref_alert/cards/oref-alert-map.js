@@ -88,7 +88,9 @@ class OrefAlertMap extends HTMLElement {
     const areas = this._getOrefAreas();
     if (
       this._areas.length === areas.length &&
-      this._areas.every((area, i) => area === areas[i])
+      this._areas.every((area, i) =>
+        Object.keys(area).every((key) => area[key] === areas[i][key]),
+      )
     ) {
       return;
     }
@@ -118,8 +120,8 @@ class OrefAlertMap extends HTMLElement {
           stateObj.entity_id.startsWith("geo_location.") &&
           stateObj.attributes?.source === "oref_alert",
       )
-      .map((stateObj) => stateObj.attributes.friendly_name)
-      .sort();
+      .map((stateObj) => stateObj.attributes)
+      .sort((a, b) => a.friendly_name.localeCompare(b.friendly_name));
   }
 
   async _createLayers(areas) {
@@ -131,10 +133,16 @@ class OrefAlertMap extends HTMLElement {
 
     const layers = [];
     for (const area of areas) {
-      const layer = createPolygon(polygons[area], {
+      const layer = createPolygon(polygons[area.friendly_name], {
         color: "#f19292",
       });
-      layer.bindTooltip(area);
+      const date = new Date(area.date);
+      layer.bindTooltip(
+        `${area.friendly_name}<br />` +
+          `${String(date.getHours()).padStart(2, "0")}:` +
+          `${String(date.getMinutes()).padStart(2, "0")} ` +
+          area.emoji,
+      );
       layers.push(layer);
     }
     return layers;
