@@ -170,6 +170,7 @@ Geo-location entities are created for every active alert in Israel (regardless o
 6. `category`: integer with alert's category
 7. `icon`: Material icon ("mdi:xxx") based on the category
 8. `emoji`: based on the category
+9. `district`: area's district
 
 These entities provide the data that powers the map card described above.
 
@@ -189,6 +190,7 @@ data:
   type: alert
   icon: mdi:rocket-launch
   emoji: 🚀
+  district: דן
   source: mobile
 ```
 
@@ -204,6 +206,7 @@ data:
   type: pre_alert
   icon: mdi:flash-alert
   emoji: ⚡
+  district: דן
   source: tzevaadom
 ```
 
@@ -222,6 +225,7 @@ data:
   title: ניתן לצאת מהמרחב המוגן
   icon: mdi:message-alert
   emoji: ⚠
+  district: דן
   source: website
 ```
 
@@ -256,7 +260,7 @@ The integration adds the following template helper functions:
 ### `oref_alerts`
 
 The historical alerts (last 24h), sorted from newest to oldest. Each item contains:
-`date`, `area`, `title`, `icon`, `emoji`, `category`, `home_distance`, `latitude`, `longitude`, `channel`.
+`date`, `area`, `title`, `icon`, `emoji`, `category`, `district`, `home_distance`, `latitude`, `longitude`, `channel`.
 
 `{{ oref_alerts | list }}`
 

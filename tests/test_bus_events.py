@@ -80,6 +80,7 @@ async def test_alert_event(
         "title": "ירי רקטות וטילים",
         "icon": "mdi:rocket-launch",
         "emoji": "🚀",
+        "district": "עוטף עזה",
         "channel": "website-history",
     }
 
@@ -94,6 +95,7 @@ async def test_alert_event(
         "type": "alert",
         "icon": "mdi:rocket-launch",
         "emoji": "🚀",
+        "district": "עוטף עזה",
         "channel": "website-history",
     }
 
@@ -135,6 +137,7 @@ async def test_update_event(
         "title": "ניתן לצאת מהמרחב המוגן",
         "icon": "mdi:message-alert",
         "emoji": "⚠",
+        "district": "דן",
         "channel": "website-history",
     }
 
@@ -149,6 +152,7 @@ async def test_update_event(
         "type": "end",
         "icon": "mdi:message-alert",
         "emoji": "⚠",
+        "district": "דן",
         "channel": "website-history",
     }
 

@@ -26,6 +26,7 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.oref_alert.const import (
+    ATTR_DISTRICT,
     ATTR_EMOJI,
     ATTR_HOME_DISTANCE,
     CONF_AREA,
@@ -98,8 +99,9 @@ async def test_entity(
     assert state.attributes["title"] == "ירי רקטות וטילים"
     assert state.attributes[ATTR_ICON] == "mdi:rocket-launch"
     assert state.attributes[ATTR_EMOJI] == "🚀"
+    assert state.attributes[ATTR_DISTRICT] == "עוטף עזה"
     assert state.attributes["channel"] == "website-history"
-    assert len(state.attributes) == 12
+    assert len(state.attributes) == 13
     await async_shutdown(hass, config_id)
 
 

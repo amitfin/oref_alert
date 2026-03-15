@@ -14,6 +14,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 from homeassistant.util.location import vincenty
 
+from custom_components.oref_alert.metadata.area_to_district import AREA_TO_DISTRICT
 from custom_components.oref_alert.records_schema import RecordType
 
 from .categories import (
@@ -22,6 +23,7 @@ from .categories import (
 )
 from .const import (
     ATTR_AREA,
+    ATTR_DISTRICT,
     ATTR_EMOJI,
     ATTR_HOME_DISTANCE,
     ATTR_TYPE,
@@ -132,6 +134,7 @@ class OrefAlertBusEventManager:
             TITLE_FIELD: record.title,
             ATTR_ICON: category_to_icon(record.category),
             ATTR_EMOJI: category_to_emoji(record.category),
+            ATTR_DISTRICT: AREA_TO_DISTRICT.get(record.data),
             CHANNEL_FIELD: record.channel,
         }
 

@@ -18,6 +18,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.util.location import vincenty
 
+from custom_components.oref_alert.metadata.area_to_district import AREA_TO_DISTRICT
 from custom_components.oref_alert.records_schema import RecordType
 
 from .categories import (
@@ -26,6 +27,7 @@ from .categories import (
 )
 from .const import (
     AREA_FIELD,
+    ATTR_DISTRICT,
     ATTR_EMOJI,
     ATTR_HOME_DISTANCE,
     CATEGORY_FIELD,
@@ -68,6 +70,7 @@ class OrefAlertLocationEvent(OrefAlertEntity, GeolocationEvent):
             ATTR_LONGITUDE,
             ATTR_DATE,
             ATTR_HOME_DISTANCE,
+            ATTR_DISTRICT,
             CONF_FRIENDLY_NAME,
             CONF_UNIT_OF_MEASUREMENT,
             CATEGORY_FIELD,
@@ -128,6 +131,7 @@ class OrefAlertLocationEvent(OrefAlertEntity, GeolocationEvent):
         attributes[ATTR_DATE] = record.time
         attributes[ATTR_ICON] = category_to_icon(record.raw.category)
         attributes[ATTR_EMOJI] = category_to_emoji(record.raw.category)
+        attributes[ATTR_DISTRICT] = AREA_TO_DISTRICT.get(self._attr_name or "")
         self._alert_attributes = attributes
 
     @callback
