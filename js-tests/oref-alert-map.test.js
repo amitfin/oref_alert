@@ -451,6 +451,31 @@ describe("oref-alert-map", () => {
       auto_fit: false,
       fit_zones: true,
     });
+
+    el._config = {
+      auto_fit: false,
+      entities: ["person.alice", "device_tracker.bob"],
+    };
+    expect(el._buildMapConfig()).toEqual({
+      type: "map",
+      geo_location_sources: ["dummy"],
+      entities: ["person.alice", "device_tracker.bob"],
+      auto_fit: false,
+      fit_zones: true,
+    });
+
+    el._config = {
+      auto_fit: false,
+      show_home: true,
+      entities: ["person.alice", "device_tracker.bob"],
+    };
+    expect(el._buildMapConfig()).toEqual({
+      type: "map",
+      geo_location_sources: ["dummy"],
+      entities: ["zone.home", "person.alice", "device_tracker.bob"],
+      auto_fit: false,
+      fit_zones: true,
+    });
   });
 
   test("setConfig updates map config only when built config changes", async () => {
@@ -482,6 +507,20 @@ describe("oref-alert-map", () => {
       type: "map",
       geo_location_sources: ["dummy"],
       entities: ["zone.home"],
+      auto_fit: false,
+      fit_zones: true,
+    });
+
+    el.setConfig({
+      auto_fit: false,
+      show_home: true,
+      entities: ["person.alice"],
+    });
+    expect(setConfigSpy).toHaveBeenCalledTimes(3);
+    expect(setConfigSpy).toHaveBeenLastCalledWith({
+      type: "map",
+      geo_location_sources: ["dummy"],
+      entities: ["zone.home", "person.alice"],
       auto_fit: false,
       fit_zones: true,
     });

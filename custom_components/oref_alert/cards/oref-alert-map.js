@@ -180,7 +180,9 @@ class OrefAlertMap extends HTMLElement {
     return {
       type: "map",
       geo_location_sources: ["dummy"],
-      entities: this._config?.show_home ? ["zone.home"] : [],
+      entities: (this._config?.show_home ? ["zone.home"] : []).concat(
+        this._config?.entities ? this._config.entities : [],
+      ),
       auto_fit: this._config?.auto_fit ?? true,
       fit_zones: true,
     };
