@@ -9,7 +9,6 @@ from homeassistant.const import Platform
 from homeassistant.core import callback
 from homeassistant.util import slugify
 
-from .classifier import RECORDS_SCHEMA
 from .const import (
     ATTR_RECORD,
     CONF_AREAS,
@@ -20,6 +19,7 @@ from .const import (
 )
 from .entity import OrefAlertCoordinatorEntity
 from .metadata.areas import AREAS
+from .records_schema import RECORDS_SCHEMA
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant

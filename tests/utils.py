@@ -8,9 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from pytest_homeassistant_custom_component.common import load_fixture
 
-from custom_components.oref_alert import records_schema
 from custom_components.oref_alert.areas_checker import CITIES_MIX_URL
-from custom_components.oref_alert.classifier import RECORDS_SCHEMA_URL
 from custom_components.oref_alert.coordinator import (
     OREF_ALERTS_URL,
     OREF_HISTORY2_URL,
@@ -77,14 +75,6 @@ def _mock_pushy_urls(
         )
 
 
-def _mock_records_schema_url(
-    aioclient_mock: AiohttpClientMocker,
-) -> None:
-    """Mock the Records Schema URL."""
-    with Path(records_schema.__file__).open() as file:
-        aioclient_mock.get(RECORDS_SCHEMA_URL, text=file.read())
-
-
 def mock_urls(
     aioclient_mock: AiohttpClientMocker,
     real_time_fixture: str | None,
@@ -95,7 +85,6 @@ def mock_urls(
     aioclient_mock.clear_requests()
     _mock_website_urls(aioclient_mock, real_time_fixture, history_fixture, **kwargs)
     _mock_pushy_urls(aioclient_mock)
-    _mock_records_schema_url(aioclient_mock)
 
 
 def mock_pushy_urls(
@@ -109,7 +98,6 @@ def mock_pushy_urls(
         callback()
     _mock_pushy_urls(aioclient_mock, valid_credentials=valid_credentials)
     _mock_website_urls(aioclient_mock, None, None)
-    _mock_records_schema_url(aioclient_mock)
 
 
 def fixture_path(file_name: str) -> Path:

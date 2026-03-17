@@ -159,7 +159,6 @@ class OrefAlertRuntimeData:
         self.updater.stop()
         self.unload_template_extensions()
         self.bus_events.stop()
-        self.classifier.stop()
         await asyncio.gather(
             self.coordinator.async_save(),
             self.bus_events.async_save(),
@@ -364,7 +363,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
         await inject_template_extensions(hass, entry),
         pushy,
         tzevaadom,
-        Classifier(hass),
+        Classifier(),
         OrefAlertBusEventManager(hass, entry),
     )
 
@@ -381,8 +380,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
     entry.runtime_data.bus_events.start()
 
     try:
-        await entry.runtime_data.classifier.load()
-
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
         await asyncio.gather(

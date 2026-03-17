@@ -18,11 +18,11 @@ from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.update_coordinator import UpdateFailed
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
 )
 
-from custom_components.oref_alert.classifier import RECORDS_SCHEMA_URL
 from custom_components.oref_alert.const import (
     ADD_AREAS,
     ADD_SENSOR_ACTION,
@@ -41,12 +41,10 @@ from custom_components.oref_alert.const import (
     REMOVE_SENSOR_ACTION,
     SYNTHETIC_ALERT_ACTION,
 )
+from custom_components.oref_alert.coordinator import OrefAlertDataUpdateCoordinator
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
-    from pytest_homeassistant_custom_component.test_util.aiohttp import (
-        AiohttpClientMocker,
-    )
 
 DEFAULT_OPTIONS: dict[str, list[str]] = {CONF_AREAS: []}
 ENTITY_ID = f"{Platform.BINARY_SENSOR}.{OREF_ALERT_UNIQUE_ID}"
@@ -113,15 +111,23 @@ async def test_config_update(hass: HomeAssistant) -> None:
     await hass.async_block_till_done(wait_background_tasks=True)
 
 
-@pytest.mark.allowed_logs(["Error loading oref_alert config entry. Will retry later."])
+@pytest.mark.allowed_logs(
+    [
+        "Error fetching oref_alert data: refresh failed",
+        "Error loading oref_alert config entry. Will retry later.",
+    ]
+)
 async def test_config_retry(
     hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
     caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test config retry on setup failure."""
-    aioclient_mock.clear_requests()
-    aioclient_mock.get(RECORDS_SCHEMA_URL, status=500)
+    monkeypatch.setattr(
+        OrefAlertDataUpdateCoordinator,
+        "_async_update_data",
+        AsyncMock(side_effect=UpdateFailed("refresh failed")),
+    )
     config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
     config_entry.add_to_hass(hass)
     await hass.config_entries.async_setup(config_entry.entry_id)

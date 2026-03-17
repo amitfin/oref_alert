@@ -70,7 +70,7 @@ def create_coordinator(
     config.mock_state(hass, ConfigEntryState.SETUP_IN_PROGRESS)
     coordinator = OrefAlertDataUpdateCoordinator(hass, config, channels or [])
     coordinator.config_entry = config
-    config.runtime_data = SimpleNamespace(classifier=Classifier(hass))
+    config.runtime_data = SimpleNamespace(classifier=Classifier())
     return coordinator
 
 
