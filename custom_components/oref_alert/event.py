@@ -16,10 +16,10 @@ from .const import (
     OREF_ALERT_UNIQUE_ID,
     Record,
     RecordAndMetadata,
+    RecordType,
 )
 from .entity import OrefAlertCoordinatorEntity
 from .metadata.areas import AREAS
-from .records_schema import RECORDS_SCHEMA
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -61,7 +61,7 @@ class AlertEvent(OrefAlertCoordinatorEntity, EventEntity):
     ) -> None:
         """Initialize object with defaults."""
         super().__init__(config_entry)
-        self._attr_event_types = list(RECORDS_SCHEMA.keys())
+        self._attr_event_types = list(RecordType)
         self._area = area
         if not name:
             self.use_device_name = True

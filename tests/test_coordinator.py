@@ -32,6 +32,7 @@ from custom_components.oref_alert.const import (
     TITLE_FIELD,
     Record,
     RecordAndMetadata,
+    RecordType,
 )
 from custom_components.oref_alert.coordinator import (
     OREF_ALERTS_URL,
@@ -41,7 +42,6 @@ from custom_components.oref_alert.coordinator import (
     OrefAlertCoordinatorUpdater,
     OrefAlertDataUpdateCoordinator,
 )
-from custom_components.oref_alert.records_schema import RecordType
 
 from .utils import load_json_fixture, mock_urls
 

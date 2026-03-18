@@ -13,8 +13,6 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import event as event_helper
 from homeassistant.util import slugify
 
-from custom_components.oref_alert.records_schema import RecordType
-
 from .const import (
     ATTR_ALERT,
     ATTR_AREA,
@@ -25,6 +23,7 @@ from .const import (
     CONF_SENSORS,
     OREF_ALERT_UNIQUE_ID,
     TIME_TO_SHELTER_ID_SUFFIX,
+    RecordType,
 )
 from .entity import OrefAlertCoordinatorEntity
 from .metadata.area_to_migun_time import AREA_TO_MIGUN_TIME

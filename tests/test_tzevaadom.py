@@ -28,8 +28,8 @@ from custom_components.oref_alert.const import (
     IST,
     OREF_ALERT_UNIQUE_ID,
     RecordAndMetadata,
+    RecordType,
 )
-from custom_components.oref_alert.records_schema import RecordType
 from custom_components.oref_alert.tzevaadom import TzevaAdomNotifications
 from tests.utils import load_json_fixture
 

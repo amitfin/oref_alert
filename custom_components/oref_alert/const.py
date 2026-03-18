@@ -11,8 +11,6 @@ from typing import TYPE_CHECKING, Final
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from .records_schema import RecordType
-
 DOMAIN: Final = "oref_alert"
 TITLE: Final = "Oref Alert"
 LOGGER = logging.getLogger(__package__)
@@ -83,6 +81,14 @@ class Record:
         """Convert StrEnum to plain str."""
         if isinstance(self.channel, enum.StrEnum):
             object.__setattr__(self, "channel", self.channel.value)
+
+
+class RecordType(enum.StrEnum):
+    """Event types."""
+
+    PRE_ALERT = "pre_alert"
+    ALERT = "alert"
+    END = "end"
 
 
 @dataclass(frozen=True)

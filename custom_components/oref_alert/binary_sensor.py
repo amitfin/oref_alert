@@ -8,8 +8,6 @@ from homeassistant.components import binary_sensor
 from homeassistant.const import Platform
 from homeassistant.util import slugify
 
-from custom_components.oref_alert.records_schema import RecordType
-
 from .entity import OrefAlertCoordinatorEntity
 
 if TYPE_CHECKING:
@@ -27,6 +25,7 @@ from .const import (
     CONF_AREAS,
     CONF_SENSORS,
     OREF_ALERT_UNIQUE_ID,
+    RecordType,
 )
 
 if TYPE_CHECKING:

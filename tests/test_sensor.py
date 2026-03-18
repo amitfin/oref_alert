@@ -31,9 +31,9 @@ from custom_components.oref_alert.const import (
     TIME_TO_SHELTER_ID_SUFFIX,
     Record,
     RecordAndMetadata,
+    RecordType,
 )
 from custom_components.oref_alert.coordinator import OrefAlertCoordinatorData
-from custom_components.oref_alert.records_schema import RecordType
 
 from .utils import load_json_fixture, mock_urls, refresh_coordinator
 

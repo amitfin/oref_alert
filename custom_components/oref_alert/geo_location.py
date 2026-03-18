@@ -19,7 +19,6 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.util.location import vincenty
 
 from custom_components.oref_alert.metadata.area_to_district import AREA_TO_DISTRICT
-from custom_components.oref_alert.records_schema import RecordType
 
 from .categories import (
     category_to_emoji,
@@ -37,6 +36,7 @@ from .const import (
     OREF_ALERT_UNIQUE_ID,
     TITLE_FIELD,
     RecordAndMetadata,
+    RecordType,
 )
 from .entity import OrefAlertEntity
 from .metadata.area_info import AREA_INFO

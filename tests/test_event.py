@@ -29,8 +29,8 @@ from custom_components.oref_alert.const import (
     DOMAIN,
     REMOVE_SENSOR_ACTION,
     SYNTHETIC_ALERT_ACTION,
+    RecordType,
 )
-from custom_components.oref_alert.records_schema import RecordType
 
 from .utils import mock_urls
 

@@ -19,7 +19,6 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
-from custom_components.oref_alert.records_schema import RecordType
 
 from .categories import (
     END_ALERT_CATEGORY,
@@ -43,6 +42,7 @@ from .const import (
     Record,
     RecordAndMetadata,
     RecordSource,
+    RecordType,
 )
 from .metadata.areas import AREAS
 
