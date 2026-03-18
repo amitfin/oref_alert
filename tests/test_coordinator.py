@@ -5,7 +5,7 @@ from collections import deque
 from dataclasses import asdict
 from datetime import timedelta
 from http import HTTPStatus
-from types import MappingProxyType, SimpleNamespace
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock
 
@@ -17,12 +17,10 @@ from pytest_homeassistant_custom_component.common import (
     async_fire_time_changed,
 )
 
-from custom_components.oref_alert import classifier, records_schema
 from custom_components.oref_alert.categories import (
     END_ALERT_CATEGORY,
     PRE_ALERT_CATEGORY,
 )
-from custom_components.oref_alert.classifier import Classifier
 from custom_components.oref_alert.const import (
     AREA_FIELD,
     CONF_AREA,
@@ -54,8 +52,6 @@ if TYPE_CHECKING:
         AiohttpClientMocker,
     )
 
-classifier.RECORDS_SCHEMA = records_schema.RECORDS_SCHEMA
-
 
 def create_coordinator(
     hass: HomeAssistant,
@@ -70,7 +66,6 @@ def create_coordinator(
     config.mock_state(hass, ConfigEntryState.SETUP_IN_PROGRESS)
     coordinator = OrefAlertDataUpdateCoordinator(hass, config, channels or [])
     coordinator.config_entry = config
-    config.runtime_data = SimpleNamespace(classifier=Classifier())
     return coordinator
 
 
@@ -101,9 +96,7 @@ async def test_save_and_restore_areas(hass: HomeAssistant) -> None:
         channel="website-history",
     )
     coordinator._areas = {  # noqa: SLF001
-        "אילת": coordinator._config_entry.runtime_data.classifier.add_metadata(  # noqa: SLF001
-            record
-        )
+        "אילת": coordinator.add_metadata(record)
     }
     await coordinator.async_save()
 
@@ -149,12 +142,8 @@ async def test_save_persists_only_records_newer_than_cutoff(
         channel="website-history",
     )
     coordinator._areas = {  # noqa: SLF001
-        "אילת": coordinator._config_entry.runtime_data.classifier.add_metadata(  # noqa: SLF001
-            fresh_record
-        ),
-        "קריית שמונה": coordinator._config_entry.runtime_data.classifier.add_metadata(  # noqa: SLF001
-            old_record
-        ),
+        "אילת": coordinator.add_metadata(fresh_record),
+        "קריית שמונה": coordinator.add_metadata(old_record),
     }
     await coordinator.async_save()
 
@@ -183,9 +172,7 @@ async def test_restore_skips_expired_records(hass: HomeAssistant) -> None:
         channel="website-history",
     )
     coordinator._areas = {  # noqa: SLF001
-        "אילת": coordinator._config_entry.runtime_data.classifier.add_metadata(  # noqa: SLF001
-            old_record
-        )
+        "אילת": coordinator.add_metadata(old_record)
     }
     await coordinator.async_save()
 
@@ -231,7 +218,7 @@ async def test_get_record_and_metadata_sorting_filters_and_window(
     """Test get_record_and_metadata sorting and filtering semantics."""
     freezer.move_to("2026-01-02 12:00:00+00:00")
     coordinator = create_coordinator(hass)
-    classify = coordinator._config_entry.runtime_data.classifier.add_metadata  # noqa: SLF001
+    classify = coordinator.add_metadata
 
     # Same timestamp for two records to validate tie ordering by area.
     same_time = "2026-01-02 13:58:00"
@@ -630,12 +617,8 @@ def test_manual_event_end_skips_non_alert_records(hass: HomeAssistant) -> None:
         channel="website-history",
     )
     coordinator._areas = {  # noqa: SLF001
-        pre_alert.data: coordinator._config_entry.runtime_data.classifier.add_metadata(  # noqa: SLF001
-            pre_alert
-        ),
-        alert.data: coordinator._config_entry.runtime_data.classifier.add_metadata(  # noqa: SLF001
-            alert
-        ),
+        pre_alert.data: coordinator.add_metadata(pre_alert),
+        alert.data: coordinator.add_metadata(alert),
     }
 
     coordinator.add_manual_event_end([pre_alert.data, alert.data])
@@ -871,10 +854,9 @@ async def test_pre_alert_transition_rules(
     freezer.move_to("2025-01-01 10:10:00+03:00")
     mock_urls(aioclient_mock, None, None)
     coordinator = create_coordinator(hass, channels=[deque()])
-    classifier = coordinator._config_entry.runtime_data.classifier  # noqa: SLF001
     area = "בארי"
     coordinator._areas = {  # noqa: SLF001
-        area: classifier.add_metadata(
+        area: coordinator.add_metadata(
             Record(
                 alertDate="2025-01-01 10:00:00",
                 title="current",
@@ -885,7 +867,7 @@ async def test_pre_alert_transition_rules(
         )
     }
     coordinator._channels[0].append(  # noqa: SLF001
-        classifier.add_metadata(
+        coordinator.add_metadata(
             Record(
                 alertDate="2025-01-01 10:05:00",
                 title="pre alert",

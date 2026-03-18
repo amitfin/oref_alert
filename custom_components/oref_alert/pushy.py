@@ -308,7 +308,7 @@ class PushyNotifications:
                     if int(segment) in SEGMENT_TO_AREA
                 ]:
                     self.alerts.append(
-                        self._config_entry.runtime_data.classifier.add_metadata(
+                        self._config_entry.runtime_data.coordinator.add_metadata(
                             Record(
                                 alertDate=alert_date,
                                 title=content[TITLE_FIELD],

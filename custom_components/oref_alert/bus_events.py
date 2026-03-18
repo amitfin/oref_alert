@@ -92,7 +92,7 @@ class OrefAlertBusEventManager:
             except Exception:  # noqa: BLE001
                 LOGGER.debug("Skipping invalid restored history record", exc_info=True)
                 continue
-            record_metadata = self._config_entry.runtime_data.classifier.add_metadata(
+            record_metadata = self._config_entry.runtime_data.coordinator.add_metadata(
                 record
             )
             self._history_records.add(record_metadata, record_metadata.time)

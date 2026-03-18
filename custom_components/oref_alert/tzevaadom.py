@@ -233,7 +233,7 @@ class TzevaAdomNotifications:
                     )
                     continue
                 self.alerts.append(
-                    self._config_entry.runtime_data.classifier.add_metadata(
+                    self._config_entry.runtime_data.coordinator.add_metadata(
                         Record(
                             alertDate=fields[DATE_FIELD],
                             title=fields[TITLE_FIELD],

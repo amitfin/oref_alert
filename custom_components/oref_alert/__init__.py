@@ -22,7 +22,6 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.entity_platform import async_get_platforms
 from homeassistant.helpers.service import async_register_admin_service
 
-from custom_components.oref_alert.classifier import Classifier
 from custom_components.oref_alert.custom_cards import publish_cards
 
 from .areas_checker import AreasChecker
@@ -150,7 +149,6 @@ class OrefAlertRuntimeData:
     unload_template_extensions: Callable[[], None]
     pushy: PushyNotifications
     tzevaadom: TzevaAdomNotifications
-    classifier: Classifier
     bus_events: OrefAlertBusEventManager
 
     async def stop(self) -> None:
@@ -363,7 +361,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
         await inject_template_extensions(hass, entry),
         pushy,
         tzevaadom,
-        Classifier(),
         OrefAlertBusEventManager(hass, entry),
     )
 

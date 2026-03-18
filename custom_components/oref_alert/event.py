@@ -80,7 +80,7 @@ class AlertEvent(OrefAlertCoordinatorEntity, EventEntity):
         if (last_state := await self.async_get_last_state()) and (
             record := last_state.attributes.get(ATTR_RECORD)
         ):
-            self._record = self._config_entry.runtime_data.classifier.add_metadata(
+            self._record = self._config_entry.runtime_data.coordinator.add_metadata(
                 Record(**record)
             )
 

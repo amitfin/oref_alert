@@ -5,11 +5,11 @@ from __future__ import annotations
 import asyncio
 import itertools
 import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from http import HTTPStatus
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 import homeassistant.util.dt as dt_util
 from homeassistant.core import callback
@@ -23,6 +23,7 @@ from custom_components.oref_alert.records_schema import RecordType
 
 from .categories import (
     END_ALERT_CATEGORY,
+    PRE_ALERT_CATEGORY,
     category_is_alert,
     category_is_update,
     real_time_to_history_category,
@@ -53,20 +54,28 @@ if TYPE_CHECKING:
 
     from . import OrefAlertConfigEntry
 
-OREF_ALERTS_URL = "https://www.oref.org.il/warningMessages/alert/Alerts.json"
-OREF_HISTORY_URL = (
+CATEGORY_TO_RECORD_TYPE: Final[dict[int, RecordType]] = {
+    PRE_ALERT_CATEGORY: RecordType.PRE_ALERT,
+    END_ALERT_CATEGORY: RecordType.END,
+}
+RECORD_EXPIRATION_MINUTES: Final[dict[RecordType, int]] = {
+    RecordType.PRE_ALERT: 20,
+    RecordType.ALERT: 180,
+}
+OREF_ALERTS_URL: Final = "https://www.oref.org.il/warningMessages/alert/Alerts.json"
+OREF_HISTORY_URL: Final = (
     "https://www.oref.org.il/warningMessages/alert/History/AlertsHistory.json"
 )
-OREF_HISTORY2_URL = "https://alerts-history.oref.org.il/Shared/Ajax/GetAlarmsHistory.aspx?lang=he&mode=1"
-OREF_HEADERS = {
+OREF_HISTORY2_URL: Final = "https://alerts-history.oref.org.il/Shared/Ajax/GetAlarmsHistory.aspx?lang=he&mode=1"
+OREF_HEADERS: Final = {
     "Referer": "https://www.oref.org.il/",
     "X-Requested-With": "XMLHttpRequest",
     "Content-Type": "application/json",
 }
-REQUEST_RETRIES = 3
-REQUEST_THROTTLING = 0.8
-DEDUP_WINDOW_SECONDS = 180
-STORAGE_VERSION = 1
+REQUEST_RETRIES: Final = 3
+REQUEST_THROTTLING: Final = 0.8
+DEDUP_WINDOW_SECONDS: Final = 180
+STORAGE_VERSION: Final = 1
 
 
 def next_record(queue: deque[RecordAndMetadata]) -> Generator[RecordAndMetadata]:
@@ -112,11 +121,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         if stored:
             for area, raw_record in stored.get(CONF_AREAS, {}).items():
                 try:
-                    self._areas[area] = (
-                        self._config_entry.runtime_data.classifier.add_metadata(
-                            Record(**raw_record)
-                        )
-                    )
+                    self._areas[area] = self.add_metadata(Record(**raw_record))
                 except Exception:  # noqa: BLE001
                     LOGGER.debug(
                         "Skipping invalid restored area '%s'",
@@ -250,6 +255,30 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
 
         return OrefAlertCoordinatorData(MappingProxyType(self._areas))
 
+    def add_metadata(
+        self, record: Record, record_expire: datetime | None = None
+    ) -> RecordAndMetadata:
+        """Calculate record metadata."""
+        record_time = dt_util.parse_datetime(
+            record.alertDate, raise_on_error=True
+        ).replace(tzinfo=IST)
+
+        record_type = CATEGORY_TO_RECORD_TYPE.get(record.category, RecordType.ALERT)
+
+        if (
+            record_expire is None
+            and (expiration := RECORD_EXPIRATION_MINUTES.get(record_type)) is not None
+        ):
+            record_expire = record_time + timedelta(minutes=expiration)
+
+        return RecordAndMetadata(
+            raw=record,
+            raw_dict=asdict(record),
+            record_type=record_type,
+            time=record_time,
+            expire=record_expire,
+        )
+
     async def _async_fetch_url(self, url: str) -> Any:
         """Fetch data from Oref servers."""
         exc_info = Exception()
@@ -310,7 +339,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             return
         now = dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S")
         for area in current[AREA_FIELD]:
-            yield self._config_entry.runtime_data.classifier.add_metadata(
+            yield self.add_metadata(
                 Record(
                     alertDate=now,
                     title=current[TITLE_FIELD],
@@ -325,7 +354,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         now = dt_util.now(IST)
         expire = now + timedelta(seconds=details[CONF_DURATION])
         for area in details[CONF_AREA]:
-            self._areas[area] = self._config_entry.runtime_data.classifier.add_metadata(
+            self._areas[area] = self.add_metadata(
                 Record(
                     alertDate=now.strftime("%Y-%m-%d %H:%M:%S"),
                     title=details.get(TITLE_FIELD, "התרעה סינטטית לצורכי בדיקות"),
@@ -345,7 +374,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 continue
             if areas is not None and area not in areas:
                 continue
-            self._areas[area] = self._config_entry.runtime_data.classifier.add_metadata(
+            self._areas[area] = self.add_metadata(
                 Record(
                     alertDate=now,
                     title=MANUAL_EVENT_END_TITLE,
@@ -390,9 +419,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             if record[AREA_FIELD] in areas:
                 continue
             areas.add(record[AREA_FIELD])
-            record_meta = self._config_entry.runtime_data.classifier.add_metadata(
-                payload_to_record(record)
-            )
+            record_meta = self.add_metadata(payload_to_record(record))
             yield record_meta
 
             # Post initial fetch, take only recent records.

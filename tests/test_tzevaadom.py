@@ -238,8 +238,8 @@ async def test_duplicate(hass: HomeAssistant) -> None:
     data = json.dumps(alert).encode("utf-8")
     config = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
     config.runtime_data = SimpleNamespace(
-        coordinator=SimpleNamespace(async_refresh=AsyncMock()),
-        classifier=SimpleNamespace(
+        coordinator=SimpleNamespace(
+            async_refresh=AsyncMock(),
             add_metadata=lambda record: RecordAndMetadata(
                 raw=record,
                 raw_dict=asdict(record),
@@ -248,7 +248,7 @@ async def test_duplicate(hass: HomeAssistant) -> None:
                     tzinfo=IST
                 ),
                 expire=None,
-            )
+            ),
         ),
     )
     tzevaadom = TzevaAdomNotifications(hass, config)
