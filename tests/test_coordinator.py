@@ -793,9 +793,21 @@ async def test_channels(
             expire=None,
         )
     )
+
+    updates = 0
+
+    def update() -> None:
+        nonlocal updates
+        updates += 1
+
     coordinator = create_coordinator(hass, channels=[channel, channel])
-    coordinator.async_add_listener(lambda: None)
+    coordinator.async_add_listener(update)
     await coordinator.async_config_entry_first_refresh()
+    assert updates == 1
+    assert len(coordinator.get_records(None, None, None)) == 1
+
+    await hass.async_block_till_done()
+    assert updates == 2
     assert len(coordinator.get_records(None, None, None)) == expected
     assert coordinator.data.areas[alert["data"]].raw.category == alert["category"]
     await coordinator.async_shutdown()

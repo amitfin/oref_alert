@@ -48,7 +48,7 @@ from .metadata.areas import AREAS
 
 if TYPE_CHECKING:
     from collections import deque
-    from collections.abc import Callable, Generator, Iterable, Mapping
+    from collections.abc import AsyncIterator, Callable, Generator, Iterable, Mapping
 
     from homeassistant.core import HomeAssistant
 
@@ -76,12 +76,6 @@ REQUEST_RETRIES: Final = 3
 REQUEST_THROTTLING: Final = 0.8
 DEDUP_WINDOW_SECONDS: Final = 180
 STORAGE_VERSION: Final = 1
-
-
-def next_record(queue: deque[RecordAndMetadata]) -> Generator[RecordAndMetadata]:
-    """Consume records from the queue."""
-    while queue:
-        yield queue.popleft()
 
 
 @dataclass(frozen=True)
@@ -193,6 +187,29 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             return None
         return record.raw_dict
 
+    async def _records_to_process(self) -> AsyncIterator[RecordAndMetadata]:
+        """Get records from push channels. Otherwise, from polling channels."""
+        if any(channel for channel in self._channels):
+            for channel in self._channels:
+                while channel:
+                    yield channel.popleft()
+
+            # Polling channels are postponed to a follow up refresh.
+            self.hass.async_create_task(self.async_refresh())
+        else:
+            current, history, history2 = await asyncio.gather(
+                *[
+                    self._async_fetch_url(url)
+                    for url in (OREF_ALERTS_URL, OREF_HISTORY_URL, OREF_HISTORY2_URL)
+                ]
+            )
+            for record in itertools.chain(
+                self._process_history_alerts(history, self._history_to_record),
+                self._process_history_alerts(history2, self._history2_to_record),
+                self._current_to_history_format(current),
+            ):
+                yield record
+
     async def _async_update_data(self) -> OrefAlertCoordinatorData:
         """Request the data from Oref channels."""
         # Remove expired records.
@@ -203,22 +220,8 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             if not record.expire or record.expire > now
         }
 
-        current, history, history2 = await asyncio.gather(
-            *[
-                self._async_fetch_url(url)
-                for url in (OREF_ALERTS_URL, OREF_HISTORY_URL, OREF_HISTORY2_URL)
-            ]
-        )
-
         # Update the latest areas' records.
-        for record in itertools.chain(
-            self._process_history_alerts(history, self._history_to_record),
-            self._process_history_alerts(history2, self._history2_to_record),
-            self._current_to_history_format(current),
-            itertools.chain.from_iterable(
-                next_record(channel) for channel in self._channels
-            ),
-        ):
+        async for record in self._records_to_process():
             # Check if a valid record.
             if (
                 not category_is_alert(record.raw.category)
