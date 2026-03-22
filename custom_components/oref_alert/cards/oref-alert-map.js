@@ -40,7 +40,6 @@ class OrefAlertMap extends HTMLElement {
   setConfig(config) {
     this._config = config;
 
-    // Reset everything.
     this._stopRefresh();
     this._mapCard = null;
     this._mapCardPromise = null;

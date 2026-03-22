@@ -56,6 +56,7 @@ Card configuration:
 - `auto_fit` (optional, default: `true`): automatically fit the map view to active alerts.
 - `show_home` (optional, default: `false`): show `zone.home` on the map.
 - `hebrew_basemap` (optional, default: `true`): use a Hebrew basemap tile layer.
+- `entities` (optional, YAML only, no UI): additional entities passed to the [map card](https://www.home-assistant.io/dashboards/map). See also [here](https://www.home-assistant.io/dashboards/map/#entities) and [here](https://www.home-assistant.io/dashboards/map/#options-for-entities).
 
 | <img width="344" height="551" alt="image" src="https://github.com/user-attachments/assets/f2d17037-4e40-4edb-ae21-0375bd32f224" /> |
 |---|
