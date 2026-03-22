@@ -38,14 +38,20 @@ class OrefAlertMap extends HTMLElement {
   }
 
   setConfig(config) {
-    const previousMapConfig = this._buildMapConfig();
     this._config = config;
-    const newMapConfig = this._buildMapConfig();
-    if (
-      this._mapCard &&
-      JSON.stringify(previousMapConfig) !== JSON.stringify(newMapConfig)
-    ) {
-      this._mapCard.setConfig(newMapConfig);
+
+    // Reset everything.
+    this._stopRefresh();
+    this._mapCard = null;
+    this._mapCardPromise = null;
+    this._areas = [];
+    this._refreshDeadline = Date.now() + 60_000;
+    this.replaceChildren();
+
+    if (this._hass) {
+      void this._applyHass(++this._updateToken).catch((error) => {
+        console.error("oref-alert-map update failed", error);
+      });
     }
   }
 
@@ -78,9 +84,15 @@ class OrefAlertMap extends HTMLElement {
       return;
     }
 
-    const mapCard = await this._ensureMapCard();
+    const mapCard = await this._ensureMapCard(token);
     if (!mapCard) {
       return;
+    }
+    if (token !== this._updateToken) {
+      return;
+    }
+    if (this.firstElementChild !== mapCard) {
+      this.replaceChildren(mapCard);
     }
     mapCard.hass = this._hass;
     this._setTileLayer();
@@ -148,7 +160,7 @@ class OrefAlertMap extends HTMLElement {
     return layers;
   }
 
-  async _ensureMapCard() {
+  async _ensureMapCard(token) {
     if (this._mapCard) {
       return this._mapCard;
     }
@@ -158,21 +170,31 @@ class OrefAlertMap extends HTMLElement {
         this._mapCardPromise = null;
       });
     }
-    return this._mapCardPromise;
+    const mapCardPromise = this._mapCardPromise;
+    const mapCard = await mapCardPromise;
+
+    if (this._mapCardPromise === mapCardPromise) {
+      this._mapCardPromise = null;
+    }
+
+    if (!mapCard) {
+      return null;
+    }
+
+    if (token !== this._updateToken) {
+      return null;
+    }
+
+    this._mapCard = mapCard;
+    return mapCard;
   }
 
   async _createMapCard() {
     const helpers = await window.loadCardHelpers();
     const mapCard = await helpers.createCardElement(this._buildMapConfig());
-    if (this._hass) {
-      mapCard.hass = this._hass;
-    }
     if (this._layout !== undefined) {
       mapCard.layout = this._layout;
     }
-    this._mapCard = mapCard;
-    this._setTileLayer();
-    this.replaceChildren(mapCard);
     return mapCard;
   }
 
@@ -205,7 +227,18 @@ class OrefAlertMap extends HTMLElement {
   }
 
   async _setTileLayer() {
-    if (!this._config?.tileLayer) {
+    let tileLayer;
+    if (this._config?.tileLayer) {
+      tileLayer = this._config.tileLayer;
+    } else if (this._config?.hebrew_basemap) {
+      tileLayer = {
+        url: "https://cdnil.govmap.gov.il/xyz/heb/{z}/{x}/{y}.png",
+        options: {
+          maxZoom: 15,
+          attribution: "© GovMap / המרכז למיפוי ישראל",
+        },
+      };
+    } else {
       return;
     }
 
@@ -219,7 +252,7 @@ class OrefAlertMap extends HTMLElement {
     let found = false;
     leafletMap.eachLayer((layer) => {
       if (layer instanceof leaflet.TileLayer) {
-        if (layer._url !== this._config.tileLayer.url) {
+        if (layer._url !== tileLayer.url) {
           leafletMap.removeLayer(layer);
         } else {
           found = true;
@@ -229,10 +262,7 @@ class OrefAlertMap extends HTMLElement {
 
     if (!found) {
       leaflet
-        .tileLayer(
-          this._config.tileLayer.url,
-          this._config.tileLayer.options || {},
-        )
+        .tileLayer(tileLayer.url, tileLayer.options || {})
         .addTo(leafletMap);
     }
   }
@@ -282,6 +312,7 @@ class OrefAlertMap extends HTMLElement {
       schema: [
         { name: "auto_fit", selector: { boolean: {} } },
         { name: "show_home", selector: { boolean: {} } },
+        { name: "hebrew_basemap", selector: { boolean: {} } },
       ],
       computeLabel: (schema) => {
         if (schema.name === "auto_fit") {
@@ -293,6 +324,9 @@ class OrefAlertMap extends HTMLElement {
         if (schema.name === "show_home") {
           return _t("Show home", "הצג בית");
         }
+        if (schema.name === "hebrew_basemap") {
+          return _t("Hebrew basemap", "מפת בסיס בעברית");
+        }
         return undefined;
       },
     };
@@ -302,6 +336,7 @@ class OrefAlertMap extends HTMLElement {
     return {
       auto_fit: true,
       show_home: false,
+      hebrew_basemap: true,
     };
   }
 }

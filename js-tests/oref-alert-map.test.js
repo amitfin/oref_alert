@@ -82,8 +82,14 @@ describe("oref-alert-map", () => {
 
     const created = await el._createMapCard();
     expect(created).toBe(mapCard);
-    expect(hassSetter).toHaveBeenCalledWith(el._hass);
+    expect(hassSetter).not.toHaveBeenCalled();
     expect(mapCard.layout).toBe("panel");
+    expect(el._map).toBeNull();
+
+    el._updateToken = 1;
+    vi.spyOn(el, "_getOrefAreas").mockReturnValue([]);
+    await el._applyHass(1);
+    expect(hassSetter).toHaveBeenCalledWith(el._hass);
     expect(el._map).toBe(mapCard.shadowRoot.querySelector("ha-map"));
 
     expect(el.getCardSize()).toBe(3);
@@ -110,8 +116,9 @@ describe("oref-alert-map", () => {
     window.loadCardHelpers = vi.fn().mockResolvedValue({ createCardElement });
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const p1 = el._ensureMapCard();
-    const p2 = el._ensureMapCard();
+    el._updateToken = 1;
+    const p1 = el._ensureMapCard(1);
+    const p2 = el._ensureMapCard(1);
     await Promise.all([p1, p2]);
 
     expect(createCardElement).toHaveBeenCalledTimes(1);
@@ -121,10 +128,19 @@ describe("oref-alert-map", () => {
     );
     expect(el._mapCardPromise).toBeNull();
 
-    await expect(el._ensureMapCard()).resolves.toBe(mapCard);
+    el._updateToken = 2;
+    await expect(el._ensureMapCard(2)).resolves.toBe(mapCard);
     expect(createCardElement).toHaveBeenCalledTimes(2);
-    await expect(el._ensureMapCard()).resolves.toBe(mapCard);
+    await expect(el._ensureMapCard(2)).resolves.toBe(mapCard);
     expect(createCardElement).toHaveBeenCalledTimes(2);
+
+    const staleMapCard = createMapCardWithInnerMap().mapCard;
+    el._mapCard = null;
+    el._mapCardPromise = Promise.resolve(staleMapCard);
+    el._updateToken = 3;
+    await expect(el._ensureMapCard(2)).resolves.toBeNull();
+    expect(el._mapCard).toBeNull();
+    expect(el._mapCardPromise).toBeNull();
   });
 
   test("getPolygons caches after success and handles unresolved/missing polygons", async () => {
@@ -411,6 +427,18 @@ describe("oref-alert-map", () => {
       "https://tiles2.example/{z}/{x}/{y}.png",
       {},
     );
+
+    el._config = {
+      hebrew_basemap: true,
+    };
+    await el._setTileLayer();
+    expect(tileLayerFactory).toHaveBeenLastCalledWith(
+      "https://cdnil.govmap.gov.il/xyz/heb/{z}/{x}/{y}.png",
+      {
+        maxZoom: 15,
+        attribution: "© GovMap / המרכז למיפוי ישראל",
+      },
+    );
   });
 
   test("setTileLayer no-ops when map prerequisites are missing", async () => {
@@ -478,52 +506,38 @@ describe("oref-alert-map", () => {
     });
   });
 
-  test("setConfig updates map config only when built config changes", async () => {
+  test("setConfig resets state and reapplies hass when available", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
     const el = new Card();
-    const setConfigSpy = vi.fn();
-    el._mapCard = { setConfig: setConfigSpy };
+    const stopRefreshSpy = vi.spyOn(el, "_stopRefresh");
+    const applyHassSpy = vi.spyOn(el, "_applyHass").mockResolvedValue();
+    const child = document.createElement("div");
+    el.append(child);
 
-    el.setConfig({ auto_fit: true, show_home: false });
-    expect(setConfigSpy).not.toHaveBeenCalled();
-
-    el.setConfig({ auto_fit: false, show_home: false });
-    expect(setConfigSpy).toHaveBeenCalledTimes(1);
-    expect(setConfigSpy).toHaveBeenLastCalledWith({
-      type: "map",
-      geo_location_sources: ["dummy"],
-      entities: [],
-      auto_fit: false,
-      fit_zones: true,
-    });
-
-    el.setConfig({ auto_fit: false, show_home: false });
-    expect(setConfigSpy).toHaveBeenCalledTimes(1);
+    el._mapCard = { id: "map-card" };
+    el._mapCardPromise = Promise.resolve(el._mapCard);
+    el._areas = [{ id: "Area A" }];
+    el._refreshDeadline = 0;
+    el._hass = { states: {}, connection: {} };
+    el._updateToken = 7;
 
     el.setConfig({ auto_fit: false, show_home: true });
-    expect(setConfigSpy).toHaveBeenCalledTimes(2);
-    expect(setConfigSpy).toHaveBeenLastCalledWith({
-      type: "map",
-      geo_location_sources: ["dummy"],
-      entities: ["zone.home"],
-      auto_fit: false,
-      fit_zones: true,
-    });
 
-    el.setConfig({
-      auto_fit: false,
-      show_home: true,
-      entities: ["person.alice"],
-    });
-    expect(setConfigSpy).toHaveBeenCalledTimes(3);
-    expect(setConfigSpy).toHaveBeenLastCalledWith({
-      type: "map",
-      geo_location_sources: ["dummy"],
-      entities: ["zone.home", "person.alice"],
-      auto_fit: false,
-      fit_zones: true,
-    });
+    expect(stopRefreshSpy).toHaveBeenCalledTimes(1);
+    expect(el._mapCard).toBeNull();
+    expect(el._mapCardPromise).toBeNull();
+    expect(el._areas).toEqual([]);
+    expect(el.childElementCount).toBe(0);
+    expect(el._refreshDeadline).toBeGreaterThan(Date.now() - 1000);
+    expect(applyHassSpy).toHaveBeenCalledWith(8);
+
+    const elNoHass = new Card();
+    const applyHassNoHassSpy = vi
+      .spyOn(elNoHass, "_applyHass")
+      .mockResolvedValue();
+    elNoHass.setConfig({ auto_fit: true, show_home: false });
+    expect(applyHassNoHassSpy).not.toHaveBeenCalled();
   });
 
   test("getConfigForm labels support english and hebrew", async () => {
@@ -539,6 +553,9 @@ describe("oref-alert-map", () => {
       "התאם את המפה אוטומטית להתרעות פעילות",
     );
     expect(form.computeLabel({ name: "show_home" })).toBe("הצג בית");
+    expect(form.computeLabel({ name: "hebrew_basemap" })).toBe(
+      "מפת בסיס בעברית",
+    );
     homeAssistant.remove();
 
     document.documentElement.lang = "en-US";
@@ -546,6 +563,9 @@ describe("oref-alert-map", () => {
       "Auto fit map to active alerts",
     );
     expect(form.computeLabel({ name: "show_home" })).toBe("Show home");
+    expect(form.computeLabel({ name: "hebrew_basemap" })).toBe(
+      "Hebrew basemap",
+    );
     expect(form.computeLabel({ name: "unknown" })).toBeUndefined();
 
     const homeAssistantNoHass = document.createElement("home-assistant");
@@ -569,6 +589,7 @@ describe("oref-alert-map", () => {
     expect(Card.getStubConfig()).toEqual({
       auto_fit: true,
       show_home: false,
+      hebrew_basemap: true,
     });
   });
 
@@ -587,6 +608,52 @@ describe("oref-alert-map", () => {
       "oref-alert-map update failed",
       error,
     );
+  });
+
+  test("setConfig catches errors from applyHass", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const error = new Error("set-config boom");
+    el._hass = { states: {}, connection: {} };
+    vi.spyOn(el, "_applyHass").mockRejectedValue(error);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    el.setConfig({ auto_fit: true, show_home: false });
+    await waitForTasks();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      "oref-alert-map update failed",
+      error,
+    );
+  });
+
+  test("applyHass returns when token changes after ensureMapCard resolves", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard } = createMapCardWithInnerMap();
+    const hassSetter = vi.fn();
+    Object.defineProperty(mapCard, "hass", {
+      configurable: true,
+      set(value) {
+        hassSetter(value);
+      },
+    });
+
+    el._areas = [{ id: "existing" }];
+    el._hass = { states: {}, connection: {} };
+    el._updateToken = 1;
+    vi.spyOn(el, "_ensureMapCard").mockImplementation(async () => {
+      el._updateToken = 2;
+      return mapCard;
+    });
+    const replaceChildrenSpy = vi.spyOn(el, "replaceChildren");
+
+    await el._applyHass(1);
+
+    expect(replaceChildrenSpy).not.toHaveBeenCalled();
+    expect(hassSetter).not.toHaveBeenCalled();
   });
 
   test("empty areas refresh retries every second until areas are set", async () => {
