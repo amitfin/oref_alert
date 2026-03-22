@@ -435,6 +435,7 @@ describe("oref-alert-map", () => {
     expect(tileLayerFactory).toHaveBeenLastCalledWith(
       "https://cdnil.govmap.gov.il/xyz/heb/{z}/{x}/{y}.png",
       {
+        minZoom: 8,
         maxZoom: 15,
         attribution: "© GovMap / המרכז למיפוי ישראל",
       },
