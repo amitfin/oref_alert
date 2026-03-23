@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import homeassistant.util.dt as dt_util
 import pytest
 from homeassistant.config_entries import ConfigEntryDisabler
 from homeassistant.const import (
@@ -92,9 +91,7 @@ async def test_entity(
     assert state.attributes[CONF_UNIT_OF_MEASUREMENT] == UnitOfLength.KILOMETERS
     assert state.attributes[CONF_FRIENDLY_NAME] == "בארי"
     assert state.attributes[ATTR_HOME_DISTANCE] == 80.7
-    assert state.attributes[ATTR_DATE] == dt_util.parse_datetime(
-        "2023-10-07 06:30:00+03:00"
-    )
+    assert state.attributes[ATTR_DATE] == "2023-10-07T06:30:00+03:00"
     assert state.attributes["category"] == 1
     assert state.attributes["title"] == "ירי רקטות וטילים"
     assert state.attributes[ATTR_ICON] == "mdi:rocket-launch"

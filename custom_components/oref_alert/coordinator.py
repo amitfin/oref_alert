@@ -5,31 +5,47 @@ from __future__ import annotations
 import asyncio
 import itertools
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timedelta
 from http import HTTPStatus
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Final
 
 import homeassistant.util.dt as dt_util
+from homeassistant.const import (
+    ATTR_DATE,
+    ATTR_ICON,
+    ATTR_LATITUDE,
+    ATTR_LONGITUDE,
+)
 from homeassistant.core import callback
 from homeassistant.helpers import event as event_helper
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util.location import vincenty
 
 from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
+from custom_components.oref_alert.metadata.area_to_district import AREA_TO_DISTRICT
 
 from .categories import (
     END_ALERT_CATEGORY,
     PRE_ALERT_CATEGORY,
     category_is_alert,
     category_is_update,
+    category_to_emoji,
+    category_to_icon,
     real_time_to_history_category,
 )
 from .const import (
     AREA_FIELD,
+    ATTR_AREA,
+    ATTR_DISTRICT,
+    ATTR_EMOJI,
+    ATTR_HOME_DISTANCE,
+    ATTR_TYPE,
     CATEGORY_FIELD,
+    CHANNEL_FIELD,
     CONF_AREA,
     CONF_AREAS,
     CONF_DURATION,
@@ -39,11 +55,13 @@ from .const import (
     LOGGER,
     MANUAL_EVENT_END_TITLE,
     TITLE_FIELD,
+    PublishedData,
     Record,
     RecordAndMetadata,
     RecordSource,
     RecordType,
 )
+from .metadata.area_info import AREA_INFO
 from .metadata.areas import AREAS
 
 if TYPE_CHECKING:
@@ -187,6 +205,17 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             return None
         return record.raw_dict
 
+    def get_areas_status(
+        self, record_types: Iterable[RecordType | None] | None = None
+    ) -> dict[str, PublishedData]:
+        """Return area's raw records keyed by area, filtered by record type."""
+        return {
+            area: record.published_data
+            for area, record in self.data.areas.items()
+            if record.published_data is not None
+            and (record_types is None or record.record_type in record_types)
+        }
+
     async def _records_to_process(self) -> AsyncIterator[RecordAndMetadata]:
         """Get records from push channels. Otherwise, from polling channels."""
         if any(channel for channel in self._channels):
@@ -210,6 +239,25 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             ):
                 yield record
 
+    def _area_records(
+        self, record: RecordAndMetadata
+    ) -> Generator[tuple[str, RecordAndMetadata]]:
+        """Yield area-specific records for the areas affected by a record."""
+        if record.raw.data not in ALL_AREAS_ALIASES:
+            yield record.raw.data, record
+
+        else:
+            for area in AREAS:
+                yield (
+                    area,
+                    replace(
+                        record,
+                        published_data=self._build_published_data(
+                            area, record.raw, record.time, record.record_type
+                        ),
+                    ),
+                )
+
     async def _async_update_data(self) -> OrefAlertCoordinatorData:
         """Request the data from Oref channels."""
         # Remove expired records.
@@ -230,33 +278,62 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 continue
 
             # Handle "all areas" record.
-            for area in (
-                (record.raw.data,)
-                if record.raw.data not in ALL_AREAS_ALIASES
-                else AREAS
-            ):
+            for area, area_record in self._area_records(record):
                 # If we don't have anything else for this area.
                 if (current := self._areas.get(area)) is None:
-                    self._areas[area] = record
+                    self._areas[area] = area_record
                     self._no_update = False
                     if area not in AREAS:
                         LOGGER.error("Alert has an unrecognized area: %s", area)
                 # If this is not a newer record, or this is "pre" after "alert".
-                elif record.time <= current.time or (
-                    record.record_type == RecordType.PRE_ALERT
+                elif area_record.time <= current.time or (
+                    area_record.record_type == RecordType.PRE_ALERT
                     and current.record_type == RecordType.ALERT
                 ):
                     continue
                 # Same category records within the dedup window are ignored.
                 elif (
-                    record.raw.category != current.raw.category
-                    or record.time - current.time
+                    area_record.raw.category != current.raw.category
+                    or area_record.time - current.time
                     > timedelta(seconds=DEDUP_WINDOW_SECONDS)
                 ):
-                    self._areas[area] = record
+                    self._areas[area] = area_record
                     self._no_update = False
 
         return OrefAlertCoordinatorData(MappingProxyType(self._areas))
+
+    def _build_published_data(
+        self,
+        area: str,
+        record: Record,
+        record_time: datetime,
+        record_type: RecordType | None,
+    ) -> PublishedData | None:
+        """Build area-specific published data."""
+        if not (area_info := AREA_INFO.get(area)) or record_type is None:
+            return None
+
+        return {
+            ATTR_AREA: area,
+            ATTR_HOME_DISTANCE: round(
+                vincenty(
+                    (self.hass.config.latitude, self.hass.config.longitude),
+                    (area_info["lat"], area_info["lon"]),
+                )
+                or 0,
+                1,
+            ),
+            ATTR_LATITUDE: area_info["lat"],
+            ATTR_LONGITUDE: area_info["lon"],
+            CATEGORY_FIELD: record.category,
+            TITLE_FIELD: record.title,
+            ATTR_ICON: category_to_icon(record.category),
+            ATTR_EMOJI: category_to_emoji(record.category),
+            ATTR_DISTRICT: AREA_TO_DISTRICT.get(area, ""),
+            CHANNEL_FIELD: record.channel,
+            ATTR_TYPE: record_type.value,
+            ATTR_DATE: record_time.isoformat(),
+        }
 
     def add_metadata(
         self, record: Record, record_expire: datetime | None = None
@@ -277,6 +354,9 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         return RecordAndMetadata(
             raw=record,
             raw_dict=asdict(record),
+            published_data=self._build_published_data(
+                record.data, record, record_time, record_type
+            ),
             record_type=record_type,
             time=record_time,
             expire=record_expire,

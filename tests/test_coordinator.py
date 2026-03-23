@@ -23,6 +23,7 @@ from custom_components.oref_alert.categories import (
 )
 from custom_components.oref_alert.const import (
     AREA_FIELD,
+    ATTR_AREA,
     CONF_AREA,
     CONF_AREAS,
     CONF_DURATION,
@@ -108,6 +109,38 @@ async def test_save_and_restore_areas(hass: HomeAssistant) -> None:
     assert restored.raw.data == "אילת"
     assert restored.raw.category == 1
     assert restored.raw.title == "ירי רקטות וטילים"
+
+
+async def test_all_areas_alias_builds_area_specific_published_data(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test all-areas alerts publish concrete area data per expanded area."""
+    freezer.move_to("2025-06-13 03:00:00+03:00")
+    mock_urls(aioclient_mock, None, None)
+    alert = load_json_fixture("single_all_areas_alert_history.json", "website-history")[
+        0
+    ]
+    channel: deque[RecordAndMetadata] = deque()
+    record = Record(
+        alertDate=alert["alertDate"],
+        title=alert["title"],
+        data=alert["data"],
+        category=alert["category"],
+        channel=alert["channel"],
+    )
+    coordinator = create_coordinator(hass, channels=[channel])
+    channel.append(coordinator.add_metadata(record))
+
+    await coordinator.async_config_entry_first_refresh()
+
+    assert coordinator.data.areas["קריית שמונה"].raw.data == "כל הארץ"
+    assert coordinator.data.areas["קריית שמונה"].published_data
+    assert (
+        coordinator.data.areas["קריית שמונה"].published_data[ATTR_AREA] == "קריית שמונה"
+    )
+    assert coordinator.get_areas_status()[("קריית שמונה")][ATTR_AREA] == "קריית שמונה"
 
 
 async def test_save_persists_only_records_newer_than_cutoff(

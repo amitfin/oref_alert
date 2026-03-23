@@ -256,6 +256,50 @@ data:
     - קריית שמונה
 ```
 
+## Areas Status
+
+The action `oref_alert.areas_status` returns the current areas whose status is `pre_alert` or `alert`. The response is keyed by area name, and each area contains the published fields used by the integration: `area`, `home_distance`, `latitude`, `longitude`, `category`, `title`, `icon`, `emoji`, `district`, `channel`, `type`, and `date`.
+
+The action can be accessed via this My button:
+
+[![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.areas_status)
+
+```yaml
+action: oref_alert.areas_status
+response_variable: active_areas
+```
+
+Example response:
+
+```yaml
+קריית שמונה:
+  area: קריית שמונה
+  home_distance: 150.2
+  latitude: 33.2077
+  longitude: 35.5696
+  category: 14
+  channel: website
+  date: "2025-06-30T15:00:00+03:00"
+  title: "ירי רקטות וטילים"
+  icon: mdi:flash-alert
+  emoji: ⚡
+  district: קו העימות
+  type: pre_alert
+תל אביב - דרום העיר ויפו:
+  area: תל אביב - דרום העיר ויפו
+  home_distance: 9.2
+  latitude: 32.0463
+  longitude: 34.7656
+  category: 1
+  channel: website
+  date: "2025-06-30T15:01:00+03:00"
+  title: "ירי רקטות וטילים"
+  icon: mdi:rocket-launch
+  emoji: 🚀
+  district: דן
+  type: alert
+```
+
 ## Template Functions
 
 The integration adds the following template helper functions:

@@ -1521,6 +1521,7 @@ edit_sensor:
       example: גבעתיים
       required: false
       selector: *id002
+areas_status:
 synthetic_alert:
   fields:
     area:

@@ -5,16 +5,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
+import homeassistant.util.dt as dt_util
 import pytest
 from homeassistant.config_entries import ConfigEntryDisabler, ConfigEntryState
 from homeassistant.const import (
+    ATTR_DATE,
     CONF_ENTITY_ID,
     CONF_NAME,
     EVENT_HOMEASSISTANT_STOP,
     STATE_OFF,
     Platform,
 )
-from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
+from homeassistant.core import Context
+from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady, Unauthorized
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
@@ -26,6 +29,7 @@ from pytest_homeassistant_custom_component.common import (
 from custom_components.oref_alert.const import (
     ADD_AREAS,
     ADD_SENSOR_ACTION,
+    AREAS_STATUS_ACTION,
     ATTR_COUNTRY_ACTIVE_ALERTS,
     ATTR_COUNTRY_UPDATES,
     CONF_AREA,
@@ -40,11 +44,19 @@ from custom_components.oref_alert.const import (
     REMOVE_AREAS,
     REMOVE_SENSOR_ACTION,
     SYNTHETIC_ALERT_ACTION,
+    PublishedData,
 )
 from custom_components.oref_alert.coordinator import OrefAlertDataUpdateCoordinator
+from custom_components.oref_alert.metadata.area_info import AREA_INFO
+
+from .utils import mock_urls
 
 if TYPE_CHECKING:
+    from freezegun.api import FrozenDateTimeFactory
     from homeassistant.core import HomeAssistant
+    from pytest_homeassistant_custom_component.test_util.aiohttp import (
+        AiohttpClientMocker,
+    )
 
 DEFAULT_OPTIONS: dict[str, list[str]] = {CONF_AREAS: []}
 ENTITY_ID = f"{Platform.BINARY_SENSOR}.{OREF_ALERT_UNIQUE_ID}"
@@ -231,6 +243,117 @@ async def test_edit_sensor_actions(hass: HomeAssistant) -> None:
     assert state.attributes[CONF_AREAS] == ["גבעת שמואל", "פתח תקווה"]
 
 
+async def test_areas_status_action(hass: HomeAssistant) -> None:
+    """Test areas_status custom action."""
+    config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    areas = ["קריית שמונה", "תל אביב - דרום העיר ויפו"]
+    await hass.services.async_call(
+        DOMAIN,
+        SYNTHETIC_ALERT_ACTION,
+        {CONF_AREA: areas, CONF_DURATION: 20},
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    await hass.services.async_call(
+        DOMAIN,
+        MANUAL_EVENT_END_ACTION,
+        {CONF_AREA: [areas[0]]},
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    response = await hass.services.async_call(
+        DOMAIN,
+        AREAS_STATUS_ACTION,
+        blocking=True,
+        return_response=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert response
+    assert list(response) == [areas[1]]
+    area_response: PublishedData = response[areas[1]]  # pyright: ignore[reportAssignmentType]
+    assert area_response
+    assert area_response["area"] == areas[1]
+    assert area_response["category"] == 1
+    assert area_response["channel"] == "synthetic"
+    assert isinstance(area_response["home_distance"], float)
+    assert isinstance(area_response["latitude"], float)
+    assert isinstance(area_response["longitude"], float)
+    assert isinstance(area_response["icon"], str)
+    assert isinstance(area_response["emoji"], str)
+    assert isinstance(area_response["district"], str)
+    assert area_response["title"] == "התרעה סינטטית לצורכי בדיקות"
+    assert area_response["type"] == "alert"
+    assert dt_util.parse_datetime(area_response[ATTR_DATE]) is not None
+
+
+async def test_areas_status_action_non_admin(hass: HomeAssistant) -> None:
+    """Test areas_status custom action can be called by non-admin users."""
+    config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    await hass.auth.async_create_user("owner")
+    non_admin_user = await hass.auth.async_create_user("non_admin")
+    context = Context(user_id=non_admin_user.id)
+
+    response = await hass.services.async_call(
+        DOMAIN,
+        AREAS_STATUS_ACTION,
+        blocking=True,
+        context=context,
+        return_response=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert response == {}
+
+    with pytest.raises(Unauthorized):
+        await hass.services.async_call(
+            DOMAIN,
+            SYNTHETIC_ALERT_ACTION,
+            {CONF_AREA: ["קריית שמונה"], CONF_DURATION: 20},
+            blocking=True,
+            context=context,
+        )
+
+
+@pytest.mark.slow
+async def test_areas_status_action_all_areas_alias(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test areas_status returns area-specific data for all-areas alerts."""
+    freezer.move_to("2025-06-13 03:00:00+03:00")
+    mock_urls(aioclient_mock, None, "single_all_areas_alert_history.json")
+
+    config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    response = await hass.services.async_call(
+        DOMAIN,
+        AREAS_STATUS_ACTION,
+        blocking=True,
+        return_response=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert "קריית שמונה" in response
+    assert response["קריית שמונה"]["area"] == "קריית שמונה"
+    assert response["קריית שמונה"]["district"] == "קו העימות"
+    assert response["קריית שמונה"]["latitude"] == AREA_INFO["קריית שמונה"]["lat"]
+    assert response["קריית שמונה"]["longitude"] == AREA_INFO["קריית שמונה"]["lon"]
+
+
 @pytest.mark.parametrize(
     "areas",
     [
@@ -378,6 +501,7 @@ async def test_action_without_config_entry(hass: HomeAssistant) -> None:
         ADD_SENSOR_ACTION,
         REMOVE_SENSOR_ACTION,
         EDIT_SENSOR_ACTION,
+        AREAS_STATUS_ACTION,
         SYNTHETIC_ALERT_ACTION,
         MANUAL_EVENT_END_ACTION,
     ]:
@@ -390,9 +514,9 @@ async def test_action_without_config_entry(hass: HomeAssistant) -> None:
     async def call() -> None:
         await hass.services.async_call(
             DOMAIN,
-            SYNTHETIC_ALERT_ACTION,
-            {CONF_AREA: "פתח תקווה"},
+            AREAS_STATUS_ACTION,
             blocking=True,
+            return_response=True,
         )
 
     await call()

@@ -4,38 +4,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.const import (
-    ATTR_DATE,
-    ATTR_ICON,
-    ATTR_LATITUDE,
-    ATTR_LONGITUDE,
-)
+from homeassistant.const import ATTR_DATE
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
-from homeassistant.util.location import vincenty
 
-from custom_components.oref_alert.metadata.area_to_district import AREA_TO_DISTRICT
-
-from .categories import (
-    category_to_emoji,
-    category_to_icon,
-)
 from .const import (
-    ATTR_AREA,
-    ATTR_DISTRICT,
-    ATTR_EMOJI,
-    ATTR_HOME_DISTANCE,
     ATTR_TYPE,
-    CATEGORY_FIELD,
-    CHANNEL_FIELD,
     DOMAIN,
     LOGGER,
-    TITLE_FIELD,
     Record,
     RecordAndMetadata,
     RecordType,
 )
-from .metadata.area_info import AREA_INFO
 from .ttl_deque import TTLDeque
 
 if TYPE_CHECKING:
@@ -97,7 +77,7 @@ class OrefAlertBusEventManager:
             )
             self._history_records.add(record_metadata, record_metadata.time)
             self._previous_items.add(record, record_metadata.time)
-            if event := self._compose_event(record):
+            if event := self._compose_event(record_metadata):
                 self.alert_history.add(
                     {**event, ATTR_DATE: record_metadata.time.isoformat()},
                     record_metadata.time,
@@ -114,28 +94,14 @@ class OrefAlertBusEventManager:
             }
         )
 
-    def _compose_event(self, record: Record) -> dict[str, Any] | None:
+    def _compose_event(self, record: RecordAndMetadata) -> dict[str, Any] | None:
         """Compose event from a record."""
-        if not (area_info := AREA_INFO.get(record.data)):
+        if not (published := record.published_data):
             return None
         return {
-            ATTR_AREA: record.data,
-            ATTR_HOME_DISTANCE: round(
-                vincenty(
-                    (self._hass.config.latitude, self._hass.config.longitude),
-                    (area_info["lat"], area_info["lon"]),
-                )
-                or 0,
-                1,
-            ),
-            ATTR_LATITUDE: area_info["lat"],
-            ATTR_LONGITUDE: area_info["lon"],
-            CATEGORY_FIELD: record.category,
-            TITLE_FIELD: record.title,
-            ATTR_ICON: category_to_icon(record.category),
-            ATTR_EMOJI: category_to_emoji(record.category),
-            ATTR_DISTRICT: AREA_TO_DISTRICT.get(record.data),
-            CHANNEL_FIELD: record.channel,
+            key: value
+            for key, value in published.items()
+            if key not in {ATTR_DATE, ATTR_TYPE}
         }
 
     @callback
@@ -145,7 +111,7 @@ class OrefAlertBusEventManager:
             None, None, 3, newer_first=False
         ):
             if record.raw in self._previous_items or not (
-                event := self._compose_event(record.raw)
+                event := self._compose_event(record)
             ):
                 continue
             self._hass.bus.async_fire(

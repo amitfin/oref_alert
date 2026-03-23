@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.geo_location import ATTR_SOURCE, GeolocationEvent
 from homeassistant.const import (
     ATTR_DATE,
-    ATTR_ICON,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     CONF_FRIENDLY_NAME,
@@ -16,30 +14,22 @@ from homeassistant.const import (
     UnitOfLength,
 )
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.util.location import vincenty
 
-from custom_components.oref_alert.metadata.area_to_district import AREA_TO_DISTRICT
-
-from .categories import (
-    category_to_emoji,
-    category_to_icon,
-)
 from .const import (
-    AREA_FIELD,
+    ATTR_AREA,
     ATTR_DISTRICT,
-    ATTR_EMOJI,
     ATTR_HOME_DISTANCE,
+    ATTR_TYPE,
     CATEGORY_FIELD,
-    DATE_FIELD,
     DOMAIN,
     LOCATION_ID_SUFFIX,
     OREF_ALERT_UNIQUE_ID,
     TITLE_FIELD,
+    PublishedData,
     RecordAndMetadata,
     RecordType,
 )
 from .entity import OrefAlertEntity
-from .metadata.area_info import AREA_INFO
 
 if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -80,28 +70,21 @@ class OrefAlertLocationEvent(OrefAlertEntity, GeolocationEvent):
 
     def __init__(
         self,
-        hass: HomeAssistant,
         config_entry: OrefAlertConfigEntry,
         area: str,
         record: RecordAndMetadata,
+        data: PublishedData,
     ) -> None:
         """Initialize entity."""
         super().__init__(config_entry)
         self._attr_name = area
-        self._attr_latitude: float = AREA_INFO[area]["lat"]
-        self._attr_longitude: float = AREA_INFO[area]["lon"]
+        self._attr_latitude = data[ATTR_LATITUDE]
+        self._attr_longitude = data[ATTR_LONGITUDE]
         self._attr_unit_of_measurement = UnitOfLength.KILOMETERS
-        self._attr_distance = round(
-            vincenty(
-                (hass.config.latitude, hass.config.longitude),
-                (self._attr_latitude, self._attr_longitude),
-            )
-            or 0,
-            1,
-        )
+        self._attr_distance = data[ATTR_HOME_DISTANCE]
         self._record: RecordAndMetadata | None = None
         self._alert_attributes: dict[str, Any] = {}
-        self._update_record(record)
+        self._update_record(record, data)
 
     @property
     def suggested_object_id(self) -> str | None:
@@ -119,26 +102,28 @@ class OrefAlertLocationEvent(OrefAlertEntity, GeolocationEvent):
         self.hass.async_create_task(self.async_remove(force_remove=True))
 
     @callback
-    def _update_record(self, record: RecordAndMetadata) -> None:
+    def _update_record(self, record: RecordAndMetadata, data: PublishedData) -> None:
         """Update the record and attributes."""
         self._record = record
-        attributes: dict[str, Any] = {}
         attributes = {
             key: value
-            for key, value in asdict(record.raw).items()
-            if key not in {AREA_FIELD, DATE_FIELD}
+            for key, value in data.items()
+            if key
+            not in {
+                ATTR_AREA,
+                ATTR_HOME_DISTANCE,
+                ATTR_LATITUDE,
+                ATTR_LONGITUDE,
+                ATTR_TYPE,
+            }
         }
-        attributes[ATTR_DATE] = record.time
-        attributes[ATTR_ICON] = category_to_icon(record.raw.category)
-        attributes[ATTR_EMOJI] = category_to_emoji(record.raw.category)
-        attributes[ATTR_DISTRICT] = AREA_TO_DISTRICT.get(self._attr_name or "")
         self._alert_attributes = attributes
 
     @callback
     def async_update(self, record: RecordAndMetadata) -> None:
         """Update the record and extra attributes when needed."""
-        if record != self._record:
-            self._update_record(record)
+        if self._record and record != self._record and record.published_data:
+            self._update_record(record, record.published_data)
             self.async_write_ha_state()
 
 
@@ -175,11 +160,13 @@ class OrefAlertLocationEventManager:
                 self._location_events.pop(area).async_remove_self()
 
         to_add = {
-            area: OrefAlertLocationEvent(self._hass, self._config_entry, area, record)
+            area: OrefAlertLocationEvent(
+                self._config_entry, area, record, record.published_data
+            )
             for area in set(self._coordinator.data.areas.keys()) - exists
             if (record := self._coordinator.data.areas.get(area))
             and record.record_type == RecordType.ALERT
-            and area in AREA_INFO
+            and record.published_data is not None
         }
         self._location_events.update(to_add)
         self._async_add_entities(to_add.values())

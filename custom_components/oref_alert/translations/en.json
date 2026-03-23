@@ -124,6 +124,10 @@
                 }
             }
         },
+        "areas_status": {
+            "name": "Areas Status",
+            "description": "Return areas that are currently pre-alert or alert"
+        },
         "synthetic_alert": {
             "name": "Create Synthetic Alert",
             "description": "Create a synthetic alert for testing purposes",

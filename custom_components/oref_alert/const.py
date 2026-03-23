@@ -6,7 +6,7 @@ import enum
 import logging
 import zoneinfo
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, TypedDict
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -38,6 +38,7 @@ CONF_SENSORS: Final = "sensors"
 ADD_SENSOR_ACTION: Final = "add_sensor"
 REMOVE_SENSOR_ACTION: Final = "remove_sensor"
 EDIT_SENSOR_ACTION: Final = "edit_sensor"
+AREAS_STATUS_ACTION: Final = "areas_status"
 ADD_AREAS: Final = "add_areas"
 REMOVE_AREAS: Final = "remove_areas"
 SYNTHETIC_ALERT_ACTION: Final = "synthetic_alert"
@@ -91,6 +92,23 @@ class RecordType(enum.StrEnum):
     END = "end"
 
 
+class PublishedData(TypedDict):
+    """Published record payload."""
+
+    area: str
+    home_distance: float
+    latitude: float
+    longitude: float
+    category: int
+    title: str
+    icon: str
+    emoji: str
+    district: str
+    channel: str
+    type: str
+    date: str
+
+
 @dataclass(frozen=True)
 class RecordAndMetadata:
     """Class for holding a record with additional metadata."""
@@ -100,6 +118,9 @@ class RecordAndMetadata:
     time: datetime = field(hash=False, compare=False)
     record_type: RecordType | None = field(hash=False, compare=False)
     expire: datetime | None = field(hash=False, compare=False)
+    published_data: PublishedData | None = field(
+        hash=False, compare=False, default=None
+    )
 
 
 class RecordSource(enum.StrEnum):

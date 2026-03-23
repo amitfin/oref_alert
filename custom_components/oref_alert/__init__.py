@@ -53,6 +53,7 @@ from .config_flow import AREAS_CONFIG
 from .const import (
     ADD_AREAS,
     ADD_SENSOR_ACTION,
+    AREAS_STATUS_ACTION,
     CATEGORY_FIELD,
     CONF_AREA,
     CONF_AREAS,
@@ -68,6 +69,7 @@ from .const import (
     TIME_TO_SHELTER_ID_SUFFIX,
     TITLE,
     TITLE_FIELD,
+    RecordType,
 )
 from .coordinator import OrefAlertCoordinatorUpdater, OrefAlertDataUpdateCoordinator
 from .metadata.areas import AREAS
@@ -137,6 +139,8 @@ MANUAL_EVENT_END_SCHEMA: Final = vol.Schema(
     },
     extra=vol.ALLOW_EXTRA,
 )
+
+AREAS_STATUS_SCHEMA: Final = vol.Schema({}, extra=vol.ALLOW_EXTRA)
 
 
 @dataclass
@@ -276,6 +280,20 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
         edit_sensor,
         EDIT_SENSOR_SCHEMA,
         SupportsResponse.OPTIONAL,
+    )
+
+    async def areas_status(_: ServiceCall) -> ServiceResponse:
+        """Return current pre-alert and alert areas."""
+        return get_config_entry().runtime_data.coordinator.get_areas_status(
+            [RecordType.PRE_ALERT, RecordType.ALERT]
+        )  # type: ignore[return-value]
+
+    hass.services.async_register(
+        DOMAIN,
+        AREAS_STATUS_ACTION,
+        areas_status,
+        schema=AREAS_STATUS_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
     )
 
     async def synthetic_alert(service_call: ServiceCall) -> None:
