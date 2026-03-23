@@ -24,16 +24,28 @@ class OrefAlertMap extends HTMLElement {
     this._mapCard = null;
     this._mapCardPromise = null;
     this._areas = [];
+    this._renderedAreas = [];
     this._polygons = null;
-    this._updateToken = 0;
+    this._hassUpdateToken = 0;
+    this._areasUpdateToken = 0;
     this._refreshId = null;
     this._refreshDeadline = Date.now() + 60_000;
+    this._eventUnsub = null;
+    this._eventConnection = null;
   }
 
   set hass(hass) {
     this._hass = hass;
-    void this._applyHass(++this._updateToken).catch((error) => {
-      console.error("oref-alert-map update failed", error);
+
+    if (hass?.connection !== this._eventConnection) {
+      this._teardownEventSubscription();
+      void this._subscribeToEvents().catch((error) => {
+        console.error("oref-alert-map hass subscribe failed", error);
+      });
+    }
+
+    void this._applyHass(++this._hassUpdateToken).catch((error) => {
+      console.error("oref-alert-map hass apply failed", error);
     });
   }
 
@@ -43,13 +55,13 @@ class OrefAlertMap extends HTMLElement {
     this._stopRefresh();
     this._mapCard = null;
     this._mapCardPromise = null;
-    this._areas = [];
+    this._renderedAreas = [];
     this._refreshDeadline = Date.now() + 60_000;
     this.replaceChildren();
 
     if (this._hass) {
-      void this._applyHass(++this._updateToken).catch((error) => {
-        console.error("oref-alert-map update failed", error);
+      void this._applyHass(++this._hassUpdateToken).catch((error) => {
+        console.error("oref-alert-map setConfig apply failed", error);
       });
     }
   }
@@ -76,63 +88,105 @@ class OrefAlertMap extends HTMLElement {
         };
   }
 
-  async _applyHass(token) {
+  async _applyHass(hassToken) {
     this._checkRefresh();
 
-    if (token !== this._updateToken) {
+    if (hassToken !== this._hassUpdateToken) {
       return;
     }
 
-    const mapCard = await this._ensureMapCard(token);
+    const mapCard = await this._ensureMapCard(hassToken);
     if (!mapCard) {
       return;
     }
-    if (token !== this._updateToken) {
+
+    if (hassToken !== this._hassUpdateToken) {
       return;
     }
-    if (this.firstElementChild !== mapCard) {
-      this.replaceChildren(mapCard);
-    }
+
     mapCard.hass = this._hass;
     this._setTileLayer();
 
-    const areas = this._getOrefAreas();
-    if (
-      this._areas.length === areas.length &&
-      this._areas.every((area, i) =>
-        Object.keys(area).every((key) => area[key] === areas[i][key]),
-      )
-    ) {
-      return;
+    if (this.firstElementChild !== mapCard) {
+      this.replaceChildren(mapCard);
     }
 
-    const layers = await this._createLayers(areas);
-    const map = this._map;
+    await this._applyAreas(this._areasUpdateToken);
 
-    if (token === this._updateToken && map && layers.length === areas.length) {
-      map.layers = layers;
-      this._areas = areas;
-      this._checkRefresh();
-    }
+    this._checkRefresh();
   }
 
   disconnectedCallback() {
     this._stopRefresh();
+    this._teardownEventSubscription();
   }
 
-  _getOrefAreas() {
-    const states = this._hass?.states;
-    if (!states) {
-      return [];
+  async _getOrefAreas() {
+    const areas = await this._hass?.callService(
+      "oref_alert",
+      "areas_status",
+      {},
+      undefined,
+      true,
+    );
+
+    return Object.values(areas || {})
+      .filter((area) => area.type === "alert")
+      .sort((a, b) => a.area.localeCompare(b.area));
+  }
+
+  async _refreshAreas(areasToken) {
+    const areas = await this._getOrefAreas();
+    if (areasToken === this._areasUpdateToken) {
+      this._areas = areas;
+      await this._applyAreas(areasToken);
     }
-    return Object.values(states)
-      .filter(
-        (stateObj) =>
-          stateObj.entity_id.startsWith("geo_location.") &&
-          stateObj.attributes?.source === "oref_alert",
-      )
-      .map((stateObj) => stateObj.attributes)
-      .sort((a, b) => a.friendly_name.localeCompare(b.friendly_name));
+  }
+
+  async _applyAreas(areasToken) {
+    if (this._renderedAreas === this._areas) {
+      return;
+    }
+
+    const layers = await this._createLayers(this._areas);
+    const map = this._map;
+    if (
+      areasToken === this._areasUpdateToken &&
+      map &&
+      layers.length === this._areas.length
+    ) {
+      map.layers = layers;
+      this._renderedAreas = this._areas;
+    }
+  }
+
+  async _subscribeToEvents() {
+    if (this._eventUnsub) {
+      return;
+    }
+
+    const connection = this._hass.connection;
+    const unsub = await connection.subscribeEvents(() => {
+      void this._refreshAreas(++this._areasUpdateToken).catch((error) => {
+        console.error("oref-alert-map event refresh failed", error);
+      });
+    }, "oref_alert_record");
+    if (this._hass.connection !== connection) {
+      unsub();
+      return;
+    }
+    this._eventConnection = connection;
+    this._eventUnsub = unsub;
+
+    await this._refreshAreas(++this._areasUpdateToken);
+  }
+
+  _teardownEventSubscription() {
+    if (this._eventUnsub) {
+      this._eventUnsub();
+      this._eventUnsub = null;
+    }
+    this._eventConnection = null;
   }
 
   async _createLayers(areas) {
@@ -144,12 +198,12 @@ class OrefAlertMap extends HTMLElement {
 
     const layers = [];
     for (const area of areas) {
-      const layer = createPolygon(polygons[area.friendly_name], {
+      const layer = createPolygon(polygons[area.area], {
         color: "#f19292",
       });
       const date = new Date(area.date);
       layer.bindTooltip(
-        `${area.friendly_name}<br />` +
+        `${area.area}<br />` +
           `${String(date.getHours()).padStart(2, "0")}:` +
           `${String(date.getMinutes()).padStart(2, "0")} ` +
           area.emoji,
@@ -159,7 +213,7 @@ class OrefAlertMap extends HTMLElement {
     return layers;
   }
 
-  async _ensureMapCard(token) {
+  async _ensureMapCard(hassToken) {
     if (this._mapCard) {
       return this._mapCard;
     }
@@ -180,7 +234,7 @@ class OrefAlertMap extends HTMLElement {
       return null;
     }
 
-    if (token !== this._updateToken) {
+    if (hassToken !== this._hassUpdateToken) {
       return null;
     }
 
@@ -268,7 +322,7 @@ class OrefAlertMap extends HTMLElement {
   }
 
   _checkRefresh() {
-    if (this._areas.length > 0) {
+    if (this._map) {
       this._stopRefresh();
       return;
     }
@@ -286,14 +340,13 @@ class OrefAlertMap extends HTMLElement {
       this._refreshId = window.setInterval(() => {
         if (
           !this.isConnected ||
-          this._areas.length > 0 ||
+          this._map ||
           Date.now() >= this._refreshDeadline
         ) {
           this._stopRefresh();
           return;
         }
-        const token = ++this._updateToken;
-        void this._applyHass(token).catch((error) => {
+        void this._applyHass(++this._hassUpdateToken).catch((error) => {
           console.error("oref-alert-map refresh retry failed", error);
         });
       }, 1000);
