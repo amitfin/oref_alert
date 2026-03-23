@@ -347,11 +347,13 @@ async def test_areas_status_action_all_areas_alias(
     )
     await hass.async_block_till_done(wait_background_tasks=True)
 
+    assert isinstance(response, dict)
     assert "קריית שמונה" in response
-    assert response["קריית שמונה"]["area"] == "קריית שמונה"
-    assert response["קריית שמונה"]["district"] == "קו העימות"
-    assert response["קריית שמונה"]["latitude"] == AREA_INFO["קריית שמונה"]["lat"]
-    assert response["קריית שמונה"]["longitude"] == AREA_INFO["קריית שמונה"]["lon"]
+    data: PublishedData = response["קריית שמונה"]  # pyright: ignore[reportAssignmentType]
+    assert data["area"] == "קריית שמונה"
+    assert data["district"] == "קו העימות"
+    assert data["latitude"] == AREA_INFO["קריית שמונה"]["lat"]
+    assert data["longitude"] == AREA_INFO["קריית שמונה"]["lon"]
 
 
 @pytest.mark.parametrize(
