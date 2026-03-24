@@ -28,6 +28,7 @@ from custom_components.oref_alert.const import (
     CONF_AREAS,
     CONF_DURATION,
     DOMAIN,
+    EXPIRED_EVENT_END_TITLE,
     IST,
     MANUAL_EVENT_END_TITLE,
     TITLE_FIELD,
@@ -595,7 +596,7 @@ async def test_synthetic_alert(
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
 ) -> None:
-    """Test synthetic alert."""
+    """Test synthetic alert transitions to END after expiring."""
     coordinator = create_coordinator(hass)
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_add_listener(lambda: None)
@@ -627,7 +628,13 @@ async def test_synthetic_alert(
     async_fire_time_changed(hass)
     await coordinator.async_refresh()
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert len(coordinator.get_records(None, None, None)) == 0
+    records = coordinator.get_records(None, None, None)
+    assert len(records) == 2
+    for index, area in enumerate(areas):
+        assert records[index]["data"] == area
+        assert records[index]["category"] == END_ALERT_CATEGORY
+        assert records[index]["title"] == EXPIRED_EVENT_END_TITLE
+        assert records[index]["channel"] == "synthetic"
     await coordinator.async_shutdown()
 
 

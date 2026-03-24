@@ -23,6 +23,7 @@ from custom_components.oref_alert.const import (
     CONF_AREA,
     CONF_AREAS,
     DOMAIN,
+    EXPIRED_EVENT_END_TITLE,
     IST,
     MANUAL_EVENT_END_ACTION,
     MANUAL_EVENT_END_TITLE,
@@ -407,7 +408,13 @@ async def test_alert_expires_after_180_minutes_end_to_end(
     status = hass.states.get(STATUS_ENTITY_ID)
     assert status is not None
     assert status.state == "ok"
-    assert status.attributes[ATTR_RECORD] is None
+    assert status.attributes[ATTR_RECORD] == {
+        "alertDate": "2023-10-07 09:30:01",
+        "category": 13,
+        "channel": "synthetic",
+        "data": "בארי",
+        "title": EXPIRED_EVENT_END_TITLE,
+    }
 
     await async_shutdown(hass, config_id)
 

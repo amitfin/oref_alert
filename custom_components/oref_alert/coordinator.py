@@ -51,6 +51,7 @@ from .const import (
     CONF_DURATION,
     DATE_FIELD,
     DOMAIN,
+    EXPIRED_EVENT_END_TITLE,
     IST,
     LOGGER,
     MANUAL_EVENT_END_TITLE,
@@ -260,15 +261,10 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
 
     async def _async_update_data(self) -> OrefAlertCoordinatorData:
         """Request the data from Oref channels."""
-        # Remove expired records.
-        now = dt_util.now()
-        self._areas = {
-            area: record
-            for area, record in self._areas.items()
-            if not record.expire or record.expire > now
-        }
+        self._remove_expired()
 
         # Update the latest areas' records.
+        now = dt_util.now()
         async for record in self._records_to_process():
             # Check if a valid record.
             if (
@@ -334,6 +330,23 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             ATTR_TYPE: record_type.value,
             ATTR_DATE: record_time.isoformat(),
         }
+
+    def _remove_expired(self) -> None:
+        """Remove expired records and add a synthetic "end" record instead."""
+        now = dt_util.now(IST)
+        now_str = now.strftime("%Y-%m-%d %H:%M:%S")
+        for area, record in self._areas.items():
+            if record.expire and record.expire <= now:
+                self._areas[area] = self.add_metadata(
+                    Record(
+                        alertDate=now_str,
+                        title=EXPIRED_EVENT_END_TITLE,
+                        data=area,
+                        category=END_ALERT_CATEGORY,
+                        channel=RecordSource.SYNTHETIC,
+                    )
+                )
+                self._no_update = False
 
     def add_metadata(
         self, record: Record, record_expire: datetime | None = None

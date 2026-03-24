@@ -27,6 +27,7 @@ from custom_components.oref_alert.const import (
     CONF_AREAS,
     CONF_DURATION,
     DOMAIN,
+    EXPIRED_EVENT_END_TITLE,
     REMOVE_SENSOR_ACTION,
     SYNTHETIC_ALERT_ACTION,
     RecordType,
@@ -189,6 +190,44 @@ async def test_synthetic_no_dedup(
     )
     await hass.async_block_till_done()
     assert events == [None, RecordType.ALERT, RecordType.ALERT]
+
+    await async_shutdown(hass, config_id)
+
+
+async def test_synthetic_alert_expiration_emits_end(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test synthetic alert expiration emits an END event."""
+    events: list[str] = []
+
+    async def event_listener(event: Event) -> None:
+        if event.data.get("entity_id") == "event.oref_alert" and (
+            new_state := event.data.get("new_state")
+        ):
+            events.append(new_state.attributes.get(ATTR_EVENT_TYPE))
+
+    hass.bus.async_listen("state_changed", event_listener)
+
+    config_id = await async_setup(hass)
+
+    await hass.services.async_call(
+        DOMAIN,
+        SYNTHETIC_ALERT_ACTION,
+        {CONF_AREA: AREA, CATEGORY_FIELD: 1, CONF_DURATION: 5},
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    freezer.tick(6)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    state = hass.states.get("event.oref_alert")
+    assert state is not None
+    assert state.attributes.get(ATTR_EVENT_TYPE) == RecordType.END
+    assert state.attributes[ATTR_RECORD].title == EXPIRED_EVENT_END_TITLE
+    assert events == [None, RecordType.ALERT, RecordType.END]
 
     await async_shutdown(hass, config_id)
 

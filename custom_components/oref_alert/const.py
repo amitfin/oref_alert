@@ -66,6 +66,7 @@ DATE_FIELD: Final = "alertDate"
 TITLE_FIELD: Final = "title"
 
 MANUAL_EVENT_END_TITLE: Final = "האירוע סומן כהסתיים ידנית"
+EXPIRED_EVENT_END_TITLE: Final = "פג תוקפה של הרשומה הקודמת"
 
 
 @dataclass(frozen=True)
