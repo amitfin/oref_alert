@@ -89,7 +89,7 @@ async def test_save_and_restore_areas(hass: HomeAssistant) -> None:
         side_effect=store_data
     )
     coordinator._store.async_load = AsyncMock(return_value=stored)  # noqa: SLF001
-    coordinator._no_update = False  # noqa: SLF001
+    coordinator._last_update = dt_util.now()  # noqa: SLF001
     record = Record(
         alertDate=dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
         title="ירי רקטות וטילים",
@@ -110,6 +110,43 @@ async def test_save_and_restore_areas(hass: HomeAssistant) -> None:
     assert restored.raw.data == "אילת"
     assert restored.raw.category == 1
     assert restored.raw.title == "ירי רקטות וטילים"
+
+
+async def test_get_last_update(hass: HomeAssistant) -> None:
+    """Test returning backend update token."""
+    coordinator = create_coordinator(hass)
+    now = dt_util.now(IST)
+    coordinator._last_update = now  # noqa: SLF001
+
+    assert coordinator.get_last_update() == now.isoformat()
+
+
+async def test_process_history_alerts_skips_duplicate_areas(
+    hass: HomeAssistant,
+) -> None:
+    """Test history processing ignores duplicate area entries after the first one."""
+    coordinator = create_coordinator(hass)
+
+    records = [
+        {
+            AREA_FIELD: "אילת",
+            TITLE_FIELD: "ירי רקטות וטילים",
+            "alertDate": dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
+            "category": 1,
+        },
+        {
+            AREA_FIELD: "אילת",
+            TITLE_FIELD: "ירי רקטות וטילים נוסף",
+            "alertDate": dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
+            "category": 1,
+        },
+    ]
+
+    processed = list(
+        coordinator._process_history_alerts(records, coordinator._history_to_record)  # noqa: SLF001
+    )
+
+    assert len(processed) == 1
 
 
 async def test_all_areas_alias_builds_area_specific_published_data(
@@ -157,7 +194,7 @@ async def test_save_persists_only_records_newer_than_cutoff(
     coordinator._store.async_save = AsyncMock(  # noqa: SLF001
         side_effect=store_data
     )
-    coordinator._no_update = False  # noqa: SLF001
+    coordinator._last_update = dt_util.now()  # noqa: SLF001
     freezer.move_to("2026-01-02 12:00:00+00:00")
     fresh_record = Record(
         alertDate=(dt_util.now(IST) - timedelta(hours=12)).strftime(
@@ -197,7 +234,7 @@ async def test_restore_skips_expired_records(hass: HomeAssistant) -> None:
         side_effect=store_data
     )
     coordinator._store.async_load = AsyncMock(return_value=stored)  # noqa: SLF001
-    coordinator._no_update = False  # noqa: SLF001
+    coordinator._last_update = dt_util.now()  # noqa: SLF001
     old_record = Record(
         alertDate="2020-01-01 12:00:00",
         title="ירי רקטות וטילים",

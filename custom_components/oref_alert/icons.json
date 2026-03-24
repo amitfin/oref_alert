@@ -40,6 +40,7 @@
     "remove_sensor": "mdi:map-marker-remove-outline",
     "edit_sensor": "mdi:map-marker-star-outline",
     "areas_status": "mdi:map-search-outline",
+    "last_update": "mdi:clock-sync-outline",
     "synthetic_alert": "mdi:rocket-launch",
     "manual_event_end": "mdi:check-circle-outline"
   }

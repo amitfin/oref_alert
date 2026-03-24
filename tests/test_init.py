@@ -38,6 +38,7 @@ from custom_components.oref_alert.const import (
     CONF_SENSORS,
     DOMAIN,
     EDIT_SENSOR_ACTION,
+    LAST_UPDATE_ACTION,
     MANUAL_EVENT_END_ACTION,
     MANUAL_EVENT_END_TITLE,
     OREF_ALERT_UNIQUE_ID,
@@ -322,6 +323,65 @@ async def test_areas_status_action_non_admin(hass: HomeAssistant) -> None:
             blocking=True,
             context=context,
         )
+
+
+async def test_last_update_action(hass: HomeAssistant) -> None:
+    """Test last_update custom action."""
+    config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    initial = await hass.services.async_call(
+        DOMAIN,
+        LAST_UPDATE_ACTION,
+        blocking=True,
+        return_response=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert initial == {"last_update": None}
+
+    areas = ["קריית שמונה", "תל אביב - דרום העיר ויפו"]
+    await hass.services.async_call(
+        DOMAIN,
+        SYNTHETIC_ALERT_ACTION,
+        {CONF_AREA: areas, CONF_DURATION: 20},
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    response = await hass.services.async_call(
+        DOMAIN,
+        LAST_UPDATE_ACTION,
+        blocking=True,
+        return_response=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert response
+    assert dt_util.parse_datetime(response["last_update"]) is not None  # pyright: ignore[reportArgumentType]
+
+
+async def test_last_update_action_non_admin(hass: HomeAssistant) -> None:
+    """Test last_update custom action can be called by non-admin users."""
+    config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    non_admin_user = await hass.auth.async_create_user("non_admin_map")
+    context = Context(user_id=non_admin_user.id)
+
+    response = await hass.services.async_call(
+        DOMAIN,
+        LAST_UPDATE_ACTION,
+        blocking=True,
+        context=context,
+        return_response=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert response == {"last_update": None}
 
 
 @pytest.mark.slow

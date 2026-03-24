@@ -10,6 +10,7 @@ remove_sensor:
           filter:
           - integration: oref_alert
             domain: binary_sensor
+last_update: null
 add_sensor:
   fields:
     name:

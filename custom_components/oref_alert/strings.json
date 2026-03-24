@@ -128,6 +128,10 @@
             "name": "Areas Status",
             "description": "Return areas that are currently pre-alert or alert"
         },
+        "last_update": {
+            "name": "Last Update",
+            "description": "Return the last time any area's status was changed"
+        },
         "synthetic_alert": {
             "name": "Create Synthetic Alert",
             "description": "Create a synthetic alert for testing purposes",

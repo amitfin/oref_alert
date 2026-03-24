@@ -61,6 +61,7 @@ from .const import (
     CONF_SENSORS,
     DOMAIN,
     EDIT_SENSOR_ACTION,
+    LAST_UPDATE_ACTION,
     LOGGER,
     MANUAL_EVENT_END_ACTION,
     REMOVE_AREAS,
@@ -292,6 +293,20 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
         DOMAIN,
         AREAS_STATUS_ACTION,
         areas_status,
+        schema=AREAS_STATUS_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
+    )
+
+    async def last_update(_: ServiceCall) -> ServiceResponse:
+        """Return current backend update token."""
+        return {
+            "last_update": get_config_entry().runtime_data.coordinator.get_last_update()
+        }
+
+    hass.services.async_register(
+        DOMAIN,
+        LAST_UPDATE_ACTION,
+        last_update,
         schema=AREAS_STATUS_SCHEMA,
         supports_response=SupportsResponse.ONLY,
     )

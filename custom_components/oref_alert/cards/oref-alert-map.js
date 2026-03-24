@@ -26,27 +26,15 @@ class OrefAlertMap extends HTMLElement {
     this._layout = undefined;
     this._mapCard = null;
     this._mapCardPromise = null;
-    this._areas = [];
-    this._renderedAreas = [];
     this._polygons = null;
     this._hassUpdateToken = 0;
-    this._areasUpdateToken = 0;
+    this._lastUpdated = undefined;
     this._refreshId = null;
     this._refreshDeadline = Date.now() + 60_000;
-    this._eventUnsub = null;
-    this._eventConnection = null;
   }
 
   set hass(hass) {
     this._hass = hass;
-
-    if (hass?.connection !== this._eventConnection) {
-      this._teardownEventSubscription();
-      void this._subscribeToEvents().catch((error) => {
-        console.error("oref-alert-map hass subscribe failed", error);
-      });
-    }
-
     void this._applyHass(++this._hassUpdateToken).catch((error) => {
       console.error("oref-alert-map hass apply failed", error);
     });
@@ -58,7 +46,7 @@ class OrefAlertMap extends HTMLElement {
     this._stopRefresh();
     this._mapCard = null;
     this._mapCardPromise = null;
-    this._renderedAreas = [];
+    this._lastUpdated = undefined;
     this._refreshDeadline = Date.now() + 60_000;
     this.replaceChildren();
 
@@ -114,14 +102,26 @@ class OrefAlertMap extends HTMLElement {
       this.replaceChildren(mapCard);
     }
 
-    await this._applyAreas(this._areasUpdateToken);
+    await this._refreshAreas(hassToken);
 
     this._checkRefresh();
   }
 
   disconnectedCallback() {
     this._stopRefresh();
-    this._teardownEventSubscription();
+  }
+
+  async _getLastUpdate() {
+    const result = await this._hass?.callService(
+      "oref_alert",
+      "last_update",
+      {},
+      undefined,
+      false,
+      true,
+    );
+
+    return result?.response?.last_update ?? null;
   }
 
   async _getOrefAreas() {
@@ -139,58 +139,23 @@ class OrefAlertMap extends HTMLElement {
       .sort((a, b) => a.area.localeCompare(b.area));
   }
 
-  async _refreshAreas(areasToken) {
-    const areas = await this._getOrefAreas();
-    if (areasToken === this._areasUpdateToken) {
-      this._areas = areas;
-      await this._applyAreas(areasToken);
-    }
-  }
-
-  async _applyAreas(areasToken) {
-    if (this._renderedAreas === this._areas) {
+  async _refreshAreas(hassToken) {
+    const lastUpdated = await this._getLastUpdate();
+    if (this._lastUpdated !== undefined && this._lastUpdated === lastUpdated) {
       return;
     }
 
-    const layers = await this._createLayers(this._areas);
+    const areas = await this._getOrefAreas();
+    const layers = await this._createLayers(areas);
     const map = this._map;
     if (
-      areasToken === this._areasUpdateToken &&
+      hassToken === this._hassUpdateToken &&
       map &&
-      layers.length === this._areas.length
+      layers.length === areas.length
     ) {
       map.layers = layers;
-      this._renderedAreas = this._areas;
+      this._lastUpdated = lastUpdated;
     }
-  }
-
-  async _subscribeToEvents() {
-    if (this._eventUnsub) {
-      return;
-    }
-
-    const connection = this._hass.connection;
-    const unsub = await connection.subscribeEvents(() => {
-      void this._refreshAreas(++this._areasUpdateToken).catch((error) => {
-        console.error("oref-alert-map event refresh failed", error);
-      });
-    }, "oref_alert_record");
-    if (this._hass.connection !== connection) {
-      unsub();
-      return;
-    }
-    this._eventConnection = connection;
-    this._eventUnsub = unsub;
-
-    await this._refreshAreas(++this._areasUpdateToken);
-  }
-
-  _teardownEventSubscription() {
-    if (this._eventUnsub) {
-      this._eventUnsub();
-      this._eventUnsub = null;
-    }
-    this._eventConnection = null;
   }
 
   async _createLayers(areas) {

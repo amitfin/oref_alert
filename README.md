@@ -292,6 +292,10 @@ Example response:
   type: alert
 ```
 
+## Last Update
+
+The action `oref_alert.last_update` returns only `last_update`, the last time any area's status was changed. This is used by the map card for identifying re-rendering is required.
+
 ## Template Functions
 
 The integration adds the following template helper functions:

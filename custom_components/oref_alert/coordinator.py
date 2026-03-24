@@ -123,7 +123,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         self._http_client = async_get_clientsession(hass)
         self._http_replies: dict[str, tuple[str, float]] = {}
         self._channels: list[deque[RecordAndMetadata]] = channels
-        self._no_update = True
+        self._last_update: datetime | None = None
         self._areas: dict[str, RecordAndMetadata] = {}
         self._store = Store[dict[str, Any]](hass, STORAGE_VERSION, DOMAIN)
         self.data = OrefAlertCoordinatorData(MappingProxyType({}))
@@ -144,7 +144,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
 
     async def async_save(self) -> None:
         """Persist current areas to storage as raw records."""
-        if not self._no_update:
+        if self._last_update:
             cutoff = dt_util.now() - timedelta(days=1)
             await self._store.async_save(
                 {
@@ -217,6 +217,10 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             and (record_types is None or record.record_type in record_types)
         }
 
+    def get_last_update(self) -> str | None:
+        """Return the backend revision token for map consumers."""
+        return self._last_update.isoformat() if self._last_update else None
+
     async def _records_to_process(self) -> AsyncIterator[RecordAndMetadata]:
         """Get records from push channels. Otherwise, from polling channels."""
         if any(channel for channel in self._channels):
@@ -278,7 +282,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 # If we don't have anything else for this area.
                 if (current := self._areas.get(area)) is None:
                     self._areas[area] = area_record
-                    self._no_update = False
+                    self._last_update = now
                     if area not in AREAS:
                         LOGGER.error("Alert has an unrecognized area: %s", area)
                 # If this is not a newer record, or this is "pre" after "alert".
@@ -294,7 +298,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                     > timedelta(seconds=DEDUP_WINDOW_SECONDS)
                 ):
                     self._areas[area] = area_record
-                    self._no_update = False
+                    self._last_update = now
 
         return OrefAlertCoordinatorData(MappingProxyType(self._areas))
 
@@ -346,7 +350,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                         channel=RecordSource.SYNTHETIC,
                     )
                 )
-                self._no_update = False
+                self._last_update = now
 
     def add_metadata(
         self, record: Record, record_expire: datetime | None = None
@@ -460,11 +464,12 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 ),
                 expire,
             )
-            self._no_update = False
+            self._last_update = now
 
     def add_manual_event_end(self, areas: list[str] | None = None) -> None:
         """Set selected active alerts as manual-end records."""
-        now = dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+        now = dt_util.now(IST)
+        now_str = now.strftime("%Y-%m-%d %H:%M:%S")
         for area, current in self._areas.copy().items():
             if current.record_type != RecordType.ALERT:
                 continue
@@ -472,14 +477,14 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 continue
             self._areas[area] = self.add_metadata(
                 Record(
-                    alertDate=now,
+                    alertDate=now_str,
                     title=MANUAL_EVENT_END_TITLE,
                     data=area,
                     category=END_ALERT_CATEGORY,
                     channel=RecordSource.SYNTHETIC,
                 )
             )
-            self._no_update = False
+            self._last_update = now
 
     @classmethod
     def _history_to_record(cls, record: dict[str, Any]) -> Record:
@@ -519,7 +524,9 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             yield record_meta
 
             # Post initial fetch, take only recent records.
-            if not self._no_update and (now - record_meta.time) > timedelta(minutes=5):
+            if not self._last_update and (now - record_meta.time) > timedelta(
+                minutes=5
+            ):
                 break
 
     @staticmethod
