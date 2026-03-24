@@ -41,21 +41,13 @@ There is a single configuration parameter **Selected area**. By default the inte
 
 <img width="619" height="482" alt="image" src="https://github.com/user-attachments/assets/6ea2d479-b4ea-4f91-8e1e-9cf465a53b71" />
 
-The integration adds a map card for displaying all active alerts. It's recommended to place the map card inside a [panel view](https://www.home-assistant.io/dashboards/panel/), so it can take full width and provide the best map experience:
-
-```yaml
-- type: panel
-  cards:
-    - type: custom:oref-alert-map
-      auto_fit: false
-      show_home: true
-      hebrew_basemap: true
-```
+The integration adds a map card for displaying all active alerts. It's recommended to place the map card inside a [panel view](https://www.home-assistant.io/dashboards/panel/), so it can take full width and provide the best map experience.
 
 Card configuration:
 - `auto_fit` (optional, default: `true`): automatically fit the map view to active alerts.
 - `show_home` (optional, default: `false`): show `zone.home` on the map.
 - `hebrew_basemap` (optional, default: `true`): use a Hebrew basemap tile layer.
+- `show_pre_alert` (optional, default: `false`): include `pre_alert` areas on the map (in yellow).
 - `entities` (optional, YAML only, no UI): additional entities passed to the [map card](https://www.home-assistant.io/dashboards/map). See also [here](https://www.home-assistant.io/dashboards/map/#entities) and [here](https://www.home-assistant.io/dashboards/map/#options-for-entities).
 
 | <img width="344" height="551" alt="image" src="https://github.com/user-attachments/assets/f2d17037-4e40-4edb-ae21-0375bd32f224" /> |
