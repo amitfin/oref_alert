@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 import homeassistant.util.dt as dt_util
@@ -144,6 +145,67 @@ async def test_time_to_shelter_not_going_back(
     state = hass.states.get(TIME_TO_SHELTER_ENTITY_ID)
     assert state is not None
     assert state.state == "80"
+
+    await async_shutdown(hass, config_id)
+
+
+async def test_time_to_shelter_ignores_newer_alert_while_counting_down(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test countdown keeps using the cached alert instead of a newer alert."""
+    freezer.move_to("2025-01-01 12:00:00+03:00")
+    config_id = await async_setup(hass)
+    config = hass.config_entries.async_get_entry(config_id)
+    assert config is not None
+    coordinator = config.runtime_data.coordinator
+    now = dt_util.now(IST)
+
+    def build_record_and_metadata(age_seconds: int) -> RecordAndMetadata:
+        alert_time = now - timedelta(seconds=age_seconds)
+        record = Record(
+            data="בארי",
+            category=1,
+            channel="website-history",
+            alertDate=alert_time.strftime("%Y-%m-%d %H:%M:%S"),
+            title="",
+        )
+        return RecordAndMetadata(
+            raw=record,
+            raw_dict=asdict(record),
+            time=alert_time,
+            record_type=RecordType.ALERT,
+            expire=now + timedelta(hours=1),
+        )
+
+    first_alert = build_record_and_metadata(10)
+    coordinator.data = OrefAlertCoordinatorData({"בארי": first_alert})
+    coordinator.async_update_listeners()
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    state = hass.states.get(TIME_TO_SHELTER_ENTITY_ID)
+    assert state is not None
+    assert state.state == "5"
+    assert state.attributes[ATTR_ALERT] == first_alert.raw_dict
+
+    newer_alert = build_record_and_metadata(2)
+    coordinator.data = OrefAlertCoordinatorData({"בארי": newer_alert})
+    coordinator.async_update_listeners()
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    state = hass.states.get(TIME_TO_SHELTER_ENTITY_ID)
+    assert state is not None
+    assert state.state == "5"
+    assert state.attributes[ATTR_ALERT] == first_alert.raw_dict
+
+    freezer.tick()
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    state = hass.states.get(TIME_TO_SHELTER_ENTITY_ID)
+    assert state is not None
+    assert state.state == "4"
+    assert state.attributes[ATTR_ALERT] == first_alert.raw_dict
 
     await async_shutdown(hass, config_id)
 

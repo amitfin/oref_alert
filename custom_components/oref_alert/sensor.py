@@ -23,6 +23,7 @@ from .const import (
     CONF_SENSORS,
     OREF_ALERT_UNIQUE_ID,
     TIME_TO_SHELTER_ID_SUFFIX,
+    RecordAndMetadata,
     RecordType,
 )
 from .entity import OrefAlertCoordinatorEntity
@@ -85,6 +86,7 @@ class TimeToShelterSensor(OrefAlertCoordinatorEntity, SensorEntity):
         """Initialize object with defaults."""
         super().__init__(config_entry)
         self._area: str = area
+        self._alert: RecordAndMetadata | None = None
         self._migun_time: int = AREA_TO_MIGUN_TIME[area]
         if not name:
             self._attr_translation_key = "default_time_to_shelter"
@@ -124,6 +126,21 @@ class TimeToShelterSensor(OrefAlertCoordinatorEntity, SensorEntity):
             dt_util.now() + timedelta(seconds=1),
         )
 
+    def _get_alert(self) -> RecordAndMetadata | None:
+        """Get area's record."""
+        if self._alert and self.oref_value_seconds(self._alert) is not None:
+            return self._alert
+
+        if (
+            (record := self.coordinator.data.areas.get(self._area))
+            and record.record_type == RecordType.ALERT
+            and self.oref_value_seconds(record) is not None
+        ):
+            self._alert = record
+            return record
+
+        return None
+
     @property
     def native_value(self) -> int | None:
         """Return the value and schedule another update when needed."""
@@ -142,11 +159,9 @@ class TimeToShelterSensor(OrefAlertCoordinatorEntity, SensorEntity):
             f"{seconds % SECONDS_IN_A_MINUTE:02}"
         )
 
-    def oref_value_seconds(self) -> int | None:
+    def oref_value_seconds(self, alert: RecordAndMetadata | None = None) -> int | None:
         """Return the remaining seconds to shelter."""
-        if (
-            alert := self.coordinator.data.areas.get(self._area)
-        ) and alert.record_type == RecordType.ALERT:
+        if alert or (alert := self._get_alert()):
             alert_age = (dt_util.now() - alert.time).total_seconds()
             time_to_shelter = int(self._migun_time - alert_age)
             # Count till "-60" (a minute past the time to shelter).
@@ -157,10 +172,11 @@ class TimeToShelterSensor(OrefAlertCoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return additional attributes."""
+        alert = self._get_alert()
         return {
             ATTR_AREA: self._area,
             ATTR_TIME_TO_SHELTER: self._migun_time,
-            ATTR_ALERT: self.coordinator.get_record(self._area, {RecordType.ALERT}),
+            ATTR_ALERT: alert.raw_dict if alert else None,
             ATTR_DISPLAY: self.oref_display_value(),
         }
 
