@@ -15,6 +15,9 @@ function _t(english, hebrew) {
   return _isHebrewLanguage() ? hebrew : english;
 }
 
+const DEFAULT_ALERT_COLOR = [241, 146, 146];
+const DEFAULT_PRE_ALERT_COLOR = [245, 158, 11];
+
 class OrefAlertMap extends HTMLElement {
   constructor() {
     super();
@@ -131,7 +134,7 @@ class OrefAlertMap extends HTMLElement {
     );
 
     return Object.values(areas || {})
-      .filter((area) => area.type === "alert")
+      .filter((area) => this._config?.show_pre_alert || area.type === "alert")
       .sort((a, b) => a.area.localeCompare(b.area));
   }
 
@@ -199,7 +202,10 @@ class OrefAlertMap extends HTMLElement {
     const layers = [];
     for (const area of areas) {
       const layer = createPolygon(polygons[area.area], {
-        color: "#f19292",
+        color:
+          area.type === "alert"
+            ? `rgb(${(this._config?.alert_color || DEFAULT_ALERT_COLOR).join(", ")})`
+            : `rgb(${(this._config?.pre_alert_color || DEFAULT_PRE_ALERT_COLOR).join(", ")})`,
       });
       const date = new Date(area.date);
       layer.bindTooltip(
@@ -366,6 +372,9 @@ class OrefAlertMap extends HTMLElement {
         { name: "auto_fit", selector: { boolean: {} } },
         { name: "show_home", selector: { boolean: {} } },
         { name: "hebrew_basemap", selector: { boolean: {} } },
+        { name: "show_pre_alert", selector: { boolean: {} } },
+        { name: "alert_color", selector: { color_rgb: {} } },
+        { name: "pre_alert_color", selector: { color_rgb: {} } },
       ],
       computeLabel: (schema) => {
         if (schema.name === "auto_fit") {
@@ -380,6 +389,15 @@ class OrefAlertMap extends HTMLElement {
         if (schema.name === "hebrew_basemap") {
           return _t("Hebrew basemap", "מפת בסיס בעברית");
         }
+        if (schema.name === "show_pre_alert") {
+          return _t("Show pre-alert", "הצג הנחיות מקדימות");
+        }
+        if (schema.name === "alert_color") {
+          return _t("Alert color", "צבע אזעקה");
+        }
+        if (schema.name === "pre_alert_color") {
+          return _t("Pre-alert color", "צבע הנחיה מקדימה");
+        }
         return undefined;
       },
     };
@@ -390,6 +408,9 @@ class OrefAlertMap extends HTMLElement {
       auto_fit: true,
       show_home: false,
       hebrew_basemap: true,
+      show_pre_alert: false,
+      alert_color: DEFAULT_ALERT_COLOR,
+      pre_alert_color: DEFAULT_PRE_ALERT_COLOR,
     };
   }
 }

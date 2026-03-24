@@ -208,6 +208,7 @@ describe("oref-alert-map", () => {
     const el = new Card();
     const { mapCard, innerMap } = createMapCardWithInnerMap();
     el._mapCard = mapCard;
+    el._config = null;
 
     vi.spyOn(el, "_getPolygons").mockResolvedValue({ "Area A": [[1, 1]] });
     await expect(
@@ -242,8 +243,18 @@ describe("oref-alert-map", () => {
     });
 
     const layers = await el._createLayers([
-      { area: "Area A", date: "2026-03-13T08:05:00Z", emoji: "🚀" },
-      { area: "Area B", date: "2026-03-13T11:42:00Z", emoji: "✈️" },
+      {
+        area: "Area A",
+        date: "2026-03-13T08:05:00Z",
+        emoji: "🚀",
+        type: "alert",
+      },
+      {
+        area: "Area B",
+        date: "2026-03-13T11:42:00Z",
+        emoji: "✈️",
+        type: "alert",
+      },
     ]);
     expect(layers).toHaveLength(2);
     expect(innerMap.Leaflet.polygon).toHaveBeenNthCalledWith(
@@ -252,7 +263,7 @@ describe("oref-alert-map", () => {
         [1, 1],
         [1, 2],
       ],
-      { color: "#f19292" },
+      { color: "rgb(241, 146, 146)" },
     );
     expect(innerMap.Leaflet.polygon).toHaveBeenNthCalledWith(
       2,
@@ -260,10 +271,88 @@ describe("oref-alert-map", () => {
         [2, 1],
         [2, 2],
       ],
-      { color: "#f19292" },
+      { color: "rgb(241, 146, 146)" },
     );
     expect(created[0].bindTooltip).toHaveBeenCalledWith("Area A<br />08:05 🚀");
     expect(created[1].bindTooltip).toHaveBeenCalledWith("Area B<br />11:42 ✈️");
+  });
+
+  test("createLayers uses configured alert color", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+    el._mapCard = mapCard;
+    el._config = { alert_color: [12, 34, 56] };
+    innerMap.Leaflet = {
+      polygon: vi.fn().mockImplementation(() => ({ bindTooltip: vi.fn() })),
+    };
+    vi.spyOn(el, "_getPolygons").mockResolvedValue({ "Area A": [[1, 1]] });
+
+    await el._createLayers([
+      {
+        area: "Area A",
+        date: "2026-03-13T08:05:00Z",
+        emoji: "🚀",
+        type: "alert",
+      },
+    ]);
+
+    expect(innerMap.Leaflet.polygon).toHaveBeenCalledWith([[1, 1]], {
+      color: "rgb(12, 34, 56)",
+    });
+  });
+
+  test("createLayers uses configured pre-alert color", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+    el._mapCard = mapCard;
+    el._config = { pre_alert_color: [210, 120, 10] };
+    innerMap.Leaflet = {
+      polygon: vi.fn().mockImplementation(() => ({ bindTooltip: vi.fn() })),
+    };
+    vi.spyOn(el, "_getPolygons").mockResolvedValue({ "Area A": [[1, 1]] });
+
+    await el._createLayers([
+      {
+        area: "Area A",
+        date: "2026-03-13T08:05:00Z",
+        emoji: "🚀",
+        type: "pre_alert",
+      },
+    ]);
+
+    expect(innerMap.Leaflet.polygon).toHaveBeenCalledWith([[1, 1]], {
+      color: "rgb(210, 120, 10)",
+    });
+  });
+
+  test("createLayers uses default pre-alert layer color at runtime", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+    el._mapCard = mapCard;
+    el._config = null;
+    innerMap.Leaflet = {
+      polygon: vi.fn().mockImplementation(() => ({ bindTooltip: vi.fn() })),
+    };
+    vi.spyOn(el, "_getPolygons").mockResolvedValue({ "Area A": [[1, 1]] });
+
+    await el._createLayers([
+      {
+        area: "Area A",
+        date: "2026-03-13T08:05:00Z",
+        emoji: "🚀",
+        type: "pre_alert",
+      },
+    ]);
+
+    expect(innerMap.Leaflet.polygon).toHaveBeenCalledWith([[1, 1]], {
+      color: "rgb(245, 158, 11)",
+    });
   });
 
   test("getOrefAreas loads areas_status via callService and sorts areas", async () => {
@@ -312,6 +401,55 @@ describe("oref-alert-map", () => {
       undefined,
       true,
     );
+  });
+
+  test("getOrefAreas excludes pre-alert by default and includes it when enabled", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const hass = createHass({
+      areasStatusResponse: {
+        "Area B": {
+          area: "Area B",
+          date: "2026-03-13T11:42:00Z",
+          emoji: "✈️",
+          type: "pre_alert",
+        },
+        "Area A": {
+          area: "Area A",
+          date: "2026-03-13T08:05:00Z",
+          emoji: "🚀",
+          type: "alert",
+        },
+      },
+    });
+    el._hass = hass;
+    el._config = null;
+
+    await expect(el._getOrefAreas()).resolves.toEqual([
+      {
+        area: "Area A",
+        date: "2026-03-13T08:05:00Z",
+        emoji: "🚀",
+        type: "alert",
+      },
+    ]);
+
+    el._config = { show_pre_alert: true };
+    await expect(el._getOrefAreas()).resolves.toEqual([
+      {
+        area: "Area A",
+        date: "2026-03-13T08:05:00Z",
+        emoji: "🚀",
+        type: "alert",
+      },
+      {
+        area: "Area B",
+        date: "2026-03-13T11:42:00Z",
+        emoji: "✈️",
+        type: "pre_alert",
+      },
+    ]);
   });
 
   test("applyHass handles stale hass token and does not update layers directly", async () => {
@@ -577,6 +715,13 @@ describe("oref-alert-map", () => {
     expect(form.computeLabel({ name: "hebrew_basemap" })).toBe(
       "מפת בסיס בעברית",
     );
+    expect(form.computeLabel({ name: "show_pre_alert" })).toBe(
+      "הצג הנחיות מקדימות",
+    );
+    expect(form.computeLabel({ name: "alert_color" })).toBe("צבע אזעקה");
+    expect(form.computeLabel({ name: "pre_alert_color" })).toBe(
+      "צבע הנחיה מקדימה",
+    );
     homeAssistant.remove();
 
     document.documentElement.lang = "en-US";
@@ -586,6 +731,13 @@ describe("oref-alert-map", () => {
     expect(form.computeLabel({ name: "show_home" })).toBe("Show home");
     expect(form.computeLabel({ name: "hebrew_basemap" })).toBe(
       "Hebrew basemap",
+    );
+    expect(form.computeLabel({ name: "show_pre_alert" })).toBe(
+      "Show pre-alert",
+    );
+    expect(form.computeLabel({ name: "alert_color" })).toBe("Alert color");
+    expect(form.computeLabel({ name: "pre_alert_color" })).toBe(
+      "Pre-alert color",
     );
     expect(form.computeLabel({ name: "unknown" })).toBeUndefined();
 
@@ -611,6 +763,9 @@ describe("oref-alert-map", () => {
       auto_fit: true,
       show_home: false,
       hebrew_basemap: true,
+      show_pre_alert: false,
+      alert_color: [241, 146, 146],
+      pre_alert_color: [245, 158, 11],
     });
   });
 
