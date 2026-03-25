@@ -711,7 +711,6 @@ describe("oref-alert-map", () => {
     expect(el._mapCardPromise).toBeNull();
     expect(el._lastUpdated).toBeUndefined();
     expect(el.childElementCount).toBe(0);
-    expect(el._refreshDeadline).toBeGreaterThan(Date.now() - 1000);
     expect(applyHassSpy).toHaveBeenCalledWith(8);
 
     const elNoHass = new Card();
@@ -960,7 +959,7 @@ describe("oref-alert-map", () => {
     expect(refreshAreasSpy).toHaveBeenCalledWith(1);
   });
 
-  test("bootstrap refresh retries every second until the map element is ready", async () => {
+  test("bootstrap refresh retries every second during the first 10 seconds", async () => {
     await ensureDefined();
     vi.useFakeTimers();
     const Card = customElements.get("oref-alert-map");
@@ -968,7 +967,7 @@ describe("oref-alert-map", () => {
     document.body.append(el);
     const applyHassSpy = vi.spyOn(el, "_applyHass").mockResolvedValue();
 
-    el._checkRefresh();
+    el._startRefresh();
     expect(el._refreshId).not.toBeNull();
 
     vi.advanceTimersByTime(1000);
@@ -980,8 +979,9 @@ describe("oref-alert-map", () => {
     el._mapCard = mapCard;
     vi.advanceTimersByTime(1000);
     await Promise.resolve();
-    expect(applyHassSpy).toHaveBeenCalledTimes(1);
-    expect(el._refreshId).toBeNull();
+    expect(applyHassSpy).toHaveBeenCalledTimes(2);
+    expect(applyHassSpy).toHaveBeenLastCalledWith(2);
+    expect(el._refreshId).not.toBeNull();
   });
 
   test("empty areas refresh is cleared on disconnect", async () => {
@@ -992,7 +992,7 @@ describe("oref-alert-map", () => {
     document.body.append(el);
     const applyHassSpy = vi.spyOn(el, "_applyHass").mockResolvedValue();
 
-    el._checkRefresh();
+    el._startRefresh();
     expect(el._refreshId).not.toBeNull();
 
     el.disconnectedCallback();
@@ -1013,7 +1013,7 @@ describe("oref-alert-map", () => {
     vi.spyOn(el, "_applyHass").mockRejectedValue(error);
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    el._checkRefresh();
+    el._startRefresh();
     vi.advanceTimersByTime(1000);
     await Promise.resolve();
 
@@ -1023,7 +1023,7 @@ describe("oref-alert-map", () => {
     );
   });
 
-  test("refresh resumes if the map element disappears again within first minute", async () => {
+  test("bootstrap refresh keeps retrying even after the map element appears", async () => {
     await ensureDefined();
     vi.useFakeTimers();
     const Card = customElements.get("oref-alert-map");
@@ -1031,24 +1031,18 @@ describe("oref-alert-map", () => {
     document.body.append(el);
     const applyHassSpy = vi.spyOn(el, "_applyHass").mockResolvedValue();
 
-    el._checkRefresh();
+    el._startRefresh();
     expect(el._refreshId).not.toBeNull();
 
     const { mapCard } = createMapCardWithInnerMap();
     el._mapCard = mapCard;
-    el._checkRefresh();
-    expect(el._refreshId).toBeNull();
-
-    el._mapCard = null;
-    el._checkRefresh();
-    expect(el._refreshId).not.toBeNull();
-
     vi.advanceTimersByTime(1000);
     await Promise.resolve();
     expect(applyHassSpy).toHaveBeenCalledTimes(1);
+    expect(el._refreshId).not.toBeNull();
   });
 
-  test("bootstrap refresh stops after one minute when the map stays unavailable", async () => {
+  test("bootstrap refresh stops after 10 seconds when the map stays unavailable", async () => {
     await ensureDefined();
     vi.useFakeTimers();
     const Card = customElements.get("oref-alert-map");
@@ -1056,10 +1050,10 @@ describe("oref-alert-map", () => {
     document.body.append(el);
     const applyHassSpy = vi.spyOn(el, "_applyHass").mockResolvedValue();
 
-    el._checkRefresh();
+    el._startRefresh();
     expect(el._refreshId).not.toBeNull();
 
-    vi.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(10_000);
     expect(el._refreshId).toBeNull();
     await Promise.resolve();
     const callsAtStop = applyHassSpy.mock.calls.length;
@@ -1067,19 +1061,6 @@ describe("oref-alert-map", () => {
     vi.advanceTimersByTime(5_000);
     await Promise.resolve();
     expect(applyHassSpy).toHaveBeenCalledTimes(callsAtStop);
-    expect(el._refreshId).toBeNull();
-  });
-
-  test("checkRefresh stops immediately once bootstrap deadline has passed", async () => {
-    await ensureDefined();
-    vi.useFakeTimers();
-    const Card = customElements.get("oref-alert-map");
-    const el = new Card();
-    document.body.append(el);
-
-    el._refreshDeadline = Date.now() - 1;
-    el._checkRefresh();
-
     expect(el._refreshId).toBeNull();
   });
 

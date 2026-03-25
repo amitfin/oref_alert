@@ -30,7 +30,7 @@ class OrefAlertMap extends HTMLElement {
     this._hassUpdateToken = 0;
     this._lastUpdated = undefined;
     this._refreshId = null;
-    this._refreshDeadline = Date.now() + 60_000;
+    this._bootstrapWindow = Date.now() + 10_000;
   }
 
   set hass(hass) {
@@ -47,7 +47,7 @@ class OrefAlertMap extends HTMLElement {
     this._mapCard = null;
     this._mapCardPromise = null;
     this._lastUpdated = undefined;
-    this._refreshDeadline = Date.now() + 60_000;
+    this._bootstrapWindow = Date.now() + 10_000;
     this.replaceChildren();
 
     if (this._hass) {
@@ -80,7 +80,7 @@ class OrefAlertMap extends HTMLElement {
   }
 
   async _applyHass(hassToken) {
-    this._checkRefresh();
+    this._startRefresh();
 
     if (hassToken !== this._hassUpdateToken) {
       return;
@@ -103,8 +103,6 @@ class OrefAlertMap extends HTMLElement {
     }
 
     await this._refreshAreas(hassToken);
-
-    this._checkRefresh();
   }
 
   disconnectedCallback() {
@@ -290,28 +288,10 @@ class OrefAlertMap extends HTMLElement {
     }
   }
 
-  _checkRefresh() {
-    if (this._map) {
-      this._stopRefresh();
-      return;
-    }
-
-    if (Date.now() >= this._refreshDeadline) {
-      this._stopRefresh();
-      return;
-    }
-
-    this._startRefresh();
-  }
-
   _startRefresh() {
-    if (!this._refreshId) {
+    if (!this._refreshId && Date.now() < this._bootstrapWindow) {
       this._refreshId = window.setInterval(() => {
-        if (
-          !this.isConnected ||
-          this._map ||
-          Date.now() >= this._refreshDeadline
-        ) {
+        if (!this.isConnected || Date.now() >= this._bootstrapWindow) {
           this._stopRefresh();
           return;
         }
