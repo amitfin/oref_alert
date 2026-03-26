@@ -109,8 +109,7 @@ describe("oref-alert-map", () => {
     expect(mapCard.layout).toBe("panel");
     expect(el._map).toBeNull();
 
-    el._hassUpdateToken = 1;
-    await el._applyHass(1);
+    await el._applyHass();
     expect(hassSetter).toHaveBeenCalledWith(hass);
     expect(el._map).toBe(mapCard.shadowRoot.querySelector("ha-map"));
 
@@ -126,7 +125,7 @@ describe("oref-alert-map", () => {
     expect(mapCard.layout).toBe("masonry");
   });
 
-  test("ensureMapCard reuses in-flight promise and retries after failure", async () => {
+  test("ensureMapCard retries after failure and caches after success", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
     const el = new Card();
@@ -138,31 +137,17 @@ describe("oref-alert-map", () => {
     window.loadCardHelpers = vi.fn().mockResolvedValue({ createCardElement });
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    el._hassUpdateToken = 1;
-    const p1 = el._ensureMapCard(1);
-    const p2 = el._ensureMapCard(1);
-    await Promise.all([p1, p2]);
-
-    expect(createCardElement).toHaveBeenCalledTimes(1);
+    await expect(el._ensureMapCard()).resolves.toBeNull();
     expect(errorSpy).toHaveBeenCalledWith(
       "oref-alert-map failed to create map card",
       expect.any(Error),
     );
-    expect(el._mapCardPromise).toBeNull();
 
-    el._hassUpdateToken = 2;
-    await expect(el._ensureMapCard(2)).resolves.toBe(mapCard);
-    expect(createCardElement).toHaveBeenCalledTimes(2);
-    await expect(el._ensureMapCard(2)).resolves.toBe(mapCard);
+    await expect(el._ensureMapCard()).resolves.toBe(mapCard);
     expect(createCardElement).toHaveBeenCalledTimes(2);
 
-    const staleMapCard = createMapCardWithInnerMap().mapCard;
-    el._mapCard = null;
-    el._mapCardPromise = Promise.resolve(staleMapCard);
-    el._hassUpdateToken = 3;
-    await expect(el._ensureMapCard(2)).resolves.toBeNull();
-    expect(el._mapCard).toBeNull();
-    expect(el._mapCardPromise).toBeNull();
+    await expect(el._ensureMapCard()).resolves.toBe(mapCard);
+    expect(createCardElement).toHaveBeenCalledTimes(2);
   });
 
   test("getPolygons caches after success and handles unresolved/missing polygons", async () => {
@@ -434,7 +419,7 @@ describe("oref-alert-map", () => {
     ]);
   });
 
-  test("applyHass handles stale hass token and does not update areas directly", async () => {
+  test("applyHass handles missing map card and does not update areas directly", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
     const el = new Card();
@@ -446,24 +431,14 @@ describe("oref-alert-map", () => {
 
     el._hass = createHass();
 
-    el._hassUpdateToken = 2;
-    await el._applyHass(1);
-
     vi.spyOn(el, "_ensureMapCard").mockResolvedValue(null);
-    await el._applyHass(2);
+    await el._applyHass();
 
     el._mapCard = mapCard;
     el._ensureMapCard.mockResolvedValue(mapCard);
     const refreshAreasSpy = vi.spyOn(el, "_refreshAreas").mockResolvedValue();
-    await el._applyHass(2);
-    expect(refreshAreasSpy).toHaveBeenCalledWith(2);
-    expect(innerMap.layers).toBeUndefined();
-
-    refreshAreasSpy.mockImplementation(async () => {
-      el._hassUpdateToken = 3;
-    });
-    el._hassUpdateToken = 2;
-    await el._applyHass(2);
+    await el._applyHass();
+    expect(refreshAreasSpy).toHaveBeenCalledWith();
     expect(innerMap.layers).toBeUndefined();
   });
 
@@ -479,7 +454,7 @@ describe("oref-alert-map", () => {
     el._lastUpdated = "2026-03-24T10:00:00+00:00";
     const createLayersSpy = vi.spyOn(el, "_createLayers");
 
-    await el._refreshAreas(1);
+    await el._refreshAreas();
 
     expect(createLayersSpy).not.toHaveBeenCalled();
   });
@@ -503,10 +478,9 @@ describe("oref-alert-map", () => {
         },
       },
     });
-    el._hassUpdateToken = 1;
     vi.spyOn(el, "_createLayers").mockResolvedValue([{ id: 1 }]);
 
-    await el._refreshAreas(1);
+    await el._refreshAreas();
 
     expect(el._lastUpdated).toBeNull();
     expect(innerMap.layers).toEqual([{ id: 1 }]);
@@ -537,13 +511,59 @@ describe("oref-alert-map", () => {
         },
       },
     });
-    el._hassUpdateToken = 1;
     vi.spyOn(el, "_createLayers").mockResolvedValue([{ id: 2 }, { id: 3 }]);
 
-    await el._refreshAreas(1);
+    await el._refreshAreas();
 
     expect(innerMap.layers).toEqual([{ id: 2 }, { id: 3 }]);
     expect(el._lastUpdated).toBe("2026-03-24T10:00:00+00:00");
+  });
+
+  test("applyHass runs serially for queued applies", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard } = createMapCardWithInnerMap();
+    el._mapCard = mapCard;
+    Object.defineProperty(mapCard, "hass", {
+      configurable: true,
+      set(_) {},
+    });
+
+    el._hass = createHass();
+    const ensureMapCardSpy = vi
+      .spyOn(el, "_ensureMapCard")
+      .mockResolvedValue(mapCard);
+    const phases = [];
+    let resolveFirstRefresh;
+    const firstRefreshPromise = new Promise((resolve) => {
+      resolveFirstRefresh = resolve;
+    });
+    const refreshAreasSpy = vi
+      .spyOn(el, "_refreshAreas")
+      .mockImplementation(async () => {
+        phases.push("start");
+        if (phases.length === 1) {
+          await firstRefreshPromise;
+        }
+        phases.push("end");
+      });
+
+    const firstApply = el._applyHass();
+    const secondApply = el._applyHass();
+    await waitForTasks();
+
+    expect(ensureMapCardSpy).toHaveBeenCalledTimes(1);
+    expect(refreshAreasSpy).toHaveBeenCalledTimes(1);
+    expect(phases).toEqual(["start"]);
+
+    resolveFirstRefresh();
+
+    await Promise.all([firstApply, secondApply]);
+
+    expect(ensureMapCardSpy).toHaveBeenCalledTimes(2);
+    expect(refreshAreasSpy).toHaveBeenCalledTimes(2);
+    expect(phases).toEqual(["start", "end", "start", "end"]);
   });
 
   test("setTileLayer updates tile layers and honors options defaults", async () => {
@@ -580,7 +600,7 @@ describe("oref-alert-map", () => {
         options: { maxZoom: 12 },
       },
     };
-    await el._setTileLayer();
+    el._setTileLayer();
     expect(removeLayer).toHaveBeenCalledTimes(1);
     expect(removeLayer).toHaveBeenCalledWith(oldLayer);
     expect(tileLayerFactory).not.toHaveBeenCalled();
@@ -591,7 +611,7 @@ describe("oref-alert-map", () => {
       removeLayer: vi.fn(),
     };
     innerMap.leafletMap = onlyOldLayerMap;
-    await el._setTileLayer();
+    el._setTileLayer();
     expect(tileLayerFactory).toHaveBeenCalledWith(
       "https://tiles.example/{z}/{x}/{y}.png",
       { maxZoom: 12 },
@@ -603,7 +623,7 @@ describe("oref-alert-map", () => {
         url: "https://tiles2.example/{z}/{x}/{y}.png",
       },
     };
-    await el._setTileLayer();
+    el._setTileLayer();
     expect(tileLayerFactory).toHaveBeenLastCalledWith(
       "https://tiles2.example/{z}/{x}/{y}.png",
       {},
@@ -612,7 +632,7 @@ describe("oref-alert-map", () => {
     el._config = {
       hebrew_basemap: true,
     };
-    await el._setTileLayer();
+    el._setTileLayer();
     expect(tileLayerFactory).toHaveBeenLastCalledWith(
       "https://cdnil.govmap.gov.il/xyz/heb/{z}/{x}/{y}.png",
       {
@@ -631,12 +651,12 @@ describe("oref-alert-map", () => {
     el._config = {
       tileLayer: { url: "https://tiles.example/{z}/{x}/{y}.png" },
     };
-    await expect(el._setTileLayer()).resolves.toBeUndefined();
+    expect(el._setTileLayer()).toBeUndefined();
 
     const { mapCard, innerMap } = createMapCardWithInnerMap();
     el._mapCard = mapCard;
     innerMap.leafletMap = { eachLayer: vi.fn(), removeLayer: vi.fn() };
-    await expect(el._setTileLayer()).resolves.toBeUndefined();
+    expect(el._setTileLayer()).toBeUndefined();
   });
 
   test("buildMapConfig uses defaults and show_home entity", async () => {
@@ -698,20 +718,17 @@ describe("oref-alert-map", () => {
     el.append(child);
 
     el._mapCard = { id: "map-card" };
-    el._mapCardPromise = Promise.resolve(el._mapCard);
     el._lastUpdated = "2026-03-24T10:00:00+00:00";
     el._refreshDeadline = 0;
     el._hass = createHass();
-    el._hassUpdateToken = 7;
 
     el.setConfig({ auto_fit: false, show_home: true });
 
     expect(stopRefreshSpy).toHaveBeenCalledTimes(1);
     expect(el._mapCard).toBeNull();
-    expect(el._mapCardPromise).toBeNull();
     expect(el._lastUpdated).toBeUndefined();
     expect(el.childElementCount).toBe(0);
-    expect(applyHassSpy).toHaveBeenCalledWith(8);
+    expect(applyHassSpy).toHaveBeenCalledWith();
 
     const elNoHass = new Card();
     const applyHassNoHassSpy = vi
@@ -829,9 +846,9 @@ describe("oref-alert-map", () => {
     el.hass = hass2;
     el.hass = hass3;
 
-    expect(applyHassSpy).toHaveBeenNthCalledWith(1, 1);
-    expect(applyHassSpy).toHaveBeenNthCalledWith(2, 2);
-    expect(applyHassSpy).toHaveBeenNthCalledWith(3, 3);
+    expect(applyHassSpy).toHaveBeenNthCalledWith(1);
+    expect(applyHassSpy).toHaveBeenNthCalledWith(2);
+    expect(applyHassSpy).toHaveBeenNthCalledWith(3);
   });
 
   test("hass setter passes through applyHass when tracked last_updated is unchanged", async () => {
@@ -843,34 +860,7 @@ describe("oref-alert-map", () => {
 
     el.hass = createHass();
 
-    expect(applyHassSpy).toHaveBeenCalledWith(1);
-  });
-
-  test("applyHass returns when token changes after ensureMapCard resolves", async () => {
-    await ensureDefined();
-    const Card = customElements.get("oref-alert-map");
-    const el = new Card();
-    const { mapCard } = createMapCardWithInnerMap();
-    const hassSetter = vi.fn();
-    Object.defineProperty(mapCard, "hass", {
-      configurable: true,
-      set(value) {
-        hassSetter(value);
-      },
-    });
-
-    el._hass = createHass();
-    el._hassUpdateToken = 1;
-    vi.spyOn(el, "_ensureMapCard").mockImplementation(async () => {
-      el._hassUpdateToken = 2;
-      return mapCard;
-    });
-    const replaceChildrenSpy = vi.spyOn(el, "replaceChildren");
-
-    await el._applyHass(1);
-
-    expect(replaceChildrenSpy).not.toHaveBeenCalled();
-    expect(hassSetter).not.toHaveBeenCalled();
+    expect(applyHassSpy).toHaveBeenCalledWith();
   });
 
   test("refreshAreas keeps tracked last_updated unchanged when rendering cannot complete", async () => {
@@ -892,7 +882,7 @@ describe("oref-alert-map", () => {
     });
     vi.spyOn(el, "_createLayers").mockResolvedValue([]);
 
-    await el._refreshAreas(1);
+    await el._refreshAreas();
 
     expect(el._lastUpdated).toBeUndefined();
   });
@@ -916,14 +906,13 @@ describe("oref-alert-map", () => {
         },
       },
     });
-    el._hassUpdateToken = 1;
     const createLayersSpy = vi
       .spyOn(el, "_createLayers")
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([{ id: 1 }]);
 
-    await el._refreshAreas(1);
-    await el._refreshAreas(1);
+    await el._refreshAreas();
+    await el._refreshAreas();
 
     expect(createLayersSpy).toHaveBeenCalledTimes(2);
     expect(el._lastUpdated).toBe("2026-03-24T10:00:00+00:00");
@@ -950,13 +939,61 @@ describe("oref-alert-map", () => {
       set(_) {},
     });
     el._hass = createHass();
-    el._hassUpdateToken = 1;
     vi.spyOn(el, "_ensureMapCard").mockResolvedValue(mapCard);
     const refreshAreasSpy = vi.spyOn(el, "_refreshAreas").mockResolvedValue();
 
-    await el._applyHass(1);
+    await el._applyHass();
 
-    expect(refreshAreasSpy).toHaveBeenCalledWith(1);
+    expect(refreshAreasSpy).toHaveBeenCalledWith();
+  });
+
+  test("applyHass continues after a rejected queued apply", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    el._applyHassPromise = Promise.reject(new Error("previous failure"));
+    const ensureMapCardSpy = vi
+      .spyOn(el, "_ensureMapCard")
+      .mockResolvedValue(null);
+
+    await el._applyHass();
+
+    expect(ensureMapCardSpy).toHaveBeenCalledWith();
+  });
+
+  test("applyHass keeps the queue alive when a run rejects", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const error = new Error("apply failed");
+    vi.spyOn(el, "_ensureMapCard").mockRejectedValue(error);
+
+    await expect(el._applyHass()).rejects.toThrow("apply failed");
+
+    el._ensureMapCard.mockResolvedValueOnce(null);
+    await expect(el._applyHass()).resolves.toBeUndefined();
+    expect(el._ensureMapCard).toHaveBeenCalledTimes(2);
+  });
+
+  test("applyHass cleanup keeps a newer inflight promise intact", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+
+    let resolveApply;
+    const applyPromise = new Promise((resolve) => {
+      resolveApply = resolve;
+    });
+    vi.spyOn(el, "_performApplyHass").mockReturnValue(applyPromise);
+
+    const pendingApply = el._applyHass();
+    const newerInflight = Promise.resolve();
+    el._applyHassPromise = newerInflight;
+    resolveApply();
+
+    await pendingApply;
+
+    expect(el._applyHassPromise).toBe(newerInflight);
   });
 
   test("bootstrap refresh retries every second during the first 10 seconds", async () => {
@@ -973,14 +1010,14 @@ describe("oref-alert-map", () => {
     vi.advanceTimersByTime(1000);
     await Promise.resolve();
     expect(applyHassSpy).toHaveBeenCalledTimes(1);
-    expect(applyHassSpy).toHaveBeenCalledWith(1);
+    expect(applyHassSpy).toHaveBeenCalledWith();
 
     const { mapCard } = createMapCardWithInnerMap();
     el._mapCard = mapCard;
     vi.advanceTimersByTime(1000);
     await Promise.resolve();
     expect(applyHassSpy).toHaveBeenCalledTimes(2);
-    expect(applyHassSpy).toHaveBeenLastCalledWith(2);
+    expect(applyHassSpy).toHaveBeenLastCalledWith();
     expect(el._refreshId).not.toBeNull();
   });
 
