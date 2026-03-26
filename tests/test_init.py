@@ -325,8 +325,11 @@ async def test_areas_status_action_non_admin(hass: HomeAssistant) -> None:
         )
 
 
-async def test_last_update_action(hass: HomeAssistant) -> None:
+async def test_last_update_action(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
     """Test last_update custom action."""
+    freezer.move_to("2026-01-01 00:00:00+00:00")
     config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
@@ -339,7 +342,7 @@ async def test_last_update_action(hass: HomeAssistant) -> None:
         return_response=True,
     )
     await hass.async_block_till_done(wait_background_tasks=True)
-    assert initial == {"last_update": None}
+    assert initial == {"last_update": None, "version": "1767225600"}
 
     areas = ["קריית שמונה", "תל אביב - דרום העיר ויפו"]
     await hass.services.async_call(
@@ -360,10 +363,14 @@ async def test_last_update_action(hass: HomeAssistant) -> None:
 
     assert response
     assert dt_util.parse_datetime(response["last_update"]) is not None  # pyright: ignore[reportArgumentType]
+    assert response["version"] == "1767225600"
 
 
-async def test_last_update_action_non_admin(hass: HomeAssistant) -> None:
+async def test_last_update_action_non_admin(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
     """Test last_update custom action can be called by non-admin users."""
+    freezer.move_to("2026-01-01 00:00:00+00:00")
     config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
@@ -381,7 +388,7 @@ async def test_last_update_action_non_admin(hass: HomeAssistant) -> None:
     )
     await hass.async_block_till_done(wait_background_tasks=True)
 
-    assert response == {"last_update": None}
+    assert response == {"last_update": None, "version": "1767225600"}
 
 
 @pytest.mark.slow

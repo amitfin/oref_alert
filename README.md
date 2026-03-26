@@ -294,7 +294,7 @@ Example response:
 
 ## Last Update
 
-The action `oref_alert.last_update` returns only `last_update`, the last time any area's status was changed. This is used by the map card for identifying re-rendering is required.
+The action `oref_alert.last_update` returns `last_update`, the last time any area's status was changed, and `version`, the integration's version. The map card uses these values to decide whether it should re-render or force a page reload after an integration update.
 
 ## Template Functions
 

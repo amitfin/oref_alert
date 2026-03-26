@@ -176,7 +176,7 @@ type OrefAlertConfigEntry = ConfigEntry[OrefAlertRuntimeData]
 
 async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa: PLR0915
     """Set up custom actions."""
-    await publish_cards(hass)
+    version = await publish_cards(hass)
 
     def get_config_entry() -> OrefAlertConfigEntry:
         """Get the integration's config first (and only) entry."""
@@ -300,7 +300,10 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
     async def last_update(_: ServiceCall) -> ServiceResponse:
         """Return current backend update token."""
         return {
-            "last_update": get_config_entry().runtime_data.coordinator.get_last_update()
+            "last_update": (
+                get_config_entry().runtime_data.coordinator.get_last_update()
+            ),
+            "version": version,
         }
 
     hass.services.async_register(

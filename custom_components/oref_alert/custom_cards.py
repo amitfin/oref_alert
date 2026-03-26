@@ -63,7 +63,7 @@ async def _create_polygons() -> None:
             await file.write(content)
 
 
-async def publish_cards(hass: HomeAssistant) -> None:
+async def publish_cards(hass: HomeAssistant) -> str:
     """Publish the custom cards."""
     _, _, integration = await asyncio.gather(
         _create_polygons(),
@@ -80,3 +80,5 @@ async def publish_cards(hass: HomeAssistant) -> None:
 
     for file_name in (POLYGONS_CARD_FILE, MAP_CARD_FILE):
         add_extra_js_url(hass, f"{URL_BASE}/{file_name}?v={version}")
+
+    return version

@@ -2,7 +2,9 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 async function ensureDefined() {
   if (!customElements.get("oref-alert-map")) {
-    await import("../custom_components/oref_alert/cards/oref-alert-map.js");
+    await import(
+      "../custom_components/oref_alert/cards/oref-alert-map.js?v=1.0.0"
+    );
   }
 }
 
@@ -11,7 +13,7 @@ function waitForTasks() {
 }
 
 function createHass({
-  lastUpdateResponse = { last_update: null },
+  lastUpdateResponse = { last_update: null, version: null },
   areasStatusResponse = {},
 } = {}) {
   const callService = vi.fn().mockImplementation((domain, service) => {
@@ -50,6 +52,7 @@ afterEach(() => {
   document.body.innerHTML = "";
   delete window.loadCardHelpers;
   delete window.L;
+  window.sessionStorage.clear();
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
@@ -60,7 +63,9 @@ describe("oref-alert-map", () => {
     delete window.customCards;
     const defineSpy = vi.spyOn(customElements, "define");
 
-    await import("../custom_components/oref_alert/cards/oref-alert-map.js");
+    await import(
+      "../custom_components/oref_alert/cards/oref-alert-map.js?v=1.0.0"
+    );
 
     expect(defineSpy).toHaveBeenCalledWith(
       "oref-alert-map",
@@ -299,18 +304,23 @@ describe("oref-alert-map", () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
     const el = new Card();
-    await expect(el._getLastUpdate()).resolves.toBeNull();
+    await expect(el._getLastUpdate()).resolves.toEqual({
+      lastUpdated: null,
+      version: null,
+    });
 
     const hass = createHass({
       lastUpdateResponse: {
         last_update: "2026-03-24T10:00:00+00:00",
+        version: "2.3.4",
       },
     });
     el._hass = hass;
 
-    await expect(el._getLastUpdate()).resolves.toBe(
-      "2026-03-24T10:00:00+00:00",
-    );
+    await expect(el._getLastUpdate()).resolves.toEqual({
+      lastUpdated: "2026-03-24T10:00:00+00:00",
+      version: "2.3.4",
+    });
     expect(hass.callService).toHaveBeenCalledWith(
       "oref_alert",
       "last_update",
@@ -457,6 +467,115 @@ describe("oref-alert-map", () => {
     await el._refreshAreas();
 
     expect(createLayersSpy).not.toHaveBeenCalled();
+  });
+
+  test("refreshAreas reloads the page when backend version changes", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const getLastUpdateSpy = vi.spyOn(el, "_getLastUpdate").mockResolvedValue({
+      lastUpdated: "2026-03-24T10:00:00+00:00",
+      version: "mismatch-version",
+    });
+    vi.spyOn(el, "_maybeReloadForVersion").mockReturnValue(true);
+    const createLayersSpy = vi.spyOn(el, "_createLayers");
+
+    await el._refreshAreas();
+
+    expect(getLastUpdateSpy).toHaveBeenCalledWith();
+    expect(el._maybeReloadForVersion).toHaveBeenCalledWith("mismatch-version");
+    expect(createLayersSpy).not.toHaveBeenCalled();
+  });
+
+  test("refreshAreas avoids repeated reload attempts for the same version", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const getLastUpdateSpy = vi.spyOn(el, "_getLastUpdate").mockResolvedValue({
+      lastUpdated: "2026-03-24T10:00:00+00:00",
+      version: "mismatch-version",
+    });
+    vi.spyOn(el, "_maybeReloadForVersion")
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(true);
+    const createLayersSpy = vi.spyOn(el, "_createLayers");
+
+    await el._refreshAreas();
+    await el._refreshAreas();
+
+    expect(getLastUpdateSpy).toHaveBeenCalledTimes(2);
+    expect(el._maybeReloadForVersion).toHaveBeenNthCalledWith(
+      1,
+      "mismatch-version",
+    );
+    expect(el._maybeReloadForVersion).toHaveBeenNthCalledWith(
+      2,
+      "mismatch-version",
+    );
+    expect(createLayersSpy).not.toHaveBeenCalled();
+  });
+
+  test("maybeReloadForVersion clears the guard when versions match", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    vi.spyOn(el, "_getCurrentVersion").mockReturnValue("1.0.0");
+    window.sessionStorage.setItem("oref-alert-map-reload-version", "1.0.0");
+
+    expect(el._maybeReloadForVersion("1.0.0")).toBe(false);
+    expect(
+      window.sessionStorage.getItem("oref-alert-map-reload-version"),
+    ).toBeNull();
+  });
+
+  test("maybeReloadForVersion reloads and stores guard on mismatch", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    vi.spyOn(el, "_getCurrentVersion").mockReturnValue("1.0.0");
+
+    expect(el._maybeReloadForVersion("2.0.0")).toBe(true);
+    expect(window.sessionStorage.getItem("oref-alert-map-reload-version")).toBe(
+      "2.0.0",
+    );
+  });
+
+  test("maybeReloadForVersion skips repeated reload for same mismatched version", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    vi.spyOn(el, "_getCurrentVersion").mockReturnValue("1.0.0");
+    window.sessionStorage.setItem("oref-alert-map-reload-version", "2.0.0");
+
+    expect(el._maybeReloadForVersion("2.0.0")).toBe(true);
+    expect(window.sessionStorage.getItem("oref-alert-map-reload-version")).toBe(
+      "2.0.0",
+    );
+  });
+
+  test("maybeReloadForVersion still reloads when session storage fails", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    vi.spyOn(el, "_getCurrentVersion").mockReturnValue("1.0.0");
+    const storageProto = Object.getPrototypeOf(window.sessionStorage);
+    const getItemSpy = vi
+      .spyOn(storageProto, "getItem")
+      .mockImplementation(() => {
+        throw new Error("storage unavailable");
+      });
+
+    expect(el._maybeReloadForVersion("2.0.0")).toBe(true);
+    expect(getItemSpy).toHaveBeenCalledWith("oref-alert-map-reload-version");
+  });
+
+  test("maybeReloadForVersion returns false when current version is unavailable", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    vi.spyOn(el, "_getCurrentVersion").mockReturnValue(null);
+
+    expect(el._maybeReloadForVersion("2.0.0")).toBe(false);
   });
 
   test("refreshAreas renders once on first load even when last_update is null", async () => {
@@ -926,7 +1045,10 @@ describe("oref-alert-map", () => {
       lastUpdateResponse: {},
     });
 
-    await expect(el._getLastUpdate()).resolves.toBeNull();
+    await expect(el._getLastUpdate()).resolves.toEqual({
+      lastUpdated: null,
+      version: null,
+    });
   });
 
   test("applyHass refreshes areas through refreshAreas", async () => {

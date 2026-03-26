@@ -17,6 +17,8 @@ function _t(english, hebrew) {
 
 const ALERT_COLOR = "rgb(241, 146, 146)";
 const PRE_ALERT_COLOR = "rgb(253, 224, 71)";
+const RELOAD_GUARD_KEY = "oref-alert-map-reload-version";
+const CURRENT_VERSION = new URL(import.meta.url).searchParams.get("v");
 
 class OrefAlertMap extends HTMLElement {
   constructor() {
@@ -133,7 +135,10 @@ class OrefAlertMap extends HTMLElement {
       true,
     );
 
-    return result?.response?.last_update ?? null;
+    return {
+      lastUpdated: result?.response?.last_update ?? null,
+      version: result?.response?.version ?? null,
+    };
   }
 
   async _getOrefAreas() {
@@ -152,7 +157,10 @@ class OrefAlertMap extends HTMLElement {
   }
 
   async _refreshAreas() {
-    const lastUpdated = await this._getLastUpdate();
+    const { lastUpdated, version } = await this._getLastUpdate();
+    if (this._maybeReloadForVersion(version)) {
+      return;
+    }
     if (this._lastUpdated !== undefined && this._lastUpdated === lastUpdated) {
       return;
     }
@@ -164,6 +172,38 @@ class OrefAlertMap extends HTMLElement {
       map.layers = layers;
       this._lastUpdated = lastUpdated;
     }
+  }
+
+  _maybeReloadForVersion(version) {
+    const currentVersion = this._getCurrentVersion();
+    if (!version || !currentVersion || version === currentVersion) {
+      if (version) {
+        try {
+          if (window.sessionStorage.getItem(RELOAD_GUARD_KEY) === version) {
+            window.sessionStorage.removeItem(RELOAD_GUARD_KEY);
+          }
+        } catch (_) {
+          // Ignore storage issues.
+        }
+      }
+      return false;
+    }
+
+    try {
+      if (window.sessionStorage.getItem(RELOAD_GUARD_KEY) === version) {
+        return true;
+      }
+      window.sessionStorage.setItem(RELOAD_GUARD_KEY, version);
+    } catch (_) {
+      // Ignore storage issues and still try to reload once.
+    }
+
+    window.location.reload();
+    return true;
+  }
+
+  _getCurrentVersion() {
+    return CURRENT_VERSION;
   }
 
   async _createLayers(areas) {
