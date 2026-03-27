@@ -351,7 +351,6 @@ describe("oref-alert-map", () => {
           emoji: "🚀",
           type: "alert",
         },
-        ignored: "not-an-area",
       },
     });
     el._hass = hass;
@@ -380,7 +379,7 @@ describe("oref-alert-map", () => {
     );
   });
 
-  test("getOrefAreas excludes pre-alert by default and includes it when enabled", async () => {
+  test("getOrefAreas includes pre-alert by default and excludes it when disabled", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
     const el = new Card();
@@ -410,21 +409,21 @@ describe("oref-alert-map", () => {
         emoji: "🚀",
         type: "alert",
       },
+      {
+        area: "Area B",
+        date: "2026-03-13T11:42:00Z",
+        emoji: "✈️",
+        type: "pre_alert",
+      },
     ]);
 
-    el._config = { show_pre_alert: true };
+    el._config = { show_pre_alert: false };
     await expect(el._getOrefAreas()).resolves.toEqual([
       {
         area: "Area A",
         date: "2026-03-13T08:05:00Z",
         emoji: "🚀",
         type: "alert",
-      },
-      {
-        area: "Area B",
-        date: "2026-03-13T11:42:00Z",
-        emoji: "✈️",
-        type: "pre_alert",
       },
     ]);
   });
@@ -778,6 +777,25 @@ describe("oref-alert-map", () => {
     expect(el._setTileLayer()).toBeUndefined();
   });
 
+  test("setTileLayer returns early when hebrew basemap is explicitly disabled", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+    const tileLayerFactory = vi.fn();
+
+    el._mapCard = mapCard;
+    el._config = { hebrew_basemap: false };
+    innerMap.leafletMap = { eachLayer: vi.fn(), removeLayer: vi.fn() };
+    innerMap.Leaflet = {
+      TileLayer: class {},
+      tileLayer: tileLayerFactory,
+    };
+
+    expect(el._setTileLayer()).toBeUndefined();
+    expect(tileLayerFactory).not.toHaveBeenCalled();
+  });
+
   test("buildMapConfig uses defaults and show_home entity", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
@@ -913,7 +931,7 @@ describe("oref-alert-map", () => {
       auto_fit: true,
       show_home: false,
       hebrew_basemap: true,
-      show_pre_alert: false,
+      show_pre_alert: true,
     });
   });
 

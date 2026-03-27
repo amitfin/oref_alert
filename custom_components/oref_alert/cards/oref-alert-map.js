@@ -152,7 +152,10 @@ class OrefAlertMap extends HTMLElement {
     );
 
     return Object.values(result?.response || {})
-      .filter((area) => this._config?.show_pre_alert || area.type === "alert")
+      .filter(
+        (area) =>
+          (this._config?.show_pre_alert ?? true) || area.type === "alert",
+      )
       .sort((a, b) => a.area.localeCompare(b.area));
   }
 
@@ -285,7 +288,7 @@ class OrefAlertMap extends HTMLElement {
     let tileLayer;
     if (this._config?.tileLayer) {
       tileLayer = this._config.tileLayer;
-    } else if (this._config?.hebrew_basemap) {
+    } else if (this._config?.hebrew_basemap ?? true) {
       tileLayer = {
         url: "https://cdnil.govmap.gov.il/xyz/heb/{z}/{x}/{y}.png",
         options: {
@@ -378,7 +381,7 @@ class OrefAlertMap extends HTMLElement {
       auto_fit: true,
       show_home: false,
       hebrew_basemap: true,
-      show_pre_alert: false,
+      show_pre_alert: true,
     };
   }
 }
