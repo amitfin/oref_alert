@@ -219,14 +219,15 @@ def test_limited_environment(hass: HomeAssistant, load_oref_integration: None) -
         Template(statement, hass).async_render(limited=True, log_fn=lambda _1, _2: None)
 
 
-@pytest.mark.allowed_logs(["Template variable error:"])
-async def test_unload(hass: HomeAssistant) -> None:
-    """Test no template extensions after unload."""
-    statement = "{{ oref_areas() | length > 0 }}"
-    config_id = await async_setup(hass)
-    assert Template(statement, hass).async_render() is True
+async def test_unload(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """Test template extensions remain registered after unload."""
+    areas_statement = "{{ oref_areas() | length > 0 }}"
+    alerts_statement = "{{ oref_alerts() | list }}"
+    config_id = await async_setup(hass, aioclient_mock)
+    assert Template(areas_statement, hass).async_render() is True
     await async_shutdown(hass, config_id)
-    with pytest.raises(
-        TemplateError, match="UndefinedError: 'oref_areas' is undefined"
-    ):
-        Template(statement, hass).async_render()
+    assert Template(areas_statement, hass).async_render() is True
+    assert Template(alerts_statement, hass).async_render() == []

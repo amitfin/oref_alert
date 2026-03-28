@@ -7,6 +7,7 @@ from __future__ import annotations
 import inspect
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.template import (
     Template,
     TemplateEnvironment,
@@ -15,7 +16,6 @@ from homeassistant.helpers.template import (
     distance as distance_func,
 )
 
-from . import const
 from .categories import category_to_emoji, category_to_icon
 from .const import (
     ALERTS_TEMPLATE_FUNCTION,
@@ -30,6 +30,7 @@ from .const import (
     POLYGON_TEMPLATE_FUNCTION,
     SHELTER_TEMPLATE_FUNCTION,
 )
+from .helpers import get_config_entry
 from .metadata.area_info import AREA_INFO
 from .metadata.area_to_district import AREA_TO_DISTRICT
 from .metadata.area_to_migun_time import AREA_TO_MIGUN_TIME
@@ -46,14 +47,10 @@ if TYPE_CHECKING:
 
     from homeassistant.core import HomeAssistant
 
-    from . import OrefAlertConfigEntry
-
 _template_environment_init_signature = inspect.signature(TemplateEnvironment.__init__)
 
 
-async def inject_template_extensions(  # noqa: PLR0915
-    hass: HomeAssistant, config_entry: OrefAlertConfigEntry
-) -> Callable[[], None]:
+async def inject_template_extensions(hass: HomeAssistant) -> None:  # noqa: PLR0915
     """Inject template extension to the Home Assistant instance."""
     template_environment_init = TemplateEnvironment.__init__
 
@@ -64,7 +61,12 @@ async def inject_template_extensions(  # noqa: PLR0915
 
         def __call__(self) -> Generator[dict[str, Any]]:
             """Return historical alerts."""
-            yield from config_entry.runtime_data.bus_events.alert_history.items()
+            try:
+                yield from get_config_entry(
+                    hass
+                ).runtime_data.bus_events.alert_history.items()
+            except HomeAssistantError:
+                return
 
         def __iter__(self) -> Generator[dict[str, Any]]:
             """Iterate over historical alerts."""
@@ -151,17 +153,6 @@ async def inject_template_extensions(  # noqa: PLR0915
             env.globals[FIND_AREA_TEMPLATE_FUNCTION] = find_area_by_coordinate
             env.filters[FIND_AREA_TEMPLATE_FUNCTION] = find_area_by_coordinate_filter
 
-    def revert_environment(env: TemplateEnvironment, *_: Any) -> None:
-        """Remove template extensions."""
-        functions = [
-            function
-            for function in dir(const)
-            if function.endswith("TEMPLATE_FUNCTION")
-        ]
-        for extensions in (env.globals, env.filters, env.tests):
-            for function in functions:
-                extensions.pop(getattr(const, function), None)
-
     def patched_init(
         self: TemplateEnvironment,
         *args: Any,
@@ -192,10 +183,3 @@ async def inject_template_extensions(  # noqa: PLR0915
 
     # Patch existing instances of TemplateEnvironment.
     fix_cached_environments(patch_environment)
-
-    def unload_template_extensions() -> None:
-        """Remove template extensions."""
-        TemplateEnvironment.__init__ = template_environment_init  # type: ignore[method-assign]
-        fix_cached_environments(revert_environment)
-
-    return unload_template_extensions
