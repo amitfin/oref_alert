@@ -202,7 +202,7 @@ class OrefMetadata:
                 {
                     data["id"]: data
                     for data in segments.values()
-                    if data["name"] in self._areas_no_group
+                    if data["name"] in self._areas_no_group and not data.get("isParent")
                 }.items()
             )
         )
