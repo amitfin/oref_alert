@@ -270,8 +270,12 @@ describe("oref-alert-map", () => {
       ],
       { color: "rgb(241, 146, 146)" },
     );
-    expect(created[0].bindTooltip).toHaveBeenCalledWith("Area A<br />08:05 🚀");
-    expect(created[1].bindTooltip).toHaveBeenCalledWith("Area B<br />11:42 ✈️");
+    expect(created[0].bindTooltip).toHaveBeenCalledWith(
+      `Area A<br />${String(new Date("2026-03-13T08:05:00Z").getHours()).padStart(2, "0")}:${String(new Date("2026-03-13T08:05:00Z").getMinutes()).padStart(2, "0")} 🚀`,
+    );
+    expect(created[1].bindTooltip).toHaveBeenCalledWith(
+      `Area B<br />${String(new Date("2026-03-13T11:42:00Z").getHours()).padStart(2, "0")}:${String(new Date("2026-03-13T11:42:00Z").getMinutes()).padStart(2, "0")} ✈️`,
+    );
   });
 
   test("createLayers uses default pre-alert layer color at runtime", async () => {
@@ -703,7 +707,12 @@ describe("oref-alert-map", () => {
       cb(oldLayer);
       cb(matchingLayer);
     });
-    const leafletMap = { eachLayer, removeLayer };
+    const leafletMap = {
+      eachLayer,
+      removeLayer,
+      setMaxZoom: vi.fn(),
+      setMinZoom: vi.fn(),
+    };
     const addTo = vi.fn();
     const tileLayerFactory = vi.fn(() => ({ addTo }));
     innerMap.leafletMap = leafletMap;
@@ -723,10 +732,14 @@ describe("oref-alert-map", () => {
     expect(removeLayer).toHaveBeenCalledWith(oldLayer);
     expect(tileLayerFactory).not.toHaveBeenCalled();
     expect(addTo).not.toHaveBeenCalled();
+    expect(leafletMap.setMaxZoom).not.toHaveBeenCalled();
+    expect(leafletMap.setMinZoom).not.toHaveBeenCalled();
 
     const onlyOldLayerMap = {
       eachLayer: (cb) => cb(oldLayer),
       removeLayer: vi.fn(),
+      setMaxZoom: vi.fn(),
+      setMinZoom: vi.fn(),
     };
     innerMap.leafletMap = onlyOldLayerMap;
     el._setTileLayer();
@@ -735,6 +748,8 @@ describe("oref-alert-map", () => {
       { maxZoom: 12 },
     );
     expect(addTo).toHaveBeenCalledWith(onlyOldLayerMap);
+    expect(onlyOldLayerMap.setMaxZoom).toHaveBeenCalledWith(12);
+    expect(onlyOldLayerMap.setMinZoom).not.toHaveBeenCalled();
 
     el._config = {
       tileLayer: {
@@ -748,6 +763,20 @@ describe("oref-alert-map", () => {
     );
 
     el._config = {
+      tileLayer: {
+        url: "https://tiles3.example/{z}/{x}/{y}.png",
+        options: { minZoom: 0, maxZoom: 5 },
+      },
+    };
+    el._setTileLayer();
+    expect(tileLayerFactory).toHaveBeenLastCalledWith(
+      "https://tiles3.example/{z}/{x}/{y}.png",
+      { minZoom: 0, maxZoom: 5 },
+    );
+    expect(onlyOldLayerMap.setMinZoom).toHaveBeenCalledWith(0);
+    expect(onlyOldLayerMap.setMaxZoom).toHaveBeenLastCalledWith(5);
+
+    el._config = {
       hebrew_basemap: true,
     };
     el._setTileLayer();
@@ -759,6 +788,8 @@ describe("oref-alert-map", () => {
         attribution: "© GovMap / המרכז למיפוי ישראל",
       },
     );
+    expect(onlyOldLayerMap.setMinZoom).toHaveBeenLastCalledWith(8);
+    expect(onlyOldLayerMap.setMaxZoom).toHaveBeenLastCalledWith(15);
   });
 
   test("setTileLayer no-ops when map prerequisites are missing", async () => {

@@ -323,6 +323,14 @@ class OrefAlertMap extends HTMLElement {
       leaflet
         .tileLayer(tileLayer.url, tileLayer.options || {})
         .addTo(leafletMap);
+
+      if (tileLayer.options?.maxZoom !== undefined) {
+        leafletMap.setMaxZoom(tileLayer.options.maxZoom);
+      }
+
+      if (tileLayer.options?.minZoom !== undefined) {
+        leafletMap.setMinZoom(tileLayer.options.minZoom);
+      }
     }
   }
 
