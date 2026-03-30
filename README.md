@@ -44,9 +44,9 @@ There is a single configuration parameter **Selected area**. By default the inte
 The integration adds a map card for displaying all active alerts. It's recommended to place the map card inside a [panel view](https://www.home-assistant.io/dashboards/panel/), so it can take full width and provide the best map experience.
 
 Card configuration:
-- `auto_fit` (optional, default: `true`): automatically fit the map view to active alerts.
-- `show_home` (optional, default: `false`): show `zone.home` on the map.
-- `hebrew_basemap` (optional, default: `true`): use a Hebrew basemap tile layer.
+- `auto_fit` (optional, default: `true`): Automatically adjust the map view to include all currently active alerts and pre-alerts.
+- `show_home` (optional, default: `false`): Show `zone.home` on the map. This option is typically used together with `auto_fit: false`, allowing the map to stay centered on the home area. This view is useful for users who are interested in their home's surroundings.
+- `hebrew_basemap` (optional, default: `true`): Use a Hebrew basemap tile layer. It is not recommended to enable this option when both `auto_fit` and `show_home` are enabled. The Hebrew basemap supports zoom levels only up to 15, while most other map providers support zoom levels up to 19–20. When `show_home` is enabled, `auto_fit` often selects a higher zoom level, which may exceed the Hebrew basemap's maximum supported zoom level.
 - `show_pre_alert` (optional, default: `true`): include `pre_alert` areas on the map (in yellow).
 - `entities` (optional, YAML only, no UI): additional entities passed to the [map card](https://www.home-assistant.io/dashboards/map). See also [here](https://www.home-assistant.io/dashboards/map/#entities) and [here](https://www.home-assistant.io/dashboards/map/#options-for-entities).
 
