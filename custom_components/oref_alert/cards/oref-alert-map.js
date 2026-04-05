@@ -41,15 +41,10 @@ class OrefAlertMap extends HTMLElement {
 
   setConfig(config) {
     this._config = config;
-
-    this._stopRefresh();
-    this._mapCard = null;
-    this._lastUpdated = undefined;
-    this._bootstrapWindow = Date.now() + 10_000;
-    this.replaceChildren();
-
     if (this._hass) {
-      void this._applyHass();
+      void this._applyHass(true);
+    } else {
+      this._resetCardState();
     }
   }
 
@@ -75,7 +70,7 @@ class OrefAlertMap extends HTMLElement {
         };
   }
 
-  async _applyHass() {
+  async _applyHass(reset = false) {
     while (true) {
       const inflightApply = this._applyHassPromise;
       if (inflightApply) {
@@ -84,6 +79,10 @@ class OrefAlertMap extends HTMLElement {
           this._applyHassPromise = null;
         }
         continue;
+      }
+
+      if (reset) {
+        this._resetCardState();
       }
 
       const applyPromise = this._performApplyHass().catch((error) => {
@@ -122,6 +121,14 @@ class OrefAlertMap extends HTMLElement {
     }
 
     await this._refreshAreas();
+  }
+
+  _resetCardState() {
+    this._stopRefresh();
+    this._mapCard = null;
+    this._lastUpdated = undefined;
+    this._bootstrapWindow = Date.now() + 10_000;
+    this.replaceChildren();
   }
 
   disconnectedCallback() {

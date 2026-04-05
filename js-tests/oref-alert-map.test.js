@@ -880,8 +880,8 @@ describe("oref-alert-map", () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
     const el = new Card();
-    const stopRefreshSpy = vi.spyOn(el, "_stopRefresh");
     const applyHassSpy = vi.spyOn(el, "_applyHass").mockResolvedValue();
+    const resetSpy = vi.spyOn(el, "_resetCardState");
     const child = document.createElement("div");
     el.append(child);
 
@@ -892,18 +892,17 @@ describe("oref-alert-map", () => {
 
     el.setConfig({ auto_fit: false, show_home: true });
 
-    expect(stopRefreshSpy).toHaveBeenCalledTimes(1);
-    expect(el._mapCard).toBeNull();
-    expect(el._lastUpdated).toBeUndefined();
-    expect(el.childElementCount).toBe(0);
-    expect(applyHassSpy).toHaveBeenCalledWith();
+    expect(resetSpy).not.toHaveBeenCalled();
+    expect(applyHassSpy).toHaveBeenCalledWith(true);
 
     const elNoHass = new Card();
+    const resetNoHassSpy = vi.spyOn(elNoHass, "_resetCardState");
     const applyHassNoHassSpy = vi
       .spyOn(elNoHass, "_applyHass")
       .mockResolvedValue();
     elNoHass.setConfig({ auto_fit: true, show_home: false });
     expect(applyHassNoHassSpy).not.toHaveBeenCalled();
+    expect(resetNoHassSpy).toHaveBeenCalledWith();
   });
 
   test("getConfigForm labels support english and hebrew", async () => {
