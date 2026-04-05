@@ -966,37 +966,41 @@ describe("oref-alert-map", () => {
     });
   });
 
-  test("hass setter catches errors from applyHass", async () => {
+  test("hass setter relies on applyHass to log failures", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
     const el = new Card();
     const error = new Error("boom");
-    vi.spyOn(el, "_applyHass").mockRejectedValue(error);
+    vi.spyOn(el, "_performApplyHass").mockRejectedValue(error);
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     el.hass = createHass();
     await waitForTasks();
 
     expect(errorSpy).toHaveBeenCalledWith(
-      "oref-alert-map hass apply failed",
+      "oref-alert-map apply failed",
+      "boom",
+      error.stack,
       error,
     );
   });
 
-  test("setConfig catches errors from applyHass", async () => {
+  test("setConfig relies on applyHass to log failures", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
     const el = new Card();
     const error = new Error("set-config boom");
     el._hass = createHass();
-    vi.spyOn(el, "_applyHass").mockRejectedValue(error);
+    vi.spyOn(el, "_performApplyHass").mockRejectedValue(error);
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     el.setConfig({ auto_fit: true, show_home: false });
     await waitForTasks();
 
     expect(errorSpy).toHaveBeenCalledWith(
-      "oref-alert-map setConfig apply failed",
+      "oref-alert-map apply failed",
+      "set-config boom",
+      error.stack,
       error,
     );
   });
@@ -1137,13 +1141,83 @@ describe("oref-alert-map", () => {
     const Card = customElements.get("oref-alert-map");
     const el = new Card();
     const error = new Error("apply failed");
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(el, "_ensureMapCard").mockRejectedValue(error);
 
-    await expect(el._applyHass()).rejects.toThrow("apply failed");
+    await expect(el._applyHass()).resolves.toBeUndefined();
+    expect(errorSpy).toHaveBeenCalledWith(
+      "oref-alert-map apply failed",
+      "apply failed",
+      error.stack,
+      error,
+    );
 
     el._ensureMapCard.mockResolvedValueOnce(null);
     await expect(el._applyHass()).resolves.toBeUndefined();
     expect(el._ensureMapCard).toHaveBeenCalledTimes(2);
+  });
+
+  test("applyHass logs non-Error failures without throwing", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(el, "_performApplyHass").mockRejectedValue("plain failure");
+
+    await expect(el._applyHass()).resolves.toBeUndefined();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      "oref-alert-map apply failed",
+      "plain failure",
+    );
+  });
+
+  test("applyHass logs message and stack for error-like objects", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const error = {
+      message: "foreign failure",
+      stack: "foreign-stack",
+    };
+    vi.spyOn(el, "_performApplyHass").mockRejectedValue(error);
+
+    await expect(el._applyHass()).resolves.toBeUndefined();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      "oref-alert-map apply failed",
+      "foreign failure",
+      "foreign-stack",
+      error,
+    );
+  });
+
+  test("applyHass falls back to logging plain objects without message details", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const error = {
+      code: 500,
+      detail: "plain object failure",
+    };
+    vi.spyOn(el, "_performApplyHass").mockRejectedValue(error);
+
+    await expect(el._applyHass()).resolves.toBeUndefined();
+
+    expect(errorSpy).toHaveBeenCalledWith("oref-alert-map apply failed", error);
+  });
+
+  test("applyHass clears its inflight promise after normal completion", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    vi.spyOn(el, "_performApplyHass").mockResolvedValue(undefined);
+
+    await el._applyHass();
+
+    expect(el._applyHassPromise).toBeNull();
   });
 
   test("applyHass cleanup keeps a newer inflight promise intact", async () => {
@@ -1211,14 +1285,14 @@ describe("oref-alert-map", () => {
     expect(applyHassSpy).not.toHaveBeenCalled();
   });
 
-  test("empty areas refresh logs retry errors", async () => {
+  test("empty areas refresh keeps errors inside applyHass", async () => {
     await ensureDefined();
     vi.useFakeTimers();
     const Card = customElements.get("oref-alert-map");
     const el = new Card();
     document.body.append(el);
     const error = new Error("retry failed");
-    vi.spyOn(el, "_applyHass").mockRejectedValue(error);
+    vi.spyOn(el, "_performApplyHass").mockRejectedValue(error);
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     el._startRefresh();
@@ -1226,7 +1300,9 @@ describe("oref-alert-map", () => {
     await Promise.resolve();
 
     expect(errorSpy).toHaveBeenCalledWith(
-      "oref-alert-map refresh retry failed",
+      "oref-alert-map apply failed",
+      "retry failed",
+      error.stack,
       error,
     );
   });

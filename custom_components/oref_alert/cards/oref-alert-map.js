@@ -36,9 +36,7 @@ class OrefAlertMap extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    void this._applyHass().catch((error) => {
-      console.error("oref-alert-map hass apply failed", error);
-    });
+    void this._applyHass();
   }
 
   setConfig(config) {
@@ -51,9 +49,7 @@ class OrefAlertMap extends HTMLElement {
     this.replaceChildren();
 
     if (this._hass) {
-      void this._applyHass().catch((error) => {
-        console.error("oref-alert-map setConfig apply failed", error);
-      });
+      void this._applyHass();
     }
   }
 
@@ -90,14 +86,21 @@ class OrefAlertMap extends HTMLElement {
         continue;
       }
 
-      const applyPromise = this._performApplyHass();
-      const inflightPromise = applyPromise
-        .catch(() => {})
-        .finally(() => {
-          if (this._applyHassPromise === inflightPromise) {
-            this._applyHassPromise = null;
+      const applyPromise = this._performApplyHass().catch((error) => {
+        if (error && typeof error === "object") {
+          const { message, stack } = error;
+          if (typeof message === "string" || typeof stack === "string") {
+            console.error("oref-alert-map apply failed", message, stack, error);
+            return;
           }
-        });
+        }
+        console.error("oref-alert-map apply failed", error);
+      });
+      const inflightPromise = applyPromise.finally(() => {
+        if (this._applyHassPromise === inflightPromise) {
+          this._applyHassPromise = null;
+        }
+      });
       this._applyHassPromise = inflightPromise;
       return applyPromise;
     }
@@ -341,9 +344,7 @@ class OrefAlertMap extends HTMLElement {
           this._stopRefresh();
           return;
         }
-        void this._applyHass().catch((error) => {
-          console.error("oref-alert-map refresh retry failed", error);
-        });
+        void this._applyHass();
       }, 1000);
     }
   }
