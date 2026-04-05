@@ -16,7 +16,10 @@ from homeassistant.const import (
     EVENT_HOMEASSISTANT_STOP,
     Platform,
 )
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import (
+    ConfigEntryNotReady,
+    IntegrationError,
+)
 from homeassistant.helpers import entity_registry, selector
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.entity_platform import async_get_platforms
@@ -269,9 +272,12 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
 
     async def areas_status(_: ServiceCall) -> ServiceResponse:
         """Return current pre-alert and alert areas."""
-        return get_config_entry(hass).runtime_data.coordinator.get_areas_status(
-            [RecordType.PRE_ALERT, RecordType.ALERT]
-        )  # type: ignore[return-value]
+        try:
+            return get_config_entry(hass).runtime_data.coordinator.get_areas_status(
+                [RecordType.PRE_ALERT, RecordType.ALERT]
+            )  # type: ignore[return-value]
+        except IntegrationError:
+            return {}
 
     hass.services.async_register(
         DOMAIN,
@@ -283,10 +289,14 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
 
     async def last_update(_: ServiceCall) -> ServiceResponse:
         """Return current backend update token."""
+        try:
+            last_update = get_config_entry(
+                hass
+            ).runtime_data.coordinator.get_last_update()
+        except IntegrationError:
+            last_update = None
         return {
-            "last_update": (
-                get_config_entry(hass).runtime_data.coordinator.get_last_update()
-            ),
+            "last_update": last_update,
             "version": version,
         }
 

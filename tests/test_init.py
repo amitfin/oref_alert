@@ -17,7 +17,7 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import Context
-from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady, Unauthorized
+from homeassistant.exceptions import Unauthorized
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
@@ -564,8 +564,11 @@ async def test_unknown_area(hass: HomeAssistant) -> None:
     unregister()
 
 
-async def test_action_without_config_entry(hass: HomeAssistant) -> None:
+async def test_action_without_config_entry(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
     """Test action service without config entry."""
+    freezer.move_to("2026-01-01 00:00:00+00:00")
     for service in [
         ADD_SENSOR_ACTION,
         REMOVE_SENSOR_ACTION,
@@ -580,26 +583,42 @@ async def test_action_without_config_entry(hass: HomeAssistant) -> None:
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
 
-    async def call() -> None:
-        await hass.services.async_call(
+    async def call_areas_status() -> dict[str, PublishedData]:
+        return await hass.services.async_call(
             DOMAIN,
             AREAS_STATUS_ACTION,
             blocking=True,
             return_response=True,
         )
 
-    await call()
+    async def call_last_update() -> dict[str, str | None]:
+        return await hass.services.async_call(
+            DOMAIN,
+            LAST_UPDATE_ACTION,
+            blocking=True,
+            return_response=True,
+        )
+
+    assert await call_areas_status() == {}
+    assert await call_last_update() == {
+        "last_update": None,
+        "version": "1767225600",
+    }
 
     assert await hass.config_entries.async_set_disabled_by(
         config_entry.entry_id, ConfigEntryDisabler.USER
     )
 
-    with pytest.raises(ConfigEntryNotReady) as exc:
-        await call()
-    assert str(exc.value) == "Config entry not loaded"
+    assert await call_areas_status() == {}
+    assert await call_last_update() == {
+        "last_update": None,
+        "version": "1767225600",
+    }
 
     assert await hass.config_entries.async_remove(config_entry.entry_id)
 
-    with pytest.raises(ConfigEntryError) as exc:
-        await call()
-    assert str(exc.value) == "Config entry not found"
+    assert await call_areas_status() == {}
+    assert await call_last_update() == {
+        "last_update": None,
+        "version": "1767225600",
+    }
