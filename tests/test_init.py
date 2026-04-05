@@ -589,7 +589,7 @@ async def test_action_without_config_entry(
             AREAS_STATUS_ACTION,
             blocking=True,
             return_response=True,
-        )
+        )  # pyright: ignore[reportReturnType]
 
     async def call_last_update() -> dict[str, str | None]:
         return await hass.services.async_call(
@@ -597,7 +597,7 @@ async def test_action_without_config_entry(
             LAST_UPDATE_ACTION,
             blocking=True,
             return_response=True,
-        )
+        )  # pyright: ignore[reportReturnType]
 
     assert await call_areas_status() == {}
     assert await call_last_update() == {
