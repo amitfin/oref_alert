@@ -268,6 +268,7 @@ class OrefAlertMap extends HTMLElement {
 
   _buildMapConfig() {
     return {
+      ...(this._config ?? {}),
       type: "map",
       geo_location_sources: ["dummy"],
       entities: (this._config?.show_home ? ["zone.home"] : []).concat(

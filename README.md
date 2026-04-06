@@ -49,6 +49,7 @@ Card configuration:
 - `hebrew_basemap` (optional, default: `true`): Use a Hebrew basemap tile layer. It is not recommended to enable this option when both `auto_fit` and `show_home` are enabled. The Hebrew basemap supports zoom levels only up to 15, while most other map providers support zoom levels up to 19–20. When `show_home` is enabled, `auto_fit` often selects a higher zoom level, which may exceed the Hebrew basemap's maximum supported zoom level.
 - `show_pre_alert` (optional, default: `true`): include `pre_alert` areas on the map (in yellow).
 - `entities` (optional, YAML only, no UI): additional entities passed to the [map card](https://www.home-assistant.io/dashboards/map). See also [here](https://www.home-assistant.io/dashboards/map/#entities) and [here](https://www.home-assistant.io/dashboards/map/#options-for-entities).
+- Additional [map card options](https://www.home-assistant.io/dashboards/map/#yaml-configuration) can be passed through in YAML and are forwarded to the underlying Home Assistant map card. This card still enforces `type`, `geo_location_sources`, `fit_zones`, and computes `entities` and `auto_fit` from its own settings.
 
 | <img width="344" height="551" alt="image" src="https://github.com/user-attachments/assets/f2d17037-4e40-4edb-ae21-0375bd32f224" /> |
 |---|
