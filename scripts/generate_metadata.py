@@ -61,6 +61,7 @@ class AreaInfoType(TypedDict):
 '''
 
 SPELLING_FIX = {"חדרה כל - האזורים": "חדרה - כל האזורים"}
+DISTRICT_FIX = {"סביון": "דן"}
 
 TZEVAADOM_ALL_AREAS = {10000000: next(iter(ALL_AREAS))}
 
@@ -163,6 +164,7 @@ class OrefMetadata:
                 and not area["label"].endswith(DEPRECATION_SUFFIX)
             ):
                 areas.add(area["label"])
+                area["areaname"] = DISTRICT_FIX.get(area["label"], area["areaname"])
                 result.append(area)
         return result
 
