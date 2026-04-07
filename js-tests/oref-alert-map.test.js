@@ -827,6 +827,410 @@ describe("oref-alert-map", () => {
     expect(tileLayerFactory).not.toHaveBeenCalled();
   });
 
+  test("startLocationWatch performs initial fetch, starts watch once, and updates marker state", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const syncMarkerSpy = vi
+      .spyOn(el, "_syncLocationMarker")
+      .mockImplementation(() => {});
+    const originalGeolocation = window.navigator.geolocation;
+
+    let initialSuccessCallback;
+    let watchSuccessCallback;
+    const getCurrentPosition = vi.fn((success) => {
+      initialSuccessCallback = success;
+    });
+    const watchPosition = vi.fn((success) => {
+      watchSuccessCallback = success;
+      return 7;
+    });
+    const clearWatch = vi.fn();
+    Object.defineProperty(window.navigator, "geolocation", {
+      configurable: true,
+      value: { getCurrentPosition, watchPosition, clearWatch },
+    });
+
+    try {
+      await el._startLocationWatch();
+      await el._startLocationWatch();
+
+      expect(getCurrentPosition).toHaveBeenCalledTimes(1);
+      expect(getCurrentPosition).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.any(Function),
+        {
+          enableHighAccuracy: false,
+          maximumAge: 30_000,
+          timeout: 10_000,
+        },
+      );
+
+      expect(watchPosition).toHaveBeenCalledTimes(1);
+      expect(watchPosition).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.any(Function),
+        {
+          enableHighAccuracy: false,
+          maximumAge: 30_000,
+        },
+      );
+
+      initialSuccessCallback({
+        coords: { latitude: 31.77, longitude: 35.21, accuracy: 25 },
+      });
+      watchSuccessCallback({
+        coords: { latitude: 31.78, longitude: 35.22, accuracy: 20 },
+      });
+
+      expect(syncMarkerSpy).toHaveBeenCalledTimes(2);
+      expect(syncMarkerSpy).toHaveBeenNthCalledWith(1, 31.77, 35.21);
+      expect(syncMarkerSpy).toHaveBeenNthCalledWith(2, 31.78, 35.22);
+
+      el._stopLocationWatch();
+      expect(clearWatch).toHaveBeenCalledWith(7);
+    } finally {
+      Object.defineProperty(window.navigator, "geolocation", {
+        configurable: true,
+        value: originalGeolocation,
+      });
+    }
+  });
+
+  test("startLocationWatch skips geolocation calls when permissions are denied", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const originalPermissions = window.navigator.permissions;
+    const originalGeolocation = window.navigator.geolocation;
+
+    const query = vi.fn().mockResolvedValue({ state: "denied" });
+    const getCurrentPosition = vi.fn();
+    const watchPosition = vi.fn();
+    const clearWatch = vi.fn();
+    Object.defineProperty(window.navigator, "permissions", {
+      configurable: true,
+      value: { query },
+    });
+    Object.defineProperty(window.navigator, "geolocation", {
+      configurable: true,
+      value: { getCurrentPosition, watchPosition, clearWatch },
+    });
+
+    try {
+      await el._startLocationWatch();
+      expect(query).toHaveBeenCalledWith({ name: "geolocation" });
+      expect(getCurrentPosition).not.toHaveBeenCalled();
+      expect(watchPosition).not.toHaveBeenCalled();
+      expect(el._geoWatchId).toBeUndefined();
+    } finally {
+      Object.defineProperty(window.navigator, "permissions", {
+        configurable: true,
+        value: originalPermissions,
+      });
+      Object.defineProperty(window.navigator, "geolocation", {
+        configurable: true,
+        value: originalGeolocation,
+      });
+    }
+  });
+
+  test("startLocationWatch exits early when show_location is disabled", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const originalGeolocation = window.navigator.geolocation;
+    el._config = { show_location: false };
+
+    const getCurrentPosition = vi.fn();
+    const watchPosition = vi.fn();
+    const clearWatch = vi.fn();
+    Object.defineProperty(window.navigator, "geolocation", {
+      configurable: true,
+      value: { getCurrentPosition, watchPosition, clearWatch },
+    });
+
+    try {
+      await el._startLocationWatch();
+      expect(getCurrentPosition).not.toHaveBeenCalled();
+      expect(watchPosition).not.toHaveBeenCalled();
+      expect(el._geoWatchId).toBeUndefined();
+    } finally {
+      Object.defineProperty(window.navigator, "geolocation", {
+        configurable: true,
+        value: originalGeolocation,
+      });
+    }
+  });
+
+  test("startLocationWatch keeps watch active on non-permission geolocation errors", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const originalGeolocation = window.navigator.geolocation;
+
+    let errorCallback;
+    const getCurrentPosition = vi.fn();
+    const watchPosition = vi.fn((_, error) => {
+      errorCallback = error;
+      return 12;
+    });
+    const clearWatch = vi.fn();
+    Object.defineProperty(window.navigator, "geolocation", {
+      configurable: true,
+      value: { getCurrentPosition, watchPosition, clearWatch },
+    });
+
+    try {
+      await el._startLocationWatch();
+      errorCallback({ code: 2 });
+
+      expect(clearWatch).not.toHaveBeenCalled();
+      expect(el._geoWatchId).toBe(12);
+    } finally {
+      Object.defineProperty(window.navigator, "geolocation", {
+        configurable: true,
+        value: originalGeolocation,
+      });
+    }
+  });
+
+  test("startLocationWatch stops watching when initial position request is denied", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const originalGeolocation = window.navigator.geolocation;
+
+    let initialErrorCallback;
+    const getCurrentPosition = vi.fn((_, error) => {
+      initialErrorCallback = error;
+    });
+    const watchPosition = vi.fn(() => 13);
+    const clearWatch = vi.fn();
+    Object.defineProperty(window.navigator, "geolocation", {
+      configurable: true,
+      value: { getCurrentPosition, watchPosition, clearWatch },
+    });
+
+    try {
+      await el._startLocationWatch();
+      initialErrorCallback({ code: 1 });
+
+      expect(clearWatch).toHaveBeenCalledWith(13);
+      expect(el._geoWatchId).toBeUndefined();
+    } finally {
+      Object.defineProperty(window.navigator, "geolocation", {
+        configurable: true,
+        value: originalGeolocation,
+      });
+    }
+  });
+
+  test("startLocationWatch keeps watching when initial position request fails without permission denial", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const originalGeolocation = window.navigator.geolocation;
+
+    let initialErrorCallback;
+    const getCurrentPosition = vi.fn((_, error) => {
+      initialErrorCallback = error;
+    });
+    const watchPosition = vi.fn(() => 15);
+    const clearWatch = vi.fn();
+    Object.defineProperty(window.navigator, "geolocation", {
+      configurable: true,
+      value: { getCurrentPosition, watchPosition, clearWatch },
+    });
+
+    try {
+      await el._startLocationWatch();
+      initialErrorCallback({ code: 2 });
+
+      expect(clearWatch).not.toHaveBeenCalled();
+      expect(el._geoWatchId).toBe(15);
+    } finally {
+      Object.defineProperty(window.navigator, "geolocation", {
+        configurable: true,
+        value: originalGeolocation,
+      });
+    }
+  });
+
+  test("startLocationWatch stops watching when watchPosition reports permission denied", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const originalGeolocation = window.navigator.geolocation;
+
+    let watchErrorCallback;
+    const getCurrentPosition = vi.fn();
+    const watchPosition = vi.fn((_, error) => {
+      watchErrorCallback = error;
+      return 14;
+    });
+    const clearWatch = vi.fn();
+    Object.defineProperty(window.navigator, "geolocation", {
+      configurable: true,
+      value: { getCurrentPosition, watchPosition, clearWatch },
+    });
+
+    try {
+      await el._startLocationWatch();
+      watchErrorCallback({ code: 1 });
+
+      expect(clearWatch).toHaveBeenCalledWith(14);
+      expect(el._geoWatchId).toBeUndefined();
+    } finally {
+      Object.defineProperty(window.navigator, "geolocation", {
+        configurable: true,
+        value: originalGeolocation,
+      });
+    }
+  });
+
+  test("startLocationWatch recovers when geolocation APIs throw synchronously", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const originalGeolocation = window.navigator.geolocation;
+
+    const getCurrentPosition = vi.fn(() => {
+      throw new Error("sync geolocation failure");
+    });
+    const watchPosition = vi.fn(() => 16);
+    const clearWatch = vi.fn();
+    Object.defineProperty(window.navigator, "geolocation", {
+      configurable: true,
+      value: { getCurrentPosition, watchPosition, clearWatch },
+    });
+
+    try {
+      await expect(el._startLocationWatch()).resolves.toBeUndefined();
+      expect(el._geoWatchId).toBeUndefined();
+      await expect(el._startLocationWatch()).resolves.toBeUndefined();
+      expect(getCurrentPosition).toHaveBeenCalledTimes(2);
+    } finally {
+      Object.defineProperty(window.navigator, "geolocation", {
+        configurable: true,
+        value: originalGeolocation,
+      });
+    }
+  });
+
+  test("isLocationPermissionDenied returns false when permission query fails", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const originalPermissions = window.navigator.permissions;
+
+    Object.defineProperty(window.navigator, "permissions", {
+      configurable: true,
+      value: {
+        query: vi.fn().mockRejectedValue(new Error("unavailable")),
+      },
+    });
+
+    try {
+      await expect(el._isLocationPermissionDenied()).resolves.toBe(false);
+    } finally {
+      Object.defineProperty(window.navigator, "permissions", {
+        configurable: true,
+        value: originalPermissions,
+      });
+    }
+  });
+
+  test("syncLocationMarker uses a dedicated non-interactive marker and updates it", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+    el._mapCard = mapCard;
+    const marker = {
+      addTo: vi.fn(),
+      bindTooltip: vi.fn(),
+      setLatLng: vi.fn(),
+    };
+    const markerFactory = vi.fn(() => marker);
+    const divIconFactory = vi.fn(() => ({ id: "icon" }));
+    const leafletMap = { removeLayer: vi.fn() };
+    innerMap.Leaflet = {
+      marker: markerFactory,
+      divIcon: divIconFactory,
+    };
+    innerMap.leafletMap = leafletMap;
+    marker.addTo.mockReturnValue(marker);
+
+    el._syncLocationMarker(31.77, 35.21);
+
+    expect(divIconFactory).toHaveBeenCalledWith({
+      html: '<span style="display:block;width:14px;height:14px;background:#4285F4;border:3px solid #fff;border-radius:50%;box-shadow:0 0 6px rgba(66,133,244,0.6);"></span>',
+      className: "",
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
+    });
+    expect(markerFactory).toHaveBeenCalledWith([31.77, 35.21], {
+      icon: { id: "icon" },
+      interactive: false,
+      zIndexOffset: 1000,
+    });
+    expect(marker.addTo).toHaveBeenCalledWith(leafletMap);
+    expect(marker.bindTooltip).toHaveBeenCalledWith("Location");
+
+    el._syncLocationMarker(31.79, 35.23);
+    expect(markerFactory).toHaveBeenCalledTimes(1);
+    expect(marker.setLatLng).toHaveBeenCalledWith([31.79, 35.23]);
+  });
+
+  test("syncLocationMarker no-ops when map marker prerequisites are missing", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    expect(el._syncLocationMarker(31.77, 35.21)).toBeUndefined();
+  });
+
+  test("refreshAreas keeps map layers fitted to alert layers only", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+    el._mapCard = mapCard;
+    vi.spyOn(el, "_getLastUpdate").mockResolvedValue({
+      lastUpdated: "2026-03-24T10:00:00+00:00",
+      version: null,
+    });
+    vi.spyOn(el, "_getOrefAreas").mockResolvedValue([
+      {
+        area: "Area A",
+        date: "2026-03-13T08:05:00Z",
+        emoji: "🚀",
+        type: "alert",
+      },
+    ]);
+    vi.spyOn(el, "_createLayers").mockResolvedValue([{ id: "alert-layer" }]);
+    await el._refreshAreas();
+
+    expect(innerMap.layers).toEqual([{ id: "alert-layer" }]);
+    expect(el._lastUpdated).toBe("2026-03-24T10:00:00+00:00");
+  });
+
+  test("removeLocationMarker removes marker from map when present", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+    el._mapCard = mapCard;
+    innerMap.leafletMap = { removeLayer: vi.fn() };
+    const marker = { id: "marker" };
+    el._locationMarker = marker;
+
+    el._removeLocationMarker();
+
+    expect(innerMap.leafletMap.removeLayer).toHaveBeenCalledWith(marker);
+    expect(el._locationMarker).toBeNull();
+  });
+
   test("buildMapConfig uses defaults, home entity, and passes through map options", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
@@ -945,6 +1349,7 @@ describe("oref-alert-map", () => {
     expect(form.computeLabel({ name: "show_pre_alert" })).toBe(
       "הצג הנחיות מקדימות",
     );
+    expect(form.computeLabel({ name: "show_location" })).toBe("הצג מיקום");
     homeAssistant.remove();
 
     document.documentElement.lang = "en-US";
@@ -958,6 +1363,7 @@ describe("oref-alert-map", () => {
     expect(form.computeLabel({ name: "show_pre_alert" })).toBe(
       "Show pre-alert",
     );
+    expect(form.computeLabel({ name: "show_location" })).toBe("Show location");
     expect(form.computeLabel({ name: "unknown" })).toBeUndefined();
 
     const homeAssistantNoHass = document.createElement("home-assistant");
@@ -983,6 +1389,7 @@ describe("oref-alert-map", () => {
       show_home: false,
       hebrew_basemap: true,
       show_pre_alert: true,
+      show_location: true,
     });
   });
 
@@ -1140,6 +1547,36 @@ describe("oref-alert-map", () => {
     await el._applyHass();
 
     expect(refreshAreasSpy).toHaveBeenCalledWith();
+  });
+
+  test("applyHass enables location by default and honors disabled config", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard } = createMapCardWithInnerMap();
+    Object.defineProperty(mapCard, "hass", {
+      configurable: true,
+      set(_) {},
+    });
+    el._hass = createHass();
+    vi.spyOn(el, "_ensureMapCard").mockResolvedValue(mapCard);
+    vi.spyOn(el, "_refreshAreas").mockResolvedValue();
+    const startLocationWatchSpy = vi
+      .spyOn(el, "_startLocationWatch")
+      .mockResolvedValue();
+    const stopLocationWatchSpy = vi
+      .spyOn(el, "_stopLocationWatch")
+      .mockImplementation(() => {});
+
+    el._config = null;
+    await el._applyHass();
+    expect(startLocationWatchSpy).toHaveBeenCalledTimes(1);
+    expect(stopLocationWatchSpy).not.toHaveBeenCalled();
+
+    el._config = { show_location: false };
+    await el._applyHass();
+    expect(startLocationWatchSpy).toHaveBeenCalledTimes(2);
+    expect(stopLocationWatchSpy).not.toHaveBeenCalled();
   });
 
   test("applyHass continues after a rejected queued apply", async () => {

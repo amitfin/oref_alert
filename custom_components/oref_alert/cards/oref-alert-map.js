@@ -32,6 +32,8 @@ class OrefAlertMap extends HTMLElement {
     this._lastUpdated = undefined;
     this._refreshId = null;
     this._bootstrapWindow = Date.now() + 10_000;
+    this._geoWatchId = undefined;
+    this._locationMarker = null;
   }
 
   set hass(hass) {
@@ -115,6 +117,7 @@ class OrefAlertMap extends HTMLElement {
 
     mapCard.hass = this._hass;
     this._setTileLayer();
+    void this._startLocationWatch();
 
     if (this.firstElementChild !== mapCard) {
       this.replaceChildren(mapCard);
@@ -125,6 +128,8 @@ class OrefAlertMap extends HTMLElement {
 
   _resetCardState() {
     this._stopRefresh();
+    this._stopLocationWatch();
+    this._removeLocationMarker();
     this._mapCard = null;
     this._lastUpdated = undefined;
     this._bootstrapWindow = Date.now() + 10_000;
@@ -132,7 +137,7 @@ class OrefAlertMap extends HTMLElement {
   }
 
   disconnectedCallback() {
-    this._stopRefresh();
+    this._resetCardState();
   }
 
   async _getLastUpdate() {
@@ -345,6 +350,139 @@ class OrefAlertMap extends HTMLElement {
     }
   }
 
+  _supportsLocation() {
+    return (
+      typeof navigator !== "undefined" &&
+      !!navigator.geolocation?.getCurrentPosition &&
+      !!navigator.geolocation?.watchPosition &&
+      !!navigator.geolocation?.clearWatch
+    );
+  }
+
+  async _startLocationWatch() {
+    const showLocation = this._config?.show_location ?? true;
+    if (
+      !showLocation ||
+      this._geoWatchId !== undefined ||
+      !this._supportsLocation()
+    ) {
+      return;
+    }
+
+    this._geoWatchId = null;
+    try {
+      const denied = await this._isLocationPermissionDenied();
+      if (denied) {
+        this._geoWatchId = undefined;
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          this._updateLocation(position);
+        },
+        (error) => {
+          if (error?.code === 1) {
+            this._stopLocationWatch();
+          }
+        },
+        {
+          enableHighAccuracy: false,
+          maximumAge: 30_000,
+          timeout: 10_000,
+        },
+      );
+
+      this._geoWatchId = navigator.geolocation.watchPosition(
+        (position) => {
+          this._updateLocation(position);
+        },
+        (error) => {
+          if (error?.code === 1) {
+            this._stopLocationWatch();
+          }
+        },
+        {
+          enableHighAccuracy: false,
+          maximumAge: 30_000,
+        },
+      );
+    } catch (_) {
+      this._geoWatchId = undefined;
+    }
+  }
+
+  _stopLocationWatch() {
+    if (
+      this._geoWatchId !== undefined &&
+      this._geoWatchId !== null &&
+      this._supportsLocation()
+    ) {
+      navigator.geolocation.clearWatch(this._geoWatchId);
+    }
+    this._geoWatchId = undefined;
+    this._removeLocationMarker();
+  }
+
+  async _isLocationPermissionDenied() {
+    if (!navigator.permissions?.query) {
+      return false;
+    }
+
+    try {
+      const permission = await navigator.permissions.query({
+        name: "geolocation",
+      });
+      return permission.state === "denied";
+    } catch (_) {
+      return false;
+    }
+  }
+
+  _updateLocation(position) {
+    this._syncLocationMarker(
+      position.coords.latitude,
+      position.coords.longitude,
+    );
+  }
+
+  _syncLocationMarker(latitude, longitude) {
+    const map = this._map;
+    const leafletMap = map?.leafletMap;
+    const leaflet = map?.Leaflet;
+    if (!leafletMap || !leaflet?.marker || !leaflet?.divIcon) {
+      return;
+    }
+
+    if (!this._locationMarker) {
+      const icon = leaflet.divIcon({
+        html: '<span style="display:block;width:14px;height:14px;background:#4285F4;border:3px solid #fff;border-radius:50%;box-shadow:0 0 6px rgba(66,133,244,0.6);"></span>',
+        className: "",
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+      });
+      this._locationMarker = leaflet
+        .marker([latitude, longitude], {
+          icon,
+          interactive: false,
+          zIndexOffset: 1000,
+        })
+        .addTo(leafletMap);
+      this._locationMarker.bindTooltip(_t("Location", "מיקום"));
+      return;
+    }
+
+    this._locationMarker.setLatLng([latitude, longitude]);
+  }
+
+  _removeLocationMarker() {
+    const leafletMap = this._map?.leafletMap;
+    if (this._locationMarker && leafletMap) {
+      leafletMap.removeLayer(this._locationMarker);
+    }
+    this._locationMarker = null;
+  }
+
   _startRefresh() {
     if (!this._refreshId && Date.now() < this._bootstrapWindow) {
       this._refreshId = window.setInterval(() => {
@@ -371,6 +509,7 @@ class OrefAlertMap extends HTMLElement {
         { name: "show_home", selector: { boolean: {} } },
         { name: "hebrew_basemap", selector: { boolean: {} } },
         { name: "show_pre_alert", selector: { boolean: {} } },
+        { name: "show_location", selector: { boolean: {} } },
       ],
       computeLabel: (schema) => {
         if (schema.name === "auto_fit") {
@@ -388,6 +527,9 @@ class OrefAlertMap extends HTMLElement {
         if (schema.name === "show_pre_alert") {
           return _t("Show pre-alert", "הצג הנחיות מקדימות");
         }
+        if (schema.name === "show_location") {
+          return _t("Show location", "הצג מיקום");
+        }
         return undefined;
       },
     };
@@ -399,6 +541,7 @@ class OrefAlertMap extends HTMLElement {
       show_home: false,
       hebrew_basemap: true,
       show_pre_alert: true,
+      show_location: true,
     };
   }
 }
