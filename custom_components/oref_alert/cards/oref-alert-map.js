@@ -522,11 +522,11 @@ class OrefAlertMap extends HTMLElement {
   static getConfigForm() {
     return {
       schema: [
-        { name: "auto_fit", selector: { boolean: {} } },
-        { name: "show_home", selector: { boolean: {} } },
-        { name: "hebrew_basemap", selector: { boolean: {} } },
-        { name: "show_pre_alert", selector: { boolean: {} } },
-        { name: "show_location", selector: { boolean: {} } },
+        { name: "auto_fit", selector: { boolean: {} }, default: true },
+        { name: "show_home", selector: { boolean: {} }, default: false },
+        { name: "hebrew_basemap", selector: { boolean: {} }, default: true },
+        { name: "show_pre_alert", selector: { boolean: {} }, default: true },
+        { name: "show_location", selector: { boolean: {} }, default: true },
       ],
       computeLabel: (schema) => {
         if (schema.name === "auto_fit") {

@@ -1390,6 +1390,22 @@ describe("oref-alert-map", () => {
     });
   });
 
+  test("config form includes defaults for all settings", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const form = Card.getConfigForm();
+
+    expect(
+      form.schema.map((item) => ({ name: item.name, default: item.default })),
+    ).toEqual([
+      { name: "auto_fit", default: true },
+      { name: "show_home", default: false },
+      { name: "hebrew_basemap", default: true },
+      { name: "show_pre_alert", default: true },
+      { name: "show_location", default: true },
+    ]);
+  });
+
   test("hass setter relies on applyHass to log failures", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
