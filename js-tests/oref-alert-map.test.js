@@ -1247,7 +1247,6 @@ describe("oref-alert-map", () => {
 
     el._config = { auto_fit: false, show_home: true };
     expect(el._buildMapConfig()).toEqual({
-      show_home: true,
       type: "map",
       geo_location_sources: ["dummy"],
       entities: ["zone.home"],
@@ -1273,7 +1272,6 @@ describe("oref-alert-map", () => {
       entities: ["person.alice", "device_tracker.bob"],
     };
     expect(el._buildMapConfig()).toEqual({
-      show_home: true,
       type: "map",
       geo_location_sources: ["dummy"],
       entities: ["zone.home", "person.alice", "device_tracker.bob"],
@@ -1291,7 +1289,6 @@ describe("oref-alert-map", () => {
     };
     expect(el._buildMapConfig()).toEqual({
       auto_fit: false,
-      show_home: true,
       theme_mode: "satellite",
       title: "Alerts map",
       type: "map",

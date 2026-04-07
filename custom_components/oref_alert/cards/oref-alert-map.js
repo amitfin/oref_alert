@@ -19,6 +19,16 @@ const ALERT_COLOR = "rgb(241, 146, 146)";
 const PRE_ALERT_COLOR = "rgb(253, 224, 71)";
 const RELOAD_GUARD_KEY = "oref-alert-map-reload-version";
 const CURRENT_VERSION = new URL(import.meta.url).searchParams.get("v");
+const MAP_CONFIG_PASSTHROUGH_KEYS = [
+  "aspect_ratio",
+  "cluster",
+  "conditions",
+  "default_zoom",
+  "hours_to_show",
+  "show_all",
+  "theme_mode",
+  "title",
+];
 
 class OrefAlertMap extends HTMLElement {
   constructor() {
@@ -272,8 +282,15 @@ class OrefAlertMap extends HTMLElement {
   }
 
   _buildMapConfig() {
+    const mapConfig = {};
+    for (const key of MAP_CONFIG_PASSTHROUGH_KEYS) {
+      if (this._config?.[key] !== undefined) {
+        mapConfig[key] = this._config[key];
+      }
+    }
+
     return {
-      ...(this._config ?? {}),
+      ...mapConfig,
       type: "map",
       geo_location_sources: ["dummy"],
       entities: (this._config?.show_home ? ["zone.home"] : []).concat(
