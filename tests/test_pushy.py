@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import time
 from datetime import timedelta
 from typing import TYPE_CHECKING
@@ -30,10 +29,8 @@ from custom_components.oref_alert.const import (
     CONF_AREAS,
     CONF_SENSORS,
     DOMAIN,
-    LOGGER,
     OREF_ALERT_UNIQUE_ID,
 )
-from custom_components.oref_alert.metadata import PUSHY_TEST_SEGMENTS
 from custom_components.oref_alert.metadata.area_info import AREA_INFO
 from custom_components.oref_alert.metadata.segment_to_area import SEGMENT_TO_AREA
 from custom_components.oref_alert.pushy import (
@@ -168,25 +165,11 @@ async def test_registration_exception(
     assert f"'{API_ENDPOINT}/register' failed" in caplog.text
 
 
-@pytest.mark.parametrize(
-    "debug",
-    [
-        False,
-        True,
-    ],
-    ids=("no debug", "debug"),
-)
 async def test_subscribe_unsubscribe(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
-    debug: bool,  # noqa: FBT001
 ) -> None:
     """Test subscribe/unsubscribe calls."""
-    if debug:
-        LOGGER.setLevel(logging.DEBUG)
-    else:
-        LOGGER.setLevel(logging.INFO)
-
     config = await setup_test(
         hass, options={CONF_SENSORS: {"Oref Alert Test": ["פתח תקווה"]}}
     )
@@ -196,8 +179,6 @@ async def test_subscribe_unsubscribe(
         str(AREA_INFO["קריית אונו"]["segment"]),
         str(AREA_INFO["פתח תקווה"]["segment"]),
     ]
-    if debug:
-        segments.extend(PUSHY_TEST_SEGMENTS)
 
     assert SEGMENT_TO_AREA[int(segments[0])] == "קריית אונו"
     assert SEGMENT_TO_AREA[int(segments[1])] == "פתח תקווה"

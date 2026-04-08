@@ -22,7 +22,6 @@ from metadata import (  # pyright: ignore[reportMissingImports]
     ALL_AREAS_ALIASES,
     CITIES_MIX_URL,
     DEPRECATION_SUFFIX,
-    PUSHY_TEST_SEGMENTS,
     TZEVAADOM_SPELLING_FIX,
 )
 
@@ -195,10 +194,6 @@ class OrefMetadata:
     async def _get_segments_data(self) -> dict[int, dict[str, Any]]:
         """Get segments data as a sorted dict of segment to its data."""
         segments = (await self._fetch_url_json(SEGMENTS_URL))["segments"]
-        unknown_test_segments = PUSHY_TEST_SEGMENTS - segments.keys()
-        assert not unknown_test_segments, (
-            f"Unknown test segments: {unknown_test_segments}"
-        )
         return dict(
             sorted(
                 {

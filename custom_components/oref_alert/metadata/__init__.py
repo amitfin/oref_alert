@@ -9,15 +9,6 @@ CITIES_MIX_URL: Final = (
 )
 DEPRECATION_SUFFIX: Final = " (אזור התרעה ישן)"
 
-PUSHY_TEST_SEGMENTS: Final = [
-    "5003000",
-    "5003001",
-    "5003002",
-    "5003003",
-    "5003004",
-    "5003006",
-]
-
 TZEVAADOM_SPELLING_FIX: Final = {
     "אשדוד -יא,יב,טו,יז,מרינה,סיט": "אשדוד -יא,יב,טו,יז,מרינה,סיטי"
 }
