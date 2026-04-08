@@ -24,6 +24,7 @@
     "endfor",
     "excinfo",
     "freezegun",
+    "geolocation",
     "Gugulator",
     "HACS",
     "Haoref",
