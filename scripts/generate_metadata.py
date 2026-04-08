@@ -22,6 +22,7 @@ from metadata import (  # pyright: ignore[reportMissingImports]
     ALL_AREAS_ALIASES,
     CITIES_MIX_URL,
     DEPRECATION_SUFFIX,
+    SOME_PARTS_OF_THE_COUNTRY,
     TZEVAADOM_SPELLING_FIX,
 )
 
@@ -128,7 +129,11 @@ class OrefMetadata:
         for area in data:
             if area["label"] in fix_areas:
                 area["label"] = area["label"] = SPELLING_FIX[area["label"]]
-            if area["label"] in areas or area["label"].endswith(DEPRECATION_SUFFIX):
+            if (
+                area["label"] in areas
+                or area["label"].endswith(DEPRECATION_SUFFIX)
+                or area["label"] == SOME_PARTS_OF_THE_COUNTRY
+            ):
                 continue
             areas.add(area["label"])
             result.append(area)
@@ -160,6 +165,7 @@ class OrefMetadata:
                 area["value"] is not None
                 and area["label"] not in areas
                 and area["label"] not in ALL_AREAS_ALIASES
+                and area["label"] != SOME_PARTS_OF_THE_COUNTRY
                 and not area["label"].endswith(DEPRECATION_SUFFIX)
             ):
                 areas.add(area["label"])
@@ -220,9 +226,7 @@ class OrefMetadata:
             data[new] = data.pop(old)
 
         # The lists should be identical with the exception of "all areas" aliases.
-        assert set(data.keys()) == set(self._areas_no_group) - set(ALL_AREAS.keys()) - {
-            "בחלק מהאזורים בארץ"
-        }
+        assert set(data.keys()) == set(self._areas_no_group) - set(ALL_AREAS.keys())
 
         return data
 

@@ -25,7 +25,10 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util.location import vincenty
 
-from custom_components.oref_alert.metadata import ALL_AREAS_ALIASES
+from custom_components.oref_alert.metadata import (
+    ALL_AREAS_ALIASES,
+    SOME_PARTS_OF_THE_COUNTRY,
+)
 from custom_components.oref_alert.metadata.area_to_district import AREA_TO_DISTRICT
 
 from .categories import (
@@ -272,9 +275,13 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         async for record in self._records_to_process():
             # Check if a valid record.
             if (
-                not category_is_alert(record.raw.category)
-                and not category_is_update(record.raw.category)
-            ) or (record.expire and record.expire <= now):
+                (
+                    not category_is_alert(record.raw.category)
+                    and not category_is_update(record.raw.category)
+                )
+                or (record.expire and record.expire <= now)
+                or record.raw.data == SOME_PARTS_OF_THE_COUNTRY
+            ):
                 continue
 
             # Handle "all areas" record.

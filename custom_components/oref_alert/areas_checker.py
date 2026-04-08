@@ -12,7 +12,7 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, LOGGER
-from .metadata import CITIES_MIX_URL, DEPRECATION_SUFFIX
+from .metadata import CITIES_MIX_URL, DEPRECATION_SUFFIX, SOME_PARTS_OF_THE_COUNTRY
 from .metadata.areas import AREAS
 
 if TYPE_CHECKING:
@@ -53,6 +53,7 @@ class AreasChecker:
                 if not area["label"].endswith(FILTER_SUFFIX1)
                 and not area["label"].endswith(FILTER_SUFFIX2)
                 and not area["label"].endswith(DEPRECATION_SUFFIX)
+                and area["label"] != SOME_PARTS_OF_THE_COUNTRY
             }
             new = sorted(areas.difference(AREAS))
             old = sorted(AREAS.difference(areas))

@@ -44,6 +44,7 @@ from custom_components.oref_alert.coordinator import (
     OrefAlertCoordinatorUpdater,
     OrefAlertDataUpdateCoordinator,
 )
+from custom_components.oref_alert.metadata import SOME_PARTS_OF_THE_COUNTRY
 
 from .utils import load_json_fixture, mock_urls
 
@@ -179,6 +180,32 @@ async def test_all_areas_alias_builds_area_specific_published_data(
         coordinator.data.areas["קריית שמונה"].published_data[ATTR_AREA] == "קריית שמונה"
     )
     assert coordinator.get_areas_status()[("קריית שמונה")][ATTR_AREA] == "קריית שמונה"
+
+
+async def test_special_backend_area_is_ignored(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """Test the backend's partial-country label is skipped entirely."""
+    mock_urls(aioclient_mock, None, None)
+    channel: deque[RecordAndMetadata] = deque()
+    coordinator = create_coordinator(hass, channels=[channel])
+    channel.append(
+        coordinator.add_metadata(
+            Record(
+                alertDate="2025-06-13 03:00:00",
+                title="ירי רקטות וטילים",
+                data=SOME_PARTS_OF_THE_COUNTRY,
+                category=1,
+                channel="website-history",
+            )
+        )
+    )
+
+    await coordinator.async_refresh()
+
+    assert SOME_PARTS_OF_THE_COUNTRY not in coordinator.data.areas
+    assert coordinator.get_records(None, None, None) == []
 
 
 async def test_save_persists_only_records_newer_than_cutoff(
