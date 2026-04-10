@@ -290,7 +290,6 @@ class OrefAlertMap extends HTMLElement {
     }
 
     return {
-      ...mapConfig,
       type: "map",
       geo_location_sources: ["dummy"],
       entities: (this._config?.show_home ? ["zone.home"] : []).concat(
@@ -298,6 +297,7 @@ class OrefAlertMap extends HTMLElement {
       ),
       auto_fit: this._config?.auto_fit ?? true,
       fit_zones: true,
+      ...mapConfig,
     };
   }
 
