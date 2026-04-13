@@ -195,7 +195,7 @@ class OrefAlertMap extends HTMLElement {
     if (this._maybeReloadForVersion(version)) {
       return;
     }
-    if (this._lastUpdated !== undefined && this._lastUpdated === lastUpdated) {
+    if (this._lastUpdated === lastUpdated) {
       return;
     }
 
