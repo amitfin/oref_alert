@@ -1433,6 +1433,18 @@ describe("oref-alert-map", () => {
     expect(el._locationMarker).toBeNull();
   });
 
+  test("removeLocationMarker still clears stale marker state without a map", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+
+    el._locationMarker = { id: "marker" };
+
+    el._removeLocationMarker();
+
+    expect(el._locationMarker).toBeNull();
+  });
+
   test("buildMapConfig uses defaults, home entity, and passes through map options", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
@@ -2021,6 +2033,49 @@ describe("oref-alert-map", () => {
     await Promise.resolve();
     expect(applyHassSpy).toHaveBeenCalledTimes(callsAtStop);
     expect(el._refreshId).toBeNull();
+  });
+
+  test("startRefresh does not create duplicate intervals when already active", async () => {
+    await ensureDefined();
+    vi.useFakeTimers();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    document.body.append(el);
+    const applyHassSpy = vi.spyOn(el, "_applyHass").mockResolvedValue();
+
+    el._startRefresh();
+    const firstRefreshId = el._refreshId;
+
+    el._startRefresh();
+    expect(el._refreshId).toBe(firstRefreshId);
+
+    vi.advanceTimersByTime(1000);
+    await Promise.resolve();
+    expect(applyHassSpy).toHaveBeenCalledTimes(1);
+  });
+
+  test("shouldRefresh stays true when an end layer is still present after bootstrap", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(20_000);
+
+    try {
+      el._bootstrapWindow = 10_000;
+      el._mapCard = mapCard;
+      innerMap.layers = [
+        { _oref_info: { type: "alert" } },
+        { _oref_info: { type: "end" } },
+      ];
+
+      expect(el._shouldRefresh()).toBe(true);
+
+      innerMap.layers = [{ _oref_info: { type: "alert" } }];
+      expect(el._shouldRefresh()).toBe(false);
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 
   test("re-import throws on duplicate custom element registration", async () => {

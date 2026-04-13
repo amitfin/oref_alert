@@ -214,6 +214,7 @@ class OrefAlertMap extends HTMLElement {
     if (map && layers.length >= areas.length) {
       map.layers = layers;
       this._lastUpdated = lastUpdated;
+      this._startRefresh();
     }
   }
 
@@ -549,10 +550,19 @@ class OrefAlertMap extends HTMLElement {
     this._locationMarker = null;
   }
 
+  _shouldRefresh() {
+    return (
+      Date.now() < this._bootstrapWindow ||
+      (this._map?.layers || []).some(
+        (layer) => layer._oref_info?.type === "end",
+      )
+    );
+  }
+
   _startRefresh() {
-    if (!this._refreshId && Date.now() < this._bootstrapWindow) {
+    if (!this._refreshId && this._shouldRefresh()) {
       this._refreshId = window.setInterval(() => {
-        if (!this.isConnected || Date.now() >= this._bootstrapWindow) {
+        if (!this.isConnected || !this._shouldRefresh()) {
           this._stopRefresh();
           return;
         }
