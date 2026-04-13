@@ -304,6 +304,178 @@ describe("oref-alert-map", () => {
     });
   });
 
+  test("createLayers preserves existing end layers until they expire", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+    const activeEndLayer = {
+      _oref_info: {
+        area: "Area A",
+        type: "end",
+        expire: Date.now() + 60_000,
+      },
+    };
+
+    el._mapCard = mapCard;
+    el._config = { show_end: true };
+    innerMap.layers = [activeEndLayer];
+    innerMap.Leaflet = {
+      polygon: vi.fn().mockImplementation(() => ({ bindTooltip: vi.fn() })),
+    };
+    vi.spyOn(el, "_getPolygons").mockResolvedValue({ "Area A": [[1, 1]] });
+
+    const layers = await el._createLayers([]);
+
+    expect(layers).toEqual([activeEndLayer]);
+    expect(innerMap.Leaflet.polygon).not.toHaveBeenCalled();
+  });
+
+  test("createLayers converts a cleared alert layer into an end layer", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+    const created = [];
+    const priorAlertLayer = {
+      _oref_info: {
+        area: "Area A",
+        type: "alert",
+        date: "2026-03-13T08:05:00Z",
+        emoji: "🚀",
+      },
+    };
+
+    el._mapCard = mapCard;
+    el._config = { show_end: true };
+    innerMap.layers = [priorAlertLayer];
+    innerMap.Leaflet = {
+      polygon: vi.fn().mockImplementation((points, opts) => {
+        const layer = { points, opts, bindTooltip: vi.fn() };
+        created.push(layer);
+        return layer;
+      }),
+    };
+    vi.spyOn(el, "_getPolygons").mockResolvedValue({ "Area A": [[1, 1]] });
+
+    const before = Date.now();
+    const layers = await el._createLayers([]);
+    const after = Date.now();
+
+    expect(layers).toHaveLength(1);
+    expect(created).toHaveLength(1);
+    expect(created[0].opts).toEqual({ color: "rgb(16, 205, 83)" });
+    expect(created[0]._oref_info.area).toBe("Area A");
+    expect(created[0]._oref_info.type).toBe("end");
+    expect(created[0]._oref_info.expire).toBeGreaterThanOrEqual(
+      before + 60_000,
+    );
+    expect(created[0]._oref_info.expire).toBeLessThanOrEqual(after + 60_000);
+    expect(created[0].bindTooltip).toHaveBeenCalledWith(
+      expect.stringContaining("Area A<br />"),
+    );
+    expect(created[0].bindTooltip).toHaveBeenCalledWith(
+      expect.stringContaining("✅"),
+    );
+  });
+
+  test("createLayers does not add an end layer when the area is still active", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+    const created = [];
+
+    el._mapCard = mapCard;
+    el._config = { show_end: true };
+    innerMap.layers = [{ _oref_info: { area: "Area A", type: "alert" } }];
+    innerMap.Leaflet = {
+      polygon: vi.fn().mockImplementation((points, opts) => {
+        const layer = { points, opts, bindTooltip: vi.fn() };
+        created.push(layer);
+        return layer;
+      }),
+    };
+    vi.spyOn(el, "_getPolygons").mockResolvedValue({ "Area A": [[1, 1]] });
+
+    const layers = await el._createLayers([
+      {
+        area: "Area A",
+        date: "2026-03-13T08:05:00Z",
+        emoji: "🚀",
+        type: "alert",
+      },
+    ]);
+
+    expect(layers).toHaveLength(1);
+    expect(created).toHaveLength(1);
+    expect(created[0].opts).toEqual({ color: "rgb(241, 146, 146)" });
+  });
+
+  test("createLayers drops expired end layers", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+
+    el._mapCard = mapCard;
+    el._config = { show_end: true };
+    innerMap.layers = [
+      {
+        _oref_info: { area: "Area A", type: "end", expire: Date.now() - 1_000 },
+      },
+    ];
+    innerMap.Leaflet = {
+      polygon: vi.fn().mockImplementation(() => ({ bindTooltip: vi.fn() })),
+    };
+    vi.spyOn(el, "_getPolygons").mockResolvedValue({ "Area A": [[1, 1]] });
+
+    const layers = await el._createLayers([]);
+
+    expect(layers).toEqual([]);
+    expect(innerMap.Leaflet.polygon).not.toHaveBeenCalled();
+  });
+
+  test("createLayers skips end layers when show_end is disabled", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+
+    el._mapCard = mapCard;
+    el._config = { show_end: false };
+    innerMap.layers = [{ _oref_info: { area: "Area A", type: "alert" } }];
+    innerMap.Leaflet = {
+      polygon: vi.fn().mockImplementation(() => ({ bindTooltip: vi.fn() })),
+    };
+    vi.spyOn(el, "_getPolygons").mockResolvedValue({ "Area A": [[1, 1]] });
+
+    const layers = await el._createLayers([]);
+
+    expect(layers).toEqual([]);
+    expect(innerMap.Leaflet.polygon).not.toHaveBeenCalled();
+  });
+
+  test("createLayers ignores map layers without oref metadata", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+
+    el._mapCard = mapCard;
+    el._config = { show_end: true };
+    innerMap.layers = [{ entity_id: "zone.home" }];
+    innerMap.Leaflet = {
+      polygon: vi.fn().mockImplementation(() => ({ bindTooltip: vi.fn() })),
+    };
+    vi.spyOn(el, "_getPolygons").mockResolvedValue({ "Area A": [[1, 1]] });
+
+    const layers = await el._createLayers([]);
+
+    expect(layers).toEqual([]);
+    expect(innerMap.Leaflet.polygon).not.toHaveBeenCalled();
+  });
+
   test("getLastUpdate loads last_update via callService", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
@@ -470,6 +642,36 @@ describe("oref-alert-map", () => {
     await el._refreshAreas();
 
     expect(createLayersSpy).not.toHaveBeenCalled();
+  });
+
+  test("refreshAreas refreshes when an end layer has expired", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000);
+
+    try {
+      el._mapCard = mapCard;
+      el._hass = createHass({
+        lastUpdateResponse: {
+          last_update: "2026-03-24T10:00:00+00:00",
+        },
+        areasStatusResponse: {},
+      });
+      el._lastUpdated = "2026-03-24T10:00:00+00:00";
+      innerMap.layers = [
+        { _oref_info: { area: "Area A", type: "end", expire: 999 } },
+      ];
+      vi.spyOn(el, "_createLayers").mockResolvedValue([{ id: "end-layer" }]);
+
+      await el._refreshAreas();
+
+      expect(el._createLayers).toHaveBeenCalledWith([]);
+      expect(innerMap.layers).toEqual([{ id: "end-layer" }]);
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 
   test("refreshAreas reloads the page when backend version changes", async () => {
@@ -1360,6 +1562,7 @@ describe("oref-alert-map", () => {
     expect(form.computeLabel({ name: "show_pre_alert" })).toBe(
       "Show pre-alert",
     );
+    expect(form.computeLabel({ name: "show_end" })).toBe("Show end");
     expect(form.computeLabel({ name: "show_location" })).toBe("Show location");
     expect(form.computeLabel({ name: "unknown" })).toBeUndefined();
 
@@ -1386,6 +1589,7 @@ describe("oref-alert-map", () => {
       show_home: false,
       hebrew_basemap: true,
       show_pre_alert: true,
+      show_end: true,
       show_location: true,
     });
   });
@@ -1402,6 +1606,7 @@ describe("oref-alert-map", () => {
       { name: "show_home", default: false },
       { name: "hebrew_basemap", default: true },
       { name: "show_pre_alert", default: true },
+      { name: "show_end", default: true },
       { name: "show_location", default: true },
     ]);
   });

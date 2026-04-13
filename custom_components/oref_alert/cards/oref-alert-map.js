@@ -17,6 +17,7 @@ function _t(english, hebrew) {
 
 const ALERT_COLOR = "rgb(241, 146, 146)";
 const PRE_ALERT_COLOR = "rgb(253, 224, 71)";
+const END_ALERT_COLOR = "rgb(16, 205, 83)";
 const RELOAD_GUARD_KEY = "oref-alert-map-reload-version";
 const CURRENT_VERSION = new URL(import.meta.url).searchParams.get("v");
 const MAP_CONFIG_PASSTHROUGH_KEYS = [
@@ -195,14 +196,22 @@ class OrefAlertMap extends HTMLElement {
     if (this._maybeReloadForVersion(version)) {
       return;
     }
-    if (this._lastUpdated === lastUpdated) {
+
+    const now = Date.now();
+    if (
+      this._lastUpdated === lastUpdated &&
+      !(this._map?.layers || []).some(
+        (layer) =>
+          layer._oref_info?.type === "end" && now >= layer._oref_info.expire,
+      )
+    ) {
       return;
     }
 
     const areas = await this._getOrefAreas();
     const layers = await this._createLayers(areas);
     const map = this._map;
-    if (map && layers.length === areas.length) {
+    if (map && layers.length >= areas.length) {
       map.layers = layers;
       this._lastUpdated = lastUpdated;
     }
@@ -248,10 +257,12 @@ class OrefAlertMap extends HTMLElement {
     }
 
     const layers = [];
+    const existingAreas = new Set();
     for (const area of areas) {
       const layer = createPolygon(polygons[area.area], {
         color: area.type === "alert" ? ALERT_COLOR : PRE_ALERT_COLOR,
       });
+      layer._oref_info = area;
       const date = new Date(area.date);
       layer.bindTooltip(
         `${area.area}<br />` +
@@ -260,7 +271,39 @@ class OrefAlertMap extends HTMLElement {
           area.emoji,
       );
       layers.push(layer);
+      existingAreas.add(area.area);
     }
+
+    if (this._config?.show_end ?? true) {
+      const now = new Date();
+      for (const layer of this._map?.layers || []) {
+        if (!layer._oref_info) {
+          continue;
+        }
+        if (layer._oref_info.type !== "end") {
+          if (!existingAreas.has(layer._oref_info.area)) {
+            const newLayer = createPolygon(polygons[layer._oref_info.area], {
+              color: END_ALERT_COLOR,
+            });
+            newLayer._oref_info = {
+              area: layer._oref_info.area,
+              type: "end",
+              expire: now.getTime() + 60_000,
+            };
+            newLayer.bindTooltip(
+              `${newLayer._oref_info.area}<br />` +
+                `${String(now.getHours()).padStart(2, "0")}:` +
+                `${String(now.getMinutes()).padStart(2, "0")} ` +
+                "✅",
+            );
+            layers.push(newLayer);
+          }
+        } else if (layer._oref_info.expire > now.getTime()) {
+          layers.push(layer);
+        }
+      }
+    }
+
     return layers;
   }
 
@@ -532,6 +575,7 @@ class OrefAlertMap extends HTMLElement {
         { name: "show_home", selector: { boolean: {} }, default: false },
         { name: "hebrew_basemap", selector: { boolean: {} }, default: true },
         { name: "show_pre_alert", selector: { boolean: {} }, default: true },
+        { name: "show_end", selector: { boolean: {} }, default: true },
         { name: "show_location", selector: { boolean: {} }, default: true },
       ],
       computeLabel: (schema) => {
@@ -550,6 +594,9 @@ class OrefAlertMap extends HTMLElement {
         if (schema.name === "show_pre_alert") {
           return _t("Show pre-alert", "הצג הנחיות מקדימות");
         }
+        if (schema.name === "show_end") {
+          return _t("Show end", "הצג סיום");
+        }
         if (schema.name === "show_location") {
           return _t("Show location", "הצג מיקום");
         }
@@ -564,6 +611,7 @@ class OrefAlertMap extends HTMLElement {
       show_home: false,
       hebrew_basemap: true,
       show_pre_alert: true,
+      show_end: true,
       show_location: true,
     };
   }
