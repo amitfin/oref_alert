@@ -97,22 +97,28 @@ class OrefAlertMap extends HTMLElement {
         this._resetCardState();
       }
 
-      const applyPromise = this._performApplyHass().catch((error) => {
-        if (error && typeof error === "object") {
-          const { message, stack } = error;
-          if (typeof message === "string" || typeof stack === "string") {
-            console.error("oref-alert-map apply failed", message, stack, error);
-            return;
+      const applyPromise = this._performApplyHass()
+        .catch((error) => {
+          if (error && typeof error === "object") {
+            const { message, stack } = error;
+            if (typeof message === "string" || typeof stack === "string") {
+              console.error(
+                "oref-alert-map apply failed",
+                message,
+                stack,
+                error,
+              );
+              return;
+            }
           }
-        }
-        console.error("oref-alert-map apply failed", error);
-      });
-      const inflightPromise = applyPromise.finally(() => {
-        if (this._applyHassPromise === inflightPromise) {
-          this._applyHassPromise = null;
-        }
-      });
-      this._applyHassPromise = inflightPromise;
+          console.error("oref-alert-map apply failed", error);
+        })
+        .finally(() => {
+          if (this._applyHassPromise === applyPromise) {
+            this._applyHassPromise = null;
+          }
+        });
+      this._applyHassPromise = applyPromise;
       return applyPromise;
     }
   }
