@@ -12,9 +12,8 @@ from homeassistant.helpers.template import (
     Template,
     TemplateEnvironment,
 )
-from homeassistant.helpers.template import (
-    distance as distance_func,
-)
+
+from homeassistant.util.location import distance as distance_func
 
 from .categories import category_to_emoji, category_to_icon
 from .const import (
