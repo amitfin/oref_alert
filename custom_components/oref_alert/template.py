@@ -5,15 +5,12 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.template import (
     Template,
     TemplateEnvironment,
-)
-from homeassistant.helpers.template import (
-    distance as distance_func,
 )
 
 from .categories import category_to_emoji, category_to_icon
@@ -105,7 +102,22 @@ async def inject_template_extensions(hass: HomeAssistant) -> None:  # noqa: PLR0
         """Calculate distance of area from home or provided coordinate."""
         if (area_info := AREA_INFO.get(area)) is None:
             return None
-        return distance_func(hass, area_info["lat"], area_info["lon"], *args)
+
+        return cast(
+            "float | None",
+            Template(
+                "{{ distance(oref_lat, oref_lon"
+                + "".join(f", oref_arg_{index}" for index in range(len(args)))
+                + ") }}",
+                hass,
+            ).async_render(
+                {
+                    "oref_lat": area_info["lat"],
+                    "oref_lon": area_info["lon"],
+                    **{f"oref_arg_{index}": arg for index, arg in enumerate(args)},
+                }
+            ),
+        )
 
     def area_distance_test(area: str, distance: float, *args: Any) -> bool:
         """Check if area is within the distance from home or provided coordinate."""
@@ -140,16 +152,16 @@ async def inject_template_extensions(hass: HomeAssistant) -> None:  # noqa: PLR0
         env.globals[EMOJI_TEMPLATE_FUNCTION] = env.filters[EMOJI_TEMPLATE_FUNCTION] = (
             category_to_emoji
         )
-        env.globals[DISTANCE_TEMPLATE_FUNCTION] = env.filters[
-            DISTANCE_TEMPLATE_FUNCTION
-        ] = area_to_distance
-        env.globals[DISTANCE_TEST_TEMPLATE_FUNCTION] = env.tests[
-            DISTANCE_TEST_TEMPLATE_FUNCTION
-        ] = area_distance_test
         env.globals[POLYGON_TEMPLATE_FUNCTION] = env.filters[
             POLYGON_TEMPLATE_FUNCTION
         ] = area_to_polygon
         if not limited:
+            env.globals[DISTANCE_TEMPLATE_FUNCTION] = env.filters[
+                DISTANCE_TEMPLATE_FUNCTION
+            ] = area_to_distance
+            env.globals[DISTANCE_TEST_TEMPLATE_FUNCTION] = env.tests[
+                DISTANCE_TEST_TEMPLATE_FUNCTION
+            ] = area_distance_test
             env.globals[FIND_AREA_TEMPLATE_FUNCTION] = find_area_by_coordinate
             env.filters[FIND_AREA_TEMPLATE_FUNCTION] = find_area_by_coordinate_filter
 

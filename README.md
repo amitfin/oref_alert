@@ -360,7 +360,7 @@ Gets a category (int) and returns the corresponding emoji. If no mapping is foun
 
 ### `oref_distance`
 
-Gets an area name and measures the distance between the area's coordinate and home, an entity, or coordinate (similar to the built-in [`distance`](https://www.home-assistant.io/docs/configuration/templating/#distance) function). The unit of measurement (kilometers or miles) depends on the system’s configuration settings. If the area name is not found, the return value is None. Can be used also as a filter.
+Gets an area name and measures the distance between the area's coordinate and home, an entity, or coordinate (similar to the built-in [`distance`](https://www.home-assistant.io/template-functions/distance/) function). The unit of measurement (kilometers or miles) depends on the system’s configuration settings. If the area name is not found, the return value is None. Can be used also as a filter. Unavailable for [limited templates](https://www.home-assistant.io/docs/templating/where-to-use/#limited-templates).
 
 `{{ oref_distance('פתח תקווה') }}`
 
@@ -368,7 +368,7 @@ Gets an area name and measures the distance between the area's coordinate and ho
 
 ### `oref_test_distance`
 
-Gets an area name and a distance and other optional parameters that will be passed to `oref_distance`. Returns True if the distance is less than or equals to the distance. If the area name is not found, the return value is False. Can be used also as a test.
+Gets an area name and a distance and other optional parameters that will be passed to `oref_distance`. Returns True if the distance is less than or equals to the distance. If the area name is not found, the return value is False. Can be used also as a test. Unavailable for [limited templates](https://www.home-assistant.io/docs/templating/where-to-use/#limited-templates).
 
 `{{ oref_test_distance('area name', 5, 'device_tracker.amits_iphone')}}`
 
@@ -384,7 +384,7 @@ Gets an area name and returns the polygon of the area's perimeter. If the area n
 
 ### `oref_find_area`
 
-Returns area by coordinate (lat, lon). The coordinate can be anywhere inside the area's polygon. If no area is found, the return value is None.  Can be used also as a filter. Unavailable for [limited templates](https://www.home-assistant.io/docs/configuration/templating/#limited-templates).
+Returns area by coordinate (lat, lon). The coordinate can be anywhere inside the area's polygon. If no area is found, the return value is None.  Can be used also as a filter. Unavailable for [limited templates](https://www.home-assistant.io/docs/templating/where-to-use/#limited-templates).
 
 `{{ oref_find_area(32.072, 34.879) == 'פתח תקווה' }}`
 

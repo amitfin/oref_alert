@@ -3,7 +3,7 @@
 from typing import TYPE_CHECKING, Any
 
 import pytest
-from homeassistant.const import ATTR_DATE
+from homeassistant.const import ATTR_DATE, ATTR_LATITUDE, ATTR_LONGITUDE
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.template import Template
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -185,6 +185,49 @@ def test_custom_templates(
     assert Template(template_str, hass).async_render() == expected
 
 
+def test_distance_uses_template_environment(
+    hass: HomeAssistant,
+    load_oref_integration: None,  # noqa: ARG001
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test oref_distance delegates to Home Assistant's template environment."""
+    env = Template("", hass)._env  # noqa: SLF001
+    assert env is not None
+    calls: list[tuple[Any, ...]] = []
+
+    def fake_distance(*args: Any) -> float:
+        calls.append(args)
+        return 123.45
+
+    monkeypatch.setitem(env.globals, "distance", fake_distance)
+
+    assert Template("{{ oref_distance('פתח תקווה') }}", hass).async_render() == 123.45
+    assert calls == [(32.09429109811987, 34.8780320360819)]
+
+
+def test_distance_tracks_entity_arguments(
+    hass: HomeAssistant,
+    load_oref_integration: None,  # noqa: ARG001
+) -> None:
+    """Test oref_distance tracks entities passed through to distance."""
+    hass.states.async_set(
+        "device_tracker.test",
+        "home",
+        {
+            ATTR_LATITUDE: 31.78,
+            ATTR_LONGITUDE: 35.23,
+        },
+    )
+
+    render_info = Template(
+        "{{ oref_distance('תל אביב - מרכז העיר', 'device_tracker.test') }}",
+        hass,
+    ).async_render_to_info()
+
+    assert render_info.result() == 53.884525
+    assert "device_tracker.test" in render_info.entities
+
+
 async def test_polygon(
     hass: HomeAssistant,
     load_oref_integration: None,  # noqa: ARG001
@@ -204,19 +247,32 @@ async def test_polygon(
 @pytest.mark.allowed_logs(["Template variable error:"])
 def test_limited_environment(hass: HomeAssistant, load_oref_integration: None) -> None:  # noqa: ARG001
     """Test limited environment."""
-    statement = "{{ oref_find_area(32.072, 34.879) == 'פתח תקווה' }}"
+    undefined_statements = [
+        "{{ oref_distance('פתח תקווה') }}",
+        "{{ oref_test_distance('פתח תקווה', 3) }}",
+        "{{ oref_find_area(32.072, 34.879) }}",
+    ]
 
-    assert Template(statement, hass).async_render() is True
+    assert Template("{{ oref_find_area(32.072, 34.879) }}", hass).async_render() == (
+        "פתח תקווה"
+    )
+    assert Template("{{ oref_areas() | length > 0 }}", hass).async_render(limited=True)
+    assert (
+        Template("{{ oref_district('פתח תקווה') }}", hass).async_render(limited=True)
+        == "ירקון"
+    )
+
+    for statement in undefined_statements:
+        with pytest.raises(TemplateError, match="UndefinedError: 'oref_"):
+            Template(statement, hass).async_render(limited=True)
 
     with pytest.raises(
-        TemplateError, match="UndefinedError: 'oref_find_area' is undefined"
+        TemplateError,
+        match="UndefinedError: 'oref_find_area' is undefined",
     ):
-        Template(statement, hass).async_render(limited=True)
-
-    with pytest.raises(
-        TemplateError, match="UndefinedError: 'oref_find_area' is undefined"
-    ):
-        Template(statement, hass).async_render(limited=True, log_fn=lambda _1, _2: None)
+        Template("{{ oref_find_area(32.072, 34.879) }}", hass).async_render(
+            limited=True, log_fn=lambda _1, _2: None
+        )
 
 
 async def test_unload(
