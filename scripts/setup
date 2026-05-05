@@ -9,7 +9,7 @@ python3 -m pip install uv --root-user-action ignore
 uv pip install --system --prerelease allow pytest-homeassistant-custom-component
 uv pip install --system --upgrade -r requirements.txt
 
-rm -rf node_modules package-lock.json
+rm -rf node_modules package-lock.json .devcontainer-lock.json
 npm install --no-audit --no-fund
 
 prek install
