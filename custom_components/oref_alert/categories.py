@@ -74,6 +74,7 @@ PUSHY_THREAD_ID_TO_HISTORY_CATEGORY: Final = {
     8: 13,  # Update
     9: 8,  # Earthquake2
     11: 3,  # UnconventionalMissile
+    99: 14,  # RedFlash
 }
 
 # Based on information provided by Tzeva Adom team.

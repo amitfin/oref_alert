@@ -79,6 +79,7 @@ def test_pushy_thread_id_to_history_category() -> None:
     """Test pushy_thread_id_to_history_category."""
     for category, expected in enumerate([1, 12, 10, 7, 11, 2, 9, 14, 13, 8, None, 3]):
         assert pushy_thread_id_to_history_category(category) == expected
+    assert pushy_thread_id_to_history_category(99) == 14  # RedFlash
 
 
 def test_tzevaadom_threat_id_to_history_category() -> None:
