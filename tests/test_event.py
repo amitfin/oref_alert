@@ -219,7 +219,7 @@ async def test_synthetic_alert_expiration_emits_end(
     )
     await hass.async_block_till_done(wait_background_tasks=True)
 
-    freezer.tick(6)
+    freezer.tick(20)
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
 

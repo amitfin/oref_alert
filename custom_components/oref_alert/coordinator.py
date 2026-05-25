@@ -18,8 +18,6 @@ from homeassistant.const import (
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import event as event_helper
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -97,6 +95,7 @@ OREF_HEADERS: Final = {
 REQUEST_RETRIES: Final = 3
 REQUEST_THROTTLING: Final = 0.8
 DEDUP_WINDOW_SECONDS: Final = 180
+UPDATE_INTERVAL: Final = timedelta(seconds=20)
 STORAGE_VERSION: Final = 1
 
 
@@ -120,7 +119,9 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         super().__init__(
             hass,
             LOGGER,
+            config_entry=config_entry,
             name=DOMAIN,
+            update_interval=UPDATE_INTERVAL,
         )
         self._config_entry = config_entry
         self._http_client = async_get_clientsession(hass)
@@ -542,59 +543,3 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         if area[0] == "'":
             area = f"{area[1:]}'"
         return area
-
-
-class OrefAlertCoordinatorUpdater:
-    """Refresh coordinator if there are active alerts / updates."""
-
-    def __init__(
-        self, hass: HomeAssistant, coordinator: OrefAlertDataUpdateCoordinator
-    ) -> None:
-        """Initialize the updater."""
-        self._hass: HomeAssistant = hass
-        self._coordinator: OrefAlertDataUpdateCoordinator = coordinator
-        self._active: datetime = dt_util.now() - timedelta(days=1)
-        self._update: datetime = dt_util.now()
-        self._stop: bool = False
-        self._unsub_update: Callable[[], None] | None = None
-
-    def _sub(self) -> None:
-        """Subscribe an update."""
-        if not self._stop:
-            self._unsub_update = event_helper.async_track_point_in_time(
-                self._hass,
-                self._async_update,
-                dt_util.now() + timedelta(seconds=2),
-            )
-
-    @callback
-    async def _async_update(self, *_: Any) -> None:
-        """Refresh coordinator if needed."""
-        self._unsub_update = None
-        now = dt_util.now()
-        update = False
-        if any(
-            record.record_type in (RecordType.ALERT, RecordType.PRE_ALERT)
-            for record in self._coordinator.data.areas.values()
-        ):
-            self._active = now
-            update = True
-        elif now - self._active < timedelta(
-            minutes=10
-        ) or now - self._update > timedelta(seconds=20):
-            update = True
-        if update:
-            self._update = now
-            await self._coordinator.async_refresh()
-        self._sub()
-
-    def start(self) -> None:
-        """Start the updater."""
-        self._sub()
-
-    def stop(self) -> None:
-        """Stop the updater."""
-        self._stop = True
-        if self._unsub_update is not None:
-            self._unsub_update()
-            self._unsub_update = None

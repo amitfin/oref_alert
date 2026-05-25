@@ -77,7 +77,7 @@ async def test_state(
     assert state.name == TITLE
 
     mock_urls(aioclient_mock, None, "single_alert_history_end.json")
-    freezer.tick(2)
+    freezer.tick(20)
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(ENTITY_ID)

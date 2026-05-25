@@ -74,7 +74,7 @@ from .const import (
     TITLE_FIELD,
     RecordType,
 )
-from .coordinator import OrefAlertCoordinatorUpdater, OrefAlertDataUpdateCoordinator
+from .coordinator import OrefAlertDataUpdateCoordinator
 from .metadata.areas import AREAS
 
 CONFIG_SCHEMA: Final = cv.config_entry_only_config_schema(DOMAIN)
@@ -151,7 +151,6 @@ class OrefAlertRuntimeData:
     """Oref Alert runtime data dataclass."""
 
     coordinator: OrefAlertDataUpdateCoordinator
-    updater: OrefAlertCoordinatorUpdater
     areas_checker: AreasChecker
     pushy: PushyNotifications
     tzevaadom: TzevaAdomNotifications
@@ -160,7 +159,6 @@ class OrefAlertRuntimeData:
     async def stop(self) -> None:
         """Stop background managers and release resources."""
         self.areas_checker.stop()
-        self.updater.stop()
         self.bus_events.stop()
         await asyncio.gather(
             self.coordinator.async_save(),
@@ -386,7 +384,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
 
     entry.runtime_data = OrefAlertRuntimeData(
         coordinator,
-        OrefAlertCoordinatorUpdater(hass, coordinator),
         AreasChecker(hass),
         pushy,
         tzevaadom,
@@ -421,8 +418,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
         LOGGER.exception(f"Error loading {DOMAIN} config entry. Will retry later.")
         await entry.runtime_data.stop()
         raise ConfigEntryNotReady from exc
-
-    entry.runtime_data.updater.start()
 
     return True
 

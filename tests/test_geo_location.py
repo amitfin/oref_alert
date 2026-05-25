@@ -127,7 +127,7 @@ async def test_add_remove(
     )
 
     mock_urls(aioclient_mock, None, "multi_alerts_history_end.json")
-    freezer.tick(2)
+    freezer.tick(20)
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert len(hass.states.async_all(Platform.GEO_LOCATION)) == 0
@@ -187,9 +187,8 @@ async def test_attributes_update(
     assert state.attributes["category"] == 1
     assert len(events) == 1
     mock_urls(aioclient_mock, None, "single_alert_history_update.json")
-    freezer.tick(2)
+    freezer.tick(20)
     async_fire_time_changed(hass)
-    await refresh_coordinator(hass, config_id)
     await hass.async_block_till_done(wait_background_tasks=True)
     state = hass.states.get(ENTITY_ID)
     assert state is not None
