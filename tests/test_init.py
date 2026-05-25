@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import homeassistant.util.dt as dt_util
 import pytest
@@ -80,8 +80,8 @@ async def test_setup(hass: HomeAssistant, entity_registry: er.EntityRegistry) ->
     assert not hass.states.get(ENTITY_ID)
 
 
-async def test_save_on_homeassistant_stop(hass: HomeAssistant) -> None:
-    """Test coordinator state is saved on HA stop event."""
+async def test_stop_on_homeassistant_stop(hass: HomeAssistant) -> None:
+    """Test runtime data is saved and stopped on HA stop event."""
     config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
@@ -92,12 +92,28 @@ async def test_save_on_homeassistant_stop(hass: HomeAssistant) -> None:
     bus_events_async_save = AsyncMock()
     config_entry.runtime_data.coordinator.async_save = coordinator_async_save
     config_entry.runtime_data.bus_events.async_save = bus_events_async_save
+    config_entry.runtime_data.areas_checker.stop = Mock(
+        wraps=config_entry.runtime_data.areas_checker.stop
+    )
+    config_entry.runtime_data.bus_events.stop = Mock(
+        wraps=config_entry.runtime_data.bus_events.stop
+    )
+    config_entry.runtime_data.pushy.stop = AsyncMock(
+        wraps=config_entry.runtime_data.pushy.stop
+    )
+    config_entry.runtime_data.tzevaadom.stop = AsyncMock(
+        wraps=config_entry.runtime_data.tzevaadom.stop
+    )
 
     hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
     await hass.async_block_till_done(wait_background_tasks=True)
 
     coordinator_async_save.assert_awaited_once()
     bus_events_async_save.assert_awaited_once()
+    config_entry.runtime_data.areas_checker.stop.assert_called_once()
+    config_entry.runtime_data.bus_events.stop.assert_called_once()
+    config_entry.runtime_data.pushy.stop.assert_awaited_once()
+    config_entry.runtime_data.tzevaadom.stop.assert_awaited_once()
 
 
 async def test_config_update(hass: HomeAssistant) -> None:

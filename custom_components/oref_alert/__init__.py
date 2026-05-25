@@ -36,6 +36,8 @@ from .template import inject_template_extensions
 from .tzevaadom import TzevaAdomNotifications
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import (
         HomeAssistant,
@@ -46,10 +48,7 @@ if TYPE_CHECKING:
 
     from .binary_sensor import AlertSensor
 
-from homeassistant.core import (
-    SupportsResponse,
-    callback,
-)
+from homeassistant.core import SupportsResponse
 
 from .config_flow import AREAS_CONFIG
 from .const import (
@@ -390,15 +389,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
         OrefAlertBusEventManager(hass, entry),
     )
 
-    @callback
-    def _handle_shutdown(*_: object) -> None:
-        """Persist coordinator state on Home Assistant shutdown."""
-        hass.async_create_task(entry.runtime_data.coordinator.async_save())
-        hass.async_create_task(entry.runtime_data.bus_events.async_save())
+    unsub_shutdown: Callable[[], None] | None = None
 
-    entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _handle_shutdown)
+    async def _handle_shutdown(*_: object) -> None:
+        """Persist state and stop background managers on Home Assistant shutdown."""
+        nonlocal unsub_shutdown
+        unsub_shutdown = None
+        await entry.runtime_data.stop()
+
+    unsub_shutdown = hass.bus.async_listen_once(
+        EVENT_HOMEASSISTANT_STOP, _handle_shutdown
     )
+
+    def _unsub_shutdown() -> None:
+        """Unsubscribe shutdown listener if it has not already fired."""
+        nonlocal unsub_shutdown
+        if unsub_shutdown is not None:
+            unsub_shutdown()
+            unsub_shutdown = None
+
+    entry.async_on_unload(_unsub_shutdown)
 
     entry.runtime_data.bus_events.start()
 
