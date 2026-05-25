@@ -95,6 +95,19 @@ async def test_lifecycle(hass: HomeAssistant) -> None:
     ws.close.assert_called_once()
 
 
+async def test_external_task_cancellation(hass: HomeAssistant) -> None:
+    """Test that external task cancellation is not swallowed by the WS listener."""
+    with mock_ws([]) as ws:
+        config_entry = await setup_test(hass)
+        task = config_entry.runtime_data.tzevaadom._task  # noqa: SLF001
+        task.cancel()
+        await task
+        assert task.done()
+        assert not task.cancelled()
+        await cleanup_test(hass, config_entry)
+    ws.close.assert_called_once()
+
+
 @pytest.mark.allowed_logs(["Unknown area 'dummy'"])
 @pytest.mark.parametrize(
     ("file", "overrides", "expected_state", "expected_record"),

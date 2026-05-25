@@ -340,3 +340,4 @@ class PushyNotifications:
         if self._mqtt:
             await self._hass.async_add_executor_job(self._mqtt.disconnect)
             await self._hass.async_add_executor_job(self._mqtt.loop_stop)
+            self._mqtt = None

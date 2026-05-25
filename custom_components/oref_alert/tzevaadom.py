@@ -99,6 +99,7 @@ class TzevaAdomNotifications:
         await self._close()
         if self._task:
             await self._task
+            self._task = None
 
     async def _close(self) -> None:
         """Close WS."""
@@ -138,6 +139,8 @@ class TzevaAdomNotifications:
                                     WSMsgType(message.type).name,
                                 )
 
+            except asyncio.CancelledError:
+                break
             except:  # noqa: E722
                 LOGGER.exception("Error in WS listener")
             if self._stop.is_set():
