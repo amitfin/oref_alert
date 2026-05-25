@@ -8,10 +8,30 @@
 
 ![Project Maintenance](https://img.shields.io/badge/maintainer-Amit%20Finkelstein-blue.svg?style=for-the-badge)
 
-The integration is used to monitor the emergency messages coming from the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud Haoref). Its main usage is via the entity `sensor.oref_alert`. The entity receives the relevant messages based on HA's home location (coordinate). `sensor.oref_alert`'s state is one of: `ok`, `pre_alert`, and `alert`.
-The integration is installed and configured via the user interface. There is no YAML or templates involved.
+This [Home Assistant](https://www.home-assistant.io/) integration monitors emergency alerts from the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud HaOref / פיקוד העורף). The primary entity is `sensor.oref_alert`, whose state is one of `ok`, `pre_alert`, or `alert` — determined automatically from HA's configured home location.
+
+The integration is installed and configured entirely through the UI; no YAML is required.
 
 A demo video (in Hebrew) can be found [here](https://youtu.be/p6PzAlceoSY).
+
+## Table of Contents
+
+- [Install](#install)
+- [Map Card](#map-card)
+- [Record Attribute](#record-attribute)
+- [Automation](#automation)
+- [Additional Sensors](#additional-sensors)
+- [Event Entity](#event-entity)
+- [Binary Sensor](#binary-sensor)
+- [All Areas Sensor](#all-areas-sensor)
+- [Binary Sensors Attributes](#binary-sensors-attributes)
+- [Time To Shelter Sensors](#time-to-shelter-sensors)
+- [Geo Location Entities](#geo-location-entities)
+- [Home Assistant Events](#home-assistant-events)
+- [Actions](#actions)
+- [Template Functions](#template-functions)
+- [Usages](#usages)
+- [Removing the Integration](#removing-the-integration)
 
 ## Install
 
@@ -58,7 +78,7 @@ Card configuration:
 
 A demo (in Hebrew) can be found [here](https://youtu.be/j5jny3WrgJk).
 
-## Record's Attribute
+## Record Attribute
 
 `sensor.oref_alert` has `record` attribute which holds additional information about the last message. This record has the following fields:
 1. `alertDate`: e.g. `2025-06-30 15:00:00` (Israel timezone).
@@ -104,19 +124,7 @@ Note: if `pre_alert` doesn't change to `alert` within 20 minutes, the state is g
 
 ## Additional Sensors
 
-It's possible to create additional entities using the action `oref_alert.add_sensor`. The action can be accessed via this My button:
-
-[![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.add_sensor)
-
-The selected areas of an additional sensor can be different (non overlapping) than the primary entity.
-
-The action `oref_alert.remove_sensor` can be used for deleting an additional sensor. The action can be accessed via this My button:
-
-[![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.remove_sensor)
-
-The action `oref_alert.edit_sensor` can be used for editing an additional sensor by adding or removing areas. The action can be accessed via this My button:
-
-[![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.edit_sensor)
+Additional sensor entities can be created and managed using the [`add_sensor`](#add_sensor), [`remove_sensor`](#remove_sensor), and [`edit_sensor`](#edit_sensor) actions described in the [Actions](#actions) section.
 
 ## Event Entity
 
@@ -164,11 +172,11 @@ Geo-location entities are created for every active alert in Israel (regardless o
 3. `longitude`
 4. `home_distance`: same as the state, but an integer type and not a string (state is always a string)
 5. `title`: alert's description
-7. `date`
-6. `category`: integer with alert's category
-7. `icon`: Material icon ("mdi:xxx") based on the category
-8. `emoji`: based on the category
-9. `district`: area's district
+6. `date`
+7. `category`: integer with alert's category
+8. `icon`: Material icon ("mdi:xxx") based on the category
+9. `emoji`: based on the category
+10. `district`: area's district
 
 These entities provide the data that powers the map card described above.
 
@@ -227,21 +235,37 @@ data:
   source: website
 ```
 
-## Synthetic Alert
+## Actions
 
-Synthetic alerts are useful for testing purposes. The action `oref_alert.synthetic_alert` can be used to create a synthetic alert. The action can be accessed via this My button:
+### `add_sensor`
+
+Creates an additional sensor entity for a custom set of areas. The selected areas can be different (non-overlapping) from the primary entity.
+
+[![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.add_sensor)
+
+### `remove_sensor`
+
+Deletes an additional sensor entity.
+
+[![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.remove_sensor)
+
+### `edit_sensor`
+
+Edits an additional sensor by adding or removing areas.
+
+[![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.edit_sensor)
+
+### `synthetic_alert`
+
+Useful for testing — creates a synthetic alert that disappears after the specified number of seconds (unlike a regular alert which expires after 24 hours).
 
 [![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.synthetic_alert)
 
-*Note: a synthetic alert is an additional alert. A synthetic alert disappears after the amount of seconds supplied to the action. This is different from a regular alert which disappears only after 24 hours.*
+### `manual_event_end`
 
-## Manual Event End
-
-The action `oref_alert.manual_event_end` can be used to mark active alerts as ended manually (title: `האירוע סומן כהסתיים ידנית`). The action can be accessed via this My button:
+Marks active alerts as ended manually (title: `האירוע סומן כהסתיים ידנית`). The optional `area` field limits the action to specific areas.
 
 [![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.manual_event_end)
-
-The optional `area` field can be used to limit this action to specific areas.
 
 ```yaml
 action: oref_alert.manual_event_end
@@ -251,11 +275,9 @@ data:
     - קריית שמונה
 ```
 
-## Areas Status
+### `areas_status`
 
-The action `oref_alert.areas_status` returns the current areas whose status is `pre_alert` or `alert`. The response is keyed by area name, and each area contains the published fields used by the integration: `area`, `home_distance`, `latitude`, `longitude`, `category`, `title`, `icon`, `emoji`, `district`, `channel`, `type`, and `date`.
-
-The action can be accessed via this My button:
+Returns the current areas whose status is `pre_alert` or `alert`. The response is keyed by area name, and each area contains the published fields: `area`, `home_distance`, `latitude`, `longitude`, `category`, `title`, `icon`, `emoji`, `district`, `channel`, `type`, and `date`.
 
 [![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.areas_status)
 
@@ -295,9 +317,9 @@ Example response:
   type: alert
 ```
 
-## Last Update
+### `last_update`
 
-The action `oref_alert.last_update` returns `last_update`, the last time any area's status was changed, and `version`, the integration's version. The map card uses these values to decide whether it should re-render or force a page reload after an integration update.
+Returns `last_update` (the last time any area's status was changed) and `version` (the integration's version). The map card uses these values to decide whether to re-render or force a page reload after an integration update.
 
 ## Template Functions
 
