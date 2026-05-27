@@ -794,19 +794,18 @@ async def test_unknown_real_time_category(
 
 
 @pytest.mark.parametrize(
-    ("title", "expected_category"),
+    "title",
     [
-        ("ניתן לצאת מהמרחב המוגן אך יש להישאר בקרבתו", END_ALERT_CATEGORY),
-        ("בדקות הקרובות צפויות להתקבל התרעות באזורך", PRE_ALERT_CATEGORY),
+        "ניתן לצאת מהמרחב המוגן אך יש להישאר בקרבתו",
+        "בדקות הקרובות צפויות להתקבל התרעות באזורך",
     ],
     ids=("end_alert", "pre_alert"),
 )
 def test_current_to_history_format_real_time_message_category(
     hass: HomeAssistant,
     title: str,
-    expected_category: int,
 ) -> None:
-    """Test cat=10 real-time message conversion to history update categories."""
+    """Test cat=10 real-time message is ignored."""
     coordinator = create_coordinator(hass)
 
     records = list(
@@ -819,10 +818,7 @@ def test_current_to_history_format_real_time_message_category(
         )
     )
 
-    assert len(records) == 1
-    assert records[0].raw.title == title
-    assert records[0].raw.data == "אילת"
-    assert records[0].raw.category == expected_category
+    assert records == []
 
 
 async def test_disable_all_alerts(

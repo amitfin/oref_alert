@@ -436,14 +436,10 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         """Yield current alerts payload converted to history format."""
         if (
             not isinstance(current, dict)
-            or (
-                category := real_time_to_history_category(
-                    int(current.get("cat", 0)), current[TITLE_FIELD]
-                )
-            )
+            or (category := real_time_to_history_category(int(current.get("cat", 0))))
             is None
         ):
-            # Unknown category. Wait for the history to include it.
+            # Unknown or message category. Other channels will cover it.
             return
         now = dt_util.now(IST).strftime("%Y-%m-%d %H:%M:%S")
         for area in current[AREA_FIELD]:
