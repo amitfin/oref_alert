@@ -20,7 +20,7 @@ jobs:
           find "${GITHUB_WORKSPACE:?}" -mindepth 1 -maxdepth 1 ! -name '.uv-cache' -exec rm -rf -- {} +
 
       - name: Checkout the repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: repo
 
