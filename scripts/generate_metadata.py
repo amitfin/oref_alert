@@ -37,6 +37,7 @@ AREA_INFO_OUTPUT = "area_info.py"
 SEGMENT_TO_AREA_OUTPUT = "segment_to_area.py"
 TZEVAADOM_ID_TO_AREA_OUTPUT = "tzevaadom_id_to_area.py"
 SERVICES_YAML = "custom_components/oref_alert/services.yaml"
+TRIGGERS_YAML = "custom_components/oref_alert/triggers.yaml"
 TEST_AREAS_FIXTURE = "tests/fixtures/GetCitiesMix.json"
 DISTRICTS_URL = "https://alerts-history.oref.org.il/Shared/Ajax/GetDistricts.aspx"
 SEGMENTS_URL = "https://dist-android.meser-hadash.org.il/smart-dist/services/anonymous/segments/android?instance=1544803905&locale=iw_IL"
@@ -332,13 +333,17 @@ class OrefMetadata:
                 output.write('"""GENERATED FILE. DO NOT EDIT MANUALLY."""\n\n')
                 output.write(f"{variable_name} = {variable_data}")
 
+        areas_and_groups = [
+            area for area in self._areas_and_groups if area not in ALL_AREAS_ALIASES
+        ]
+
         with (self._root_directory / SERVICES_YAML).open(
             encoding="utf-8",
         ) as services_yaml:
             services = yaml.load(services_yaml, Loader=yaml.SafeLoader)
-        services["add_sensor"]["fields"]["areas"]["selector"]["select"]["options"] = [
-            area for area in self._areas_and_groups if area not in ALL_AREAS_ALIASES
-        ]
+        services["add_sensor"]["fields"]["areas"]["selector"]["select"]["options"] = (
+            areas_and_groups
+        )
         services["synthetic_alert"]["fields"]["area"]["selector"]["select"][
             "options"
         ] = services["manual_event_end"]["fields"]["area"]["selector"]["select"][
@@ -349,6 +354,19 @@ class OrefMetadata:
             encoding="utf-8",
         ) as output:
             yaml.dump(services, output, sort_keys=False, indent=2, allow_unicode=True)
+
+        with (self._root_directory / TRIGGERS_YAML).open(
+            encoding="utf-8",
+        ) as triggers_yaml:
+            triggers = yaml.load(triggers_yaml, Loader=yaml.SafeLoader)
+        triggers["area"]["fields"]["areas"]["selector"]["select"]["options"] = (
+            areas_and_groups
+        )
+        with (self._root_directory / TRIGGERS_YAML).open(
+            "w",
+            encoding="utf-8",
+        ) as output:
+            yaml.dump(triggers, output, sort_keys=False, indent=2, allow_unicode=True)
 
         with (
             zipfile.ZipFile(

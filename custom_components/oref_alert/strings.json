@@ -165,6 +165,59 @@
             }
         }
     },
+    "triggers": {
+        "home": {
+            "name": "Oref Alert at home",
+            "description": "Triggers when Oref Alert record(s) match the home's area.",
+            "fields": {
+                "type": {
+                    "name": "Type",
+                    "description": "Record type(s) to match."
+                }
+            }
+        },
+        "area": {
+            "name": "Oref Alert in area",
+            "description": "Triggers when Oref Alert record(s) match the selected areas.",
+            "fields": {
+                "type": {
+                    "name": "Type",
+                    "description": "Record type(s) to match."
+                },
+                "areas": {
+                    "name": "Areas",
+                    "description": "Areas and/or districts to match (Hebrew only). Omitted matches any area."
+                }
+            }
+        },
+        "distance": {
+            "name": "Oref Alert within distance",
+            "description": "Triggers when Oref Alert record(s) are within the configured distance of a location.",
+            "fields": {
+                "type": {
+                    "name": "Type",
+                    "description": "Record type(s) to match."
+                },
+                "distance": {
+                    "name": "Distance",
+                    "description": "Maximum distance, in kilometers or miles depending on the system's unit settings."
+                },
+                "location": {
+                    "name": "Location",
+                    "description": "Zone, device tracker, or person providing the reference location."
+                }
+            }
+        }
+    },
+    "selector": {
+        "record_type": {
+            "options": {
+                "pre_alert": "[%key:component::oref_alert::entity::event::alert::state_attributes::event_type::state::pre_alert%]",
+                "alert": "[%key:component::oref_alert::entity::event::alert::state_attributes::event_type::state::alert%]",
+                "end": "[%key:component::oref_alert::entity::event::alert::state_attributes::event_type::state::end%]"
+            }
+        }
+    },
     "issues": {
         "unknown_area": {
             "title": "Oref Alert Unknown Area",

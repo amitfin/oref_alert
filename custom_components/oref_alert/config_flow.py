@@ -11,7 +11,7 @@ from homeassistant.core import async_get_hass, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import selector
 
-from .metadata import ALL_AREAS_ALIASES
+from .area_utils import AREAS_AND_GROUPS_WITHOUT_ALL_AREAS
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigFlowResult
@@ -22,10 +22,9 @@ from .const import (
     TITLE,
 )
 from .metadata.area_to_polygon import async_find_area
-from .metadata.areas_and_groups import AREAS_AND_GROUPS
 
 AREAS_CONFIG = selector.SelectSelectorConfig(
-    options=[area for area in AREAS_AND_GROUPS if area not in ALL_AREAS_ALIASES],
+    options=AREAS_AND_GROUPS_WITHOUT_ALL_AREAS,
     mode=selector.SelectSelectorMode.DROPDOWN,
     multiple=True,
     custom_value=False,

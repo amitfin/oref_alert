@@ -43,5 +43,16 @@
     "last_update": "mdi:clock-sync-outline",
     "synthetic_alert": "mdi:rocket-launch",
     "manual_event_end": "mdi:check-circle-outline"
+  },
+  "triggers": {
+    "home": {
+      "trigger": "mdi:home-alert-outline"
+    },
+    "area": {
+      "trigger": "mdi:map-marker-alert-outline"
+    },
+    "distance": {
+      "trigger": "mdi:map-marker-distance"
+    }
   }
 }

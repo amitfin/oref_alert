@@ -122,6 +122,31 @@ triggers:
 
 Note: if `pre_alert` doesn't change to `alert` within 20 minutes, the state is getting reverted back to `ok`.
 
+### `oref_alert` Triggers
+
+The integration also provides three dedicated triggers, covering all areas in the country (rather than just the areas of a specific sensor entity) with built-in record type filtering:
+
+```yaml
+triggers:
+  - trigger: oref_alert.home
+    type: alert # a single value or a list of pre_alert/alert/end; required, defaults to alert
+
+  - trigger: oref_alert.area
+    type: alert
+    areas: תל אביב - מרכז העיר # a single area/district name, or a list of them; omitted matches any area
+
+  - trigger: oref_alert.distance
+    type: alert
+    distance: 5 # kilometers or miles, depending on the system's unit settings; required, defaults to 5
+    location: zone.home # a zone, device tracker, or person entity; required, defaults to zone.home
+```
+
+`trigger: oref_alert.home` fires for records matching the areas configured on the integration. `trigger: oref_alert.area` fires for records matching the selected `areas` (any area in the country when omitted). `trigger: oref_alert.distance` fires for records within `distance` of `location`'s current position. The record's distance is calculated from the alerted area's city center, not from the closest point of the area's polygon (see [`oref_polygon`](#oref_polygon)), so it can be a bit off for large areas.
+
+All three fire once per update, with every new record matching the `type` filter (plus `areas` for `oref_alert.area`, or `distance`/`location` for `oref_alert.distance`) bundled into `trigger.records` — a list, since a single update commonly contains matching records for more than one area at once (e.g. several nearby areas alerted together). Each item has the record's fields (`area`, `type`, `category`, `title`, `icon`, `emoji`, `home_distance`, `latitude`, `longitude`, `district`, `channel`), e.g. `{{ trigger.records | map(attribute='area') | list }}`.
+
+It's not recommended to add more than one of these triggers to the same automation: each trigger listens independently, so a single record matching more than one of them (e.g. an area that's both in `oref_alert.area`'s `areas` and within `oref_alert.distance`'s radius) runs the automation's actions once per matching trigger instead of once.
+
 ## Additional Sensors
 
 Additional sensor entities can be created and managed using the [`add_sensor`](#add_sensor), [`remove_sensor`](#remove_sensor), and [`edit_sensor`](#edit_sensor) actions described in the [Actions](#actions) section.
@@ -216,7 +241,7 @@ data:
   source: tzevaadom
 ```
 
-In the [Mobile Notifications: Detailed Alerts](#detailed-alerts) section there is an example for usage of this event.
+The [`oref_alert` Triggers](#oref_alert-triggers) above are built on this event; see the [Mobile Notifications: Detailed Alerts](#detailed-alerts) section for an example. The raw event is still there for automations that need it directly (e.g. `trigger: event` / `condition: template`).
 
 For backward compatibility, events are also fired on `oref_alert_event` and `oref_alert_update_event` for alert and update, respectively. Here is an example of such an update event:
 
@@ -537,20 +562,16 @@ card_mod:
 
 #### Combined Alerts
 
-Here is an automation rule for getting mobile notifications for new alerts:
+Here is an automation rule for getting mobile notifications for new alerts, using the `oref_alert.area` trigger (see [`oref_alert` Triggers](#oref_alert-triggers) above) so `trigger.records` already holds only the newly-added alerts, with no diffing against the previous state required:
 
 ```yaml
 alias: Oref Alert Country Notifications
 id: oref_alert_country_notifications
 triggers:
-  - trigger: state
-    entity_id: binary_sensor.oref_alert
-    attribute: country_active_alerts
+  - trigger: oref_alert.area
 actions:
   - variables:
-      current: "{{ trigger.to_state.attributes.country_active_alerts | map(attribute='data') | list }}"
-      previous: "{{ trigger.from_state.attributes.country_active_alerts | map(attribute='data') | list }}"
-      alerts: "{{ current | difference(previous) | unique | sort | list }}"
+      alerts: "{{ trigger.records | map(attribute='area') | list | sort }}"
       alerts_per_push: "{{ (150 / (alerts | map('length') | average(0) | add(3))) | int }}"
   - repeat:
       while:
@@ -568,33 +589,33 @@ mode: queued
 
 <img width="400" src="https://github.com/user-attachments/assets/ab12abf4-042e-4099-a1ef-e26db57b653a">
 
-It's possible to get only alerts which are close to home (in the example below it's 10km from home). To do that, the `current` variable should be defined as:
+It's possible to get only alerts which are close to home (in the example below it's 10km from home) by using `oref_alert.distance` instead of `oref_alert.area`:
 
 ```yaml
-current: "{{ trigger.to_state.attributes.country_active_alerts | map(attribute='data') | select('oref_test_distance', 10) | list }}"
+triggers:
+  - trigger: oref_alert.distance
+    distance: 10
 ```
 
 #### Detailed Alerts
 
-This is a different approach where only alerts which are either within 30km from home or 5km from Amit's current location generate notifications. However, each notification has additional information (and being sent separately):
+This is a different approach where only alerts within 30km from home generate notifications, but each notification has additional information (and being sent separately). `repeat.for_each` sends one notification per record, since a single trigger firing can bundle more than one:
 
 ```yaml
 alias: Oref Alert Country Notifications Details
 id: oref_alert_country_notifications_details
 triggers:
-  - trigger: event
-    event_type: oref_alert_record
+  - trigger: oref_alert.distance
+    distance: 30
+    # location: device_tracker.amits_iphone  # use current location instead of home
 actions:
-  - condition: or
-    conditions:
-      - condition: template
-        value_template: "{{ trigger.event.data.home_distance < 30 }}"
-      - condition: template
-        value_template: "{{ distance('device_tracker.amits_iphone', trigger.event.data.latitude, trigger.event.data.longitude) < 5 }}"
-  - action: notify.mobile_app_amits_iphone
-    data:
-      title: התרעות פיקוד העורף
-      message: "{{ trigger.event.data.emoji }} {{ trigger.event.data.area }} [{{ trigger.event.data.title }}] ({{ trigger.event.data.home_distance | int }} ק״מ)"
+  - repeat:
+      for_each: "{{ trigger.records }}"
+      sequence:
+        - action: notify.mobile_app_amits_iphone
+          data:
+            title: התרעות פיקוד העורף
+            message: "{{ repeat.item.emoji }} {{ repeat.item.area }} [{{ repeat.item.title }}] ({{ repeat.item.home_distance | int }} ק״מ)"
 mode: queued
 ```
 

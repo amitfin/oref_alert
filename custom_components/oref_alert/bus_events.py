@@ -12,6 +12,7 @@ from .const import (
     ATTR_TYPE,
     DOMAIN,
     LOGGER,
+    OREF_ALERT_RECORD_EVENT,
     Record,
     RecordAndMetadata,
     RecordType,
@@ -106,7 +107,15 @@ class OrefAlertBusEventManager:
 
     @callback
     def _async_update(self) -> None:
-        """Fire event bus for new records."""
+        """
+        Fire event bus for new records.
+
+        trigger.py's batching relies on every OREF_ALERT_RECORD_EVENT for one
+        coordinator refresh being fired synchronously, within this single
+        callback with no `await` in between. Keep this method fully
+        synchronous, or the triggers will start firing multiple times per
+        refresh instead of once.
+        """
         for record in self._coordinator.get_record_and_metadata(
             None, None, 3, newer_first=False
         ):
@@ -121,7 +130,7 @@ class OrefAlertBusEventManager:
                 event,
             )
             self._hass.bus.async_fire(
-                f"{DOMAIN}_record",
+                OREF_ALERT_RECORD_EVENT,
                 {
                     **event,
                     ATTR_TYPE: record.record_type.value if record.record_type else None,
