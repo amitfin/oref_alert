@@ -8,32 +8,30 @@
 
 ![Project Maintenance](https://img.shields.io/badge/maintainer-Amit%20Finkelstein-blue.svg?style=for-the-badge)
 
-This [Home Assistant](https://www.home-assistant.io/) integration monitors emergency alerts from the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud HaOref / פיקוד העורף). The primary entity is `sensor.oref_alert`, whose state is one of `ok`, `pre_alert`, or `alert` — determined automatically from HA's configured home location.
+This [Home Assistant](https://www.home-assistant.io/) integration monitors emergency alerts from the [Israeli National Emergency Portal](https://www.oref.org.il//12481-he/Pakar.aspx) (Pikud HaOref / פיקוד העורף).
 
-The integration is installed and configured entirely through the UI; no YAML is required.
+The integration is installed and configured entirely through the UI. Moreover, for the common usage of automations and visualization, there is no need to understand or deal with entities or YAML at all.
 
-A demo video (in Hebrew) can be found [here](https://youtu.be/p6PzAlceoSY).
+## Contents
 
-## Table of Contents
+- [Common Usage](#common-usage)
+  - [Install](#install)
+  - [Map Card](#map-card)
+  - [Automation](#automation)
+- [Advanced Usage](#advanced-usage)
+  - [Integration Configuration](#integration-configuration)
+  - [Entities and Attributes](#entities-and-attributes)
+  - [Home Assistant Events](#home-assistant-events)
+  - [Actions](#actions)
+  - [Template Functions](#template-functions)
+  - [Advanced Examples](#advanced-examples)
+  - [Removing the Integration](#removing-the-integration)
+- [Contributions](#contributions-are-welcome)
+- [Acknowledgements](#acknowledgements)
 
-- [Install](#install)
-- [Map Card](#map-card)
-- [Record Attribute](#record-attribute)
-- [Automation](#automation)
-- [Additional Sensors](#additional-sensors)
-- [Event Entity](#event-entity)
-- [Binary Sensor](#binary-sensor)
-- [All Areas Sensor](#all-areas-sensor)
-- [Binary Sensors Attributes](#binary-sensors-attributes)
-- [Time To Shelter Sensors](#time-to-shelter-sensors)
-- [Geo Location Entities](#geo-location-entities)
-- [Home Assistant Events](#home-assistant-events)
-- [Actions](#actions)
-- [Template Functions](#template-functions)
-- [Usages](#usages)
-- [Removing the Integration](#removing-the-integration)
+## Common Usage
 
-## Install
+### Install
 
 [HACS](https://hacs.xyz/) is the preferred and easier way to install the component. When HACS is installed, the integration can be installed using this My button:
 
@@ -49,21 +47,13 @@ The integration should also be added to the configuration. This can be done via 
 
 The setup identifies the area according to the [Home location in the Zones settings](https://my.home-assistant.io/redirect/zones/) (the latitude and longitude coordinate). If the detection fails, the user is asked to select the area manually.
 
-Once the component is installed, it's possible to control additional parameters using the Configure dialog which can be accessed via this My button:
-
-[![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=oref_alert)
-
-There is a single configuration parameter **Selected area**. By default the integration finds the area based on HA's home location. There is no need to change this default. Note: it's highly discouraged to select more than a single area. `sensor.oref_alert` doesn't support more than a single area, and will not be created when choosing multiple areas or a district. It's possible to create additional `sensor` entities by using the action `oref_alert.add_sensor` (check below for more information), each with a single area.
-
-<kbd><img width="379" height="234" alt="image" src="https://github.com/user-attachments/assets/4dbb4a39-c9dd-47f3-8df8-685189e38bac" /></kbd>
-
-## Map Card
+### Map Card
 
 <img width="619" height="482" alt="image" src="https://github.com/user-attachments/assets/6ea2d479-b4ea-4f91-8e1e-9cf465a53b71" />
 
 The integration adds a map card for displaying all active alerts. It's recommended to place the map card inside a [panel view](https://www.home-assistant.io/dashboards/panel/), so it can take full width and provide the best map experience.
 
-Card configuration:
+Card configuration (all parameters are optional with the common defaults):
 - `auto_fit` (optional, default: `true`): Automatically adjust the map view to include all currently active alerts and pre-alerts.
 - `show_home` (optional, default: `false`): Show `zone.home` on the map. This option is typically used together with `auto_fit: false`, allowing the map to stay centered on the home area. This view is useful for users who are interested in their home's surroundings.
 - `hebrew_basemap` (optional, default: `true`): Use a Hebrew basemap tile layer. It is not recommended to enable this option when both `auto_fit` and `show_home` are enabled. The Hebrew basemap supports zoom levels only up to 15, while most other map providers support zoom levels up to 19–20. When `show_home` is enabled, `auto_fit` often selects a higher zoom level, which may exceed the Hebrew basemap's maximum supported zoom level.
@@ -78,53 +68,13 @@ Card configuration:
 
 A demo (in Hebrew) can be found [here](https://youtu.be/j5jny3WrgJk).
 
-## Record Attribute
+### Automation
 
-`sensor.oref_alert` has `record` attribute which holds additional information about the last message. This record has the following fields:
-1. `alertDate`: e.g. `2025-06-30 15:00:00` (Israel timezone).
-2. `title`: e.g. `ירי רקטות וטילים`. Always in Hebrew.
-3. `data`: a single area name, e.g. `תל אביב - מרכז העיר`.
-4. `category`: an integer of the category as listed [here](https://www.oref.org.il/alerts/alertCategories.json). Categories 14 and 13 are used for `pre_alert` and `end`, respectively.
-5. `channel`: the receiving channel. Below is the list of options. When the same alert is coming on multiple channels, only the first channel to send the alert will be used and the following ones are ignored. The fields of the messages are normalized and have the same format regardless of the channel.
-    1. `website-history`: the history file of the official website.
-    2. `website`: the real-time file of the official website.
-    3. `mobile`: the mobile notification channel of the official app.
-    4. `tzevaadom`: the notification channel of [tzevaadom.co.il](https://www.tzevaadom.co.il/).
-    5. `synthetic`: synthetic records generated via custom actions (e.g. [synthetic alert](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.synthetic_alert) and [manual event end](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.manual_event_end)).
+Automations can respond to threats by playing an announcement or calming music, turning on lights, or switching on a TV in the shelter.
 
-## Automation
+#### Automation Triggers
 
-Here are 3 different examples of typical automation triggers:
-
-```yaml
-triggers:
-  - trigger: state
-    entity_id: sensor.oref_alert
-    from: ok
-    to: pre_alert
-
-triggers:
-  - trigger: state
-    entity_id: sensor.oref_alert
-    from:
-      - ok
-      - pre_alert
-    to: alert
-
-triggers:
-  - trigger: state
-    entity_id: sensor.oref_alert
-    from:
-      - pre_alert
-      - alert
-    to: ok
-```
-
-Note: if `pre_alert` doesn't change to `alert` within 20 minutes, the state is getting reverted back to `ok`.
-
-### `oref_alert` Triggers
-
-The integration also provides three dedicated triggers, covering all areas in the country (rather than just the areas of a specific sensor entity) with built-in record type filtering:
+The integration provides three dedicated triggers with `type` filtering:
 
 ```yaml
 triggers:
@@ -141,13 +91,15 @@ triggers:
     location: zone.home # a zone, device tracker, or person entity; required, defaults to zone.home
 ```
 
-`trigger: oref_alert.home` fires for records matching the areas configured on the integration. `trigger: oref_alert.area` fires for records matching the selected `areas` (any area in the country when omitted). `trigger: oref_alert.distance` fires for records within `distance` of `location`'s current position. The record's distance is calculated from the alerted area's city center, not from the closest point of the area's polygon (see [`oref_polygon`](#oref_polygon)), so it can be a bit off for large areas.
+`trigger: oref_alert.home` fires for records matching the areas configured on the integration. `trigger: oref_alert.area` fires for records matching the selected `areas` (any area in the country when omitted). `trigger: oref_alert.distance` fires for records within `distance` of `location`'s current position. Note that the record's distance is calculated from the alerted area's city center, not from the closest point of the area's polygon, so it can be a bit off for large areas.
 
-All three fire once per update, with every new record matching the `type` filter (plus `areas` for `oref_alert.area`, or `distance`/`location` for `oref_alert.distance`) bundled into `trigger.records` — a list, since a single update commonly contains matching records for more than one area at once (e.g. several nearby areas alerted together). Each item has the record's fields (`area`, `type`, `category`, `title`, `icon`, `emoji`, `home_distance`, `latitude`, `longitude`, `district`, `channel`), e.g. `{{ trigger.records | map(attribute='area') | list }}`.
+`trigger.records` is available for the rest of the automation, containing the matching records. The list of fields for each record can be found [here](#home-assistant-events).
 
 It's not recommended to add more than one of these triggers to the same automation: each trigger listens independently, so a single record matching more than one of them (e.g. an area that's both in `oref_alert.area`'s `areas` and within `oref_alert.distance`'s radius) runs the automation's actions once per matching trigger instead of once.
 
-### `oref_alert` Conditions
+Note: if `pre_alert` doesn't change to `alert` within 20 minutes, the integration generates a synthetic `end` record for the area.
+
+#### Automation Conditions
 
 The integration also provides two dedicated conditions, checking an area's *current* status:
 
@@ -163,17 +115,49 @@ conditions:
 
 `condition: oref_alert.home` passes when an area configured on the integration currently has one of the selected `state`s. `condition: oref_alert.area` passes when one of the selected `areas` (any area in the country when omitted) currently has one of the selected `state`s. An area with no record at all, or whose most recent record has ended, is `ok`.
 
-## Additional Sensors
+## Advanced Usage
+
+### Integration Configuration
+
+Once the integration is installed, its options can be accessed using the Configure dialog via this My button:
+
+[![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=oref_alert)
+
+The integration selects an area automatically based on Home Assistant's home location, so there is usually no need to change the default. Selecting more than one area or a district is highly discouraged: `sensor.oref_alert` supports only one area and is not created for configurations containing multiple areas or a district. To monitor other areas, create additional sensor entities with the `oref_alert.add_sensor` action, using one area per sensor.
+
+<kbd><img width="379" height="234" alt="Oref Alert integration configuration dialog" src="https://github.com/user-attachments/assets/4dbb4a39-c9dd-47f3-8df8-685189e38bac" /></kbd>
+
+### Entities and Attributes
+
+#### `sensor.oref_alert`
+
+The primary entity is `sensor.oref_alert`, whose state is one of `ok`, `pre_alert`, or `alert`.
+
+##### Record Attribute
+
+`sensor.oref_alert` has `record` attribute which holds additional information about the last message. This record has the following fields:
+1. `alertDate`: e.g. `2025-06-30 15:00:00` (Israel timezone).
+2. `title`: e.g. `ירי רקטות וטילים`. Always in Hebrew.
+3. `data`: a single area name, e.g. `תל אביב - מרכז העיר`.
+4. `category`: an integer of the category as listed [here](https://www.oref.org.il/alerts/alertCategories.json). Categories 14 and 13 are used for `pre_alert` and `end`, respectively.
+5. `channel`: the receiving channel. Below is the list of options. When the same alert is coming on multiple channels, only the first channel to send the alert will be used and the following ones are ignored. The fields of the messages are normalized and have the same format regardless of the channel.
+    1. `website-history`: the history file of the official website.
+    2. `website`: the real-time file of the official website.
+    3. `mobile`: the mobile notification channel of the official app.
+    4. `tzevaadom`: the notification channel of [tzevaadom.co.il](https://www.tzevaadom.co.il/).
+    5. `synthetic`: synthetic records generated via custom actions (e.g. [synthetic alert](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.synthetic_alert) and [manual event end](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.manual_event_end)).
+
+#### Additional Sensors
 
 Additional sensor entities can be created and managed using the [`add_sensor`](#add_sensor), [`remove_sensor`](#remove_sensor), and [`edit_sensor`](#edit_sensor) actions described in the [Actions](#actions) section.
 
-## Event Entity
+#### Event Entity
 
 `event.oref_alert` is an additional entity which can be used to get the messages. There are 3 type of events: `pre_alert`, `alert` and `end`.
 
 *Note: this sensor is not created when the configuration contains multiple areas or a district. It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the action `oref_alert.add_sensor`.*
 
-## Binary Sensor
+#### Binary Sensor
 
 `binary_sensor.oref_alert` is `on` when there is an active alert in the Home area.
 
@@ -182,11 +166,11 @@ Additional sensor entities can be created and managed using the [`add_sensor`](#
 | `pre_alert` support | ❌ Not supported (`pre_alert` is reported as `off`) | ✅ Supported |
 | Multiple areas | ✅ Supported — state becomes `on` if **any area** has an active alert | ❌ Not supported |
 
-## All Areas Sensor
+#### All Areas Sensor
 
 `binary_sensor.oref_alert_all_areas` is an additional sensor monitoring any active alert in the country. The sensor is `on` when there is one or more active alerts in Israel.
 
-## Binary Sensors Attributes
+#### Binary Sensors Attributes
 
 Binary sensors have the following attributes:
 1. `Areas`: the list of areas provided by the user.
@@ -195,7 +179,7 @@ Binary sensors have the following attributes:
 4. `Country active alerts`: all active alerts in Israel.
 5. `Country updates`: the updates in Israel over the last 5 minutes.
 
-## Time To Shelter Sensors
+#### Time To Shelter Sensors
 
 The integration creates an additional set of sensors which monitor the time to shelter for a specific area. The ID of the entity is similar to the corresponding binary sensor, with the suffix of `_time_to_shelter`. For example, `sensor.oref_alert_time_to_shelter`. When there is a new alert in the area, the `state` of the sensor is set according to the instructions of Pikud Haoref for the selected area (e.g. 90 seconds in the middle of Israel). The `state` of the sensor decrements as time passes, and it becomes `unknown` once it reaches -60 seconds (one minute past due). The sensor has the following extra attributes:
 1. `Area`: the name of the area.
@@ -205,7 +189,7 @@ The integration creates an additional set of sensors which monitor the time to s
 
 *Note: this sensor is not created when the configuration contains multiple areas or a district. It's possible in such a case to create an additional sensor configuration for the specific area of interest by using the action `oref_alert.add_sensor`.*
 
-## Geo Location Entities
+#### Geo Location Entities
 
 Geo-location entities are created for every active alert in Israel (regardless of the selected areas). These entities exist while the corresponding alert is active. The state of the entity is the distance in kilometers from HA home's coordinate. In addition, each entity has the following attributes:
 1. `friendly_name`: alert's area
@@ -221,7 +205,7 @@ Geo-location entities are created for every active alert in Israel (regardless o
 
 These entities provide the data that powers the map card described above.
 
-## Home Assistant Events
+### Home Assistant Events
 
 A new event is fired on HA bus for any new alert. Here are 2 examples of such an events:
 
@@ -257,7 +241,7 @@ data:
   source: tzevaadom
 ```
 
-The [`oref_alert` Triggers](#oref_alert-triggers) above are built on this event; see the [Mobile Notifications: Detailed Alerts](#detailed-alerts) section for an example. The raw event is still there for automations that need it directly (e.g. `trigger: event` / `condition: template`).
+The [Automation Triggers](#automation-triggers) above are built on this event; see the [Mobile Notifications: Detailed Alerts](#detailed-alerts) section for an example. The raw event is still there for automations that need it directly (e.g. `trigger: event` / `condition: template`).
 
 For backward compatibility, events are also fired on `oref_alert_event` and `oref_alert_update_event` for alert and update, respectively. Here is an example of such an update event:
 
@@ -276,33 +260,33 @@ data:
   source: website
 ```
 
-## Actions
+### Actions
 
-### `add_sensor`
+#### `add_sensor`
 
 Creates an additional sensor entity for a custom set of areas. The selected areas can be different (non-overlapping) from the primary entity.
 
 [![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.add_sensor)
 
-### `remove_sensor`
+#### `remove_sensor`
 
 Deletes an additional sensor entity.
 
 [![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.remove_sensor)
 
-### `edit_sensor`
+#### `edit_sensor`
 
 Edits an additional sensor by adding or removing areas.
 
 [![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.edit_sensor)
 
-### `synthetic_alert`
+#### `synthetic_alert`
 
 Useful for testing — creates a synthetic alert that disappears after the specified number of seconds (unlike a regular alert which expires after 24 hours).
 
 [![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.synthetic_alert)
 
-### `manual_event_end`
+#### `manual_event_end`
 
 Marks active alerts as ended manually (title: `האירוע סומן כהסתיים ידנית`). The optional `area` field limits the action to specific areas.
 
@@ -316,7 +300,7 @@ data:
     - קריית שמונה
 ```
 
-### `areas_status`
+#### `areas_status`
 
 Returns the current areas whose status is `pre_alert` or `alert`. The response is keyed by area name, and each area contains the published fields: `area`, `home_distance`, `latitude`, `longitude`, `category`, `title`, `icon`, `emoji`, `district`, `channel`, `type`, and `date`.
 
@@ -358,22 +342,22 @@ Example response:
   type: alert
 ```
 
-### `last_update`
+#### `last_update`
 
 Returns `last_update` (the last time any area's status was changed) and `version` (the integration's version). The map card uses these values to decide whether to re-render or force a page reload after an integration update.
 
-## Template Functions
+### Template Functions
 
 The integration adds the following template helper functions:
 
-### `oref_alerts`
+#### `oref_alerts`
 
 The historical alerts (last 24h), sorted from newest to oldest. Each item contains:
 `date`, `area`, `title`, `icon`, `emoji`, `category`, `district`, `home_distance`, `latitude`, `longitude`, `channel`.
 
 `{{ oref_alerts | list }}`
 
-### `oref_areas`
+#### `oref_areas`
 
 Returns the list of areas. Districts are not included by default. It's possible to set the 1st parameter (`groups`) to `True` to include them.
 
@@ -381,7 +365,7 @@ Returns the list of areas. Districts are not included by default. It's possible 
 
 `{{ oref_areas(True) }}`
 
-### `oref_district`
+#### `oref_district`
 
 Gets an area name and returns its district. If no mapping is found, the return value is the input area name. Can be used also as a filter.
 
@@ -389,7 +373,7 @@ Gets an area name and returns its district. If no mapping is found, the return v
 
 `{{ ['area name'] | map('oref_district') }}`
 
-### `oref_coordinate`
+#### `oref_coordinate`
 
 Gets an area name and returns the coordinate of the city center as a tuple (lat, lon). If no mapping is found, the return value is None. Can be used also as a filter.
 
@@ -397,7 +381,7 @@ Gets an area name and returns the coordinate of the city center as a tuple (lat,
 
 `{{ 'area name' | oref_coordinate }}`
 
-### `oref_shelter`
+#### `oref_shelter`
 
 Gets an area name and returns its time to shelter (seconds). If no mapping is found, the return value is None. Can be used also as a filter.
 
@@ -405,7 +389,7 @@ Gets an area name and returns its time to shelter (seconds). If no mapping is fo
 
 `{{ 'area name' | oref_shelter }}`
 
-### `oref_icon`
+#### `oref_icon`
 
 Gets a category (int) and returns the corresponding MDI icon (has "mdi:" prefix). If no mapping is found, the return value is "mdi:alert". Can be used also as a filter.
 
@@ -413,7 +397,7 @@ Gets a category (int) and returns the corresponding MDI icon (has "mdi:" prefix)
 
 `{{ 2 | oref_icon == 'mdi:airplane-alert' }}`
 
-### `oref_emoji`
+#### `oref_emoji`
 
 Gets a category (int) and returns the corresponding emoji. If no mapping is found, the return value is "🚨". Can be used also as a filter.
 
@@ -421,7 +405,7 @@ Gets a category (int) and returns the corresponding emoji. If no mapping is foun
 
 `{{ [2] | map('oref_emoji') | list == ['✈️'] }}`
 
-### `oref_distance`
+#### `oref_distance`
 
 Gets an area name and measures the distance between the area's coordinate and home, an entity, or coordinate (similar to the built-in [`distance`](https://www.home-assistant.io/template-functions/distance/) function). The unit of measurement (kilometers or miles) depends on the system’s configuration settings. If the area name is not found, the return value is None. Can be used also as a filter. Unavailable for [limited templates](https://www.home-assistant.io/docs/templating/where-to-use/#limited-templates).
 
@@ -429,7 +413,7 @@ Gets an area name and measures the distance between the area's coordinate and ho
 
 `{{ ['area name'] | map('oref_distance', 'device_tracker.amits_iphone') }}`
 
-### `oref_test_distance`
+#### `oref_test_distance`
 
 Gets an area name and a distance and other optional parameters that will be passed to `oref_distance`. Returns True if the distance is less than or equals to the distance. If the area name is not found, the return value is False. Can be used also as a test. Unavailable for [limited templates](https://www.home-assistant.io/docs/templating/where-to-use/#limited-templates).
 
@@ -437,7 +421,7 @@ Gets an area name and a distance and other optional parameters that will be pass
 
 `{{ ['area name'] | select('oref_test_distance', 5) }}`
 
-### `oref_polygon`
+#### `oref_polygon`
 
 Gets an area name and returns the polygon of the area's perimeter. If the area name is not found, the return value is None. Can be used also as a filter.
 
@@ -445,7 +429,7 @@ Gets an area name and returns the polygon of the area's perimeter. If the area n
 
 `{{ 'area name' | oref_polygon }}`
 
-### `oref_find_area`
+#### `oref_find_area`
 
 Returns area by coordinate (lat, lon). The coordinate can be anywhere inside the area's polygon. If no area is found, the return value is None.  Can be used also as a filter. Unavailable for [limited templates](https://www.home-assistant.io/docs/templating/where-to-use/#limited-templates).
 
@@ -455,13 +439,11 @@ Returns area by coordinate (lat, lon). The coordinate can be anywhere inside the
 
 `{{ oref_find_area(state_attr('device_tracker.amits_iphone', 'latitude'), state_attr('device_tracker.amits_iphone', 'longitude')) }}`
 
-## Usages
-
-The basic usage is to trigger an automation rule when `sensor.oref_alert` state is changed. Some ideas for the `actions` section can be: play a song (can be less stressful when choosing the right song and setting the volume properly), open the lights and TV in the shelter, etc'.
+### Advanced Examples
 
 Below are a few more examples:
 
-### Displaying States
+#### Displaying States
 
 Below is an example of a card with the main entities and color coding of the icons.
 
@@ -495,7 +477,7 @@ Below is an example of a card with the main entities and color coding of the ico
 
 Note that is requires the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.
 
-### Presenting Active Alerts in Israel
+#### Presenting Active Alerts in Israel
 
 Here is a [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting all active alerts sorted by their distance from HA's home coordinate (the list of categories is based on [this file](https://www.oref.org.il/alerts/alertCategories.json)):
 
@@ -524,7 +506,7 @@ card_mod:
 
 <kbd><img width="310" alt="image" src="https://github.com/user-attachments/assets/21ad82ea-6ff6-43c3-8c57-a1f6b2785498"></kbd>
 
-### Presenting Last 100 Alerts
+#### Presenting Last 100 Alerts
 
 Here is a [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting the last 100 alerts (in the last 24 hours):
 
@@ -552,7 +534,7 @@ card_mod:
     }
 ```
 
-### Presenting Alerts in the Home's Area
+#### Presenting Alerts in the Home's Area
 
 Here is a [markdown card](https://www.home-assistant.io/dashboards/markdown/) for presenting the home's alerts (in the last 24 hours):
 
@@ -574,11 +556,11 @@ card_mod:
     }
 ```
 
-### Mobile Notifications
+#### Mobile Notifications
 
-#### Combined Alerts
+##### Combined Alerts
 
-Here is an automation rule for getting mobile notifications for new alerts, using the `oref_alert.area` trigger (see [`oref_alert` Triggers](#oref_alert-triggers) above) so `trigger.records` already holds only the newly-added alerts, with no diffing against the previous state required:
+Here is an automation rule for getting mobile notifications for new alerts, using the `oref_alert.area` trigger (see [Automation Triggers](#automation-triggers) above) so `trigger.records` already holds only the newly-added alerts, with no diffing against the previous state required:
 
 ```yaml
 alias: Oref Alert Country Notifications
@@ -613,7 +595,7 @@ triggers:
     distance: 10
 ```
 
-#### Detailed Alerts
+##### Detailed Alerts
 
 This is a different approach where only alerts within 30km from home generate notifications, but each notification has additional information (and being sent separately). `repeat.for_each` sends one notification per record, since a single trigger firing can bundle more than one:
 
@@ -637,7 +619,7 @@ mode: queued
 
 <img width="400" src="https://github.com/user-attachments/assets/3262dd19-0f65-44f4-8983-270da96200e5">
 
-#### Custom Sound
+##### Custom Sound
 
 It's possible to set a custom sound for a specific mobile app push notification. Here is an iOS example:
 
@@ -653,7 +635,7 @@ data:
 
 Additional information (for Android and iOS) can be found [here](https://companion.home-assistant.io/docs/notifications/notification-sounds).
 
-#### Custom Status Bar Icon
+##### Custom Status Bar Icon
 
 As it is possible to set a custom notification icon on Android devices, the `oref_icon` helper function, which returns an MDI icon, can be used:
 
@@ -668,7 +650,7 @@ data:
 
 Additional information (for Android only) can be found [here](https://companion.home-assistant.io/docs/notifications/notifications-basic/#notification-status-bar-icon).
 
-#### Critical Notifications
+##### Critical Notifications
 
 For the notifications to be displayed immediately on the screen after dispatching, it is recommended to set them as critical.
 
@@ -688,7 +670,7 @@ This is useful as by default, notifications may not ring the device when it is s
 
 Additional information (for Android and iOS) can be found [here](https://companion.home-assistant.io/docs/notifications/critical-notifications).
 
-### Time To Shelter Countdown
+#### Time To Shelter Countdown
 
 Here is another advanced usage for counting down (every 5 seconds) the time to shelter:
 ```yaml
@@ -710,7 +692,7 @@ max: 100
 mode: parallel
 ```
 
-## Removing the Integration
+### Removing the Integration
 
 1. **Delete the configuration:**
    - Open the integration page ([my-link](https://my.home-assistant.io/redirect/integration/?domain=oref_alert)), click the 3‑dot menu (⋮), and select **Delete**.
