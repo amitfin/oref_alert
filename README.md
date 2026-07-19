@@ -74,24 +74,11 @@ Automations can respond to threats by playing an announcement or calming music, 
 
 #### Automation Triggers
 
-The integration provides three dedicated triggers with `type` filtering:
+The integration provides three dedicated triggers:
 
-```yaml
-triggers:
-  - trigger: oref_alert.home
-    type: alert # a single value or a list of pre_alert/alert/end; required, defaults to alert
+<img width="957" height="425" alt="image" src="https://github.com/user-attachments/assets/ccca81dd-6437-4ec7-9e6a-b4605db11e7e" />
 
-  - trigger: oref_alert.area
-    type: alert
-    areas: תל אביב - מרכז העיר # a single area/district name, or a list of them; omitted matches any area
-
-  - trigger: oref_alert.distance
-    type: alert
-    distance: 5 # kilometers or miles, depending on the system's unit settings; required, defaults to 5
-    location: zone.home # a zone, device tracker, or person entity; required, defaults to zone.home
-```
-
-`trigger: oref_alert.home` fires for records matching the areas configured on the integration. `trigger: oref_alert.area` fires for records matching the selected `areas` (any area in the country when omitted). `trigger: oref_alert.distance` fires for records within `distance` of `location`'s current position. Note that the record's distance is calculated from the alerted area's city center, not from the closest point of the area's polygon, so it can be a bit off for large areas.
+`oref_alert.home` fires for records matching the areas configured on the integration. `oref_alert.area` fires for records matching the selected `areas` (any area in the country when omitted). `oref_alert.distance` fires for records within `distance` of `location`'s current position. Note that the record's distance is calculated from the alerted area's city center, not from the closest point of the area's polygon, so it can be a bit off for large areas.
 
 `trigger.records` is available for the rest of the automation, containing the matching records. The list of fields for each record can be found [here](#home-assistant-events).
 
@@ -103,17 +90,9 @@ Note: if `pre_alert` doesn't change to `alert` within 20 minutes, the integratio
 
 The integration also provides two dedicated conditions, checking an area's *current* status:
 
-```yaml
-conditions:
-  - condition: oref_alert.home
-    state: alert # a single value or a list of ok/pre_alert/alert; required, defaults to alert
+<img width="638" height="341" alt="image" src="https://github.com/user-attachments/assets/5506e7a8-973a-400a-9482-1862200c796a" />
 
-  - condition: oref_alert.area
-    state: alert
-    areas: תל אביב - מרכז העיר # a single area/district name, or a list of them; omitted matches any area
-```
-
-`condition: oref_alert.home` passes when an area configured on the integration currently has one of the selected `state`s. `condition: oref_alert.area` passes when one of the selected `areas` (any area in the country when omitted) currently has one of the selected `state`s. An area with no record at all, or whose most recent record has ended, is `ok`.
+`oref_alert.home` passes when an area configured on the integration currently has one of the selected `state`s. `oref_alert.area` passes when one of the selected `areas` (any area in the country when omitted) currently has one of the selected `state`s. An area with no record at all, or whose most recent record has ended, is `ok`.
 
 ## Advanced Usage
 
