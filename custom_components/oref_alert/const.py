@@ -8,6 +8,8 @@ import zoneinfo
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Final, TypedDict
 
+from homeassistant.const import STATE_OK
+
 if TYPE_CHECKING:
     from datetime import datetime
 
@@ -29,6 +31,7 @@ ATTR_RECORD: Final = "record"
 ATTR_RECORDS: Final = "records"
 ATTR_SELECTED_AREAS_ACTIVE_ALERTS: Final = "selected_areas_active_alerts"
 ATTR_SELECTED_AREAS_UPDATES: Final = "selected_areas_updates"
+ATTR_STATE: Final = "state"
 ATTR_TIME_TO_SHELTER: Final = "time_to_shelter"
 ATTR_TYPE: Final = "type"
 
@@ -95,6 +98,14 @@ class RecordType(enum.StrEnum):
     PRE_ALERT = "pre_alert"
     ALERT = "alert"
     END = "end"
+
+
+class AreaStatus(enum.StrEnum):
+    """An area's current computed status (as opposed to an incoming record's type)."""
+
+    OK = STATE_OK
+    PRE_ALERT = RecordType.PRE_ALERT.value
+    ALERT = RecordType.ALERT.value
 
 
 class PublishedData(TypedDict):

@@ -9,6 +9,13 @@ from typing import TYPE_CHECKING, Any
 from pytest_homeassistant_custom_component.common import load_fixture
 
 from custom_components.oref_alert.areas_checker import CITIES_MIX_URL
+from custom_components.oref_alert.const import (
+    CATEGORY_FIELD,
+    CONF_AREA,
+    CONF_DURATION,
+    DOMAIN,
+    SYNTHETIC_ALERT_ACTION,
+)
 from custom_components.oref_alert.coordinator import (
     OREF_ALERTS_URL,
     OREF_HISTORY2_URL,
@@ -34,6 +41,19 @@ async def refresh_coordinator(hass: HomeAssistant, config_id: str) -> None:
     config: OrefAlertConfigEntry | None = hass.config_entries.async_get_entry(config_id)
     assert config is not None
     await config.runtime_data.coordinator.async_refresh()
+
+
+async def fire_synthetic_alert(
+    hass: HomeAssistant, area: str, category: int = 1
+) -> None:
+    """Fire a synthetic alert and let it propagate to the coordinator."""
+    await hass.services.async_call(
+        DOMAIN,
+        SYNTHETIC_ALERT_ACTION,
+        {CONF_AREA: area, CONF_DURATION: 20, CATEGORY_FIELD: category},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
 
 
 def _mock_website_urls(

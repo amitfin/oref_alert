@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Any, ClassVar, cast, override
+from typing import TYPE_CHECKING, Any, ClassVar, Final, cast, override
 
 import voluptuous as vol
 from homeassistant.const import (
@@ -14,12 +14,13 @@ from homeassistant.const import (
     UnitOfLength,
 )
 from homeassistant.core import callback
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.automation import move_top_level_schema_fields_to_options
 from homeassistant.helpers.location import has_location
 from homeassistant.helpers.trigger import Trigger, TriggerConfig
 from homeassistant.util.location import distance as calculate_distance
 
-from .area_utils import expand_areas_and_groups
+from .area_utils import AREAS_AND_GROUPS_WITHOUT_ALL_AREAS, expand_areas_and_groups
 from .const import (
     ATTR_AREA,
     ATTR_DISTANCE,
@@ -27,13 +28,9 @@ from .const import (
     ATTR_TYPE,
     CONF_AREAS,
     OREF_ALERT_RECORD_EVENT,
+    RecordType,
 )
-from .helpers import (
-    AREA_TRIGGER_OPTIONS_SCHEMA_DICT,
-    DISTANCE_TRIGGER_OPTIONS_SCHEMA_DICT,
-    TYPE_OPTION_SCHEMA,
-    home_areas,
-)
+from .helpers import find_config_entry
 
 if TYPE_CHECKING:
     import asyncio
@@ -45,6 +42,38 @@ if TYPE_CHECKING:
         TriggerNotTriggeredReporter,
     )
     from homeassistant.helpers.typing import ConfigType
+
+DEFAULT_DISTANCE: Final = 5
+DEFAULT_LOCATION: Final = "zone.home"
+LOCATION_DOMAINS: Final = ["zone", "device_tracker", "person"]
+
+TYPE_OPTION_SCHEMA: Final[dict[vol.Marker, Any]] = {
+    vol.Optional(ATTR_TYPE, default=RecordType.ALERT): vol.All(
+        cv.ensure_list, [vol.Coerce(RecordType)]
+    ),
+}
+
+AREA_TRIGGER_OPTIONS_SCHEMA_DICT: Final[dict[vol.Marker, Any]] = {
+    **TYPE_OPTION_SCHEMA,
+    vol.Optional(CONF_AREAS): vol.All(
+        cv.ensure_list, [vol.In(AREAS_AND_GROUPS_WITHOUT_ALL_AREAS)]
+    ),
+}
+
+DISTANCE_TRIGGER_OPTIONS_SCHEMA_DICT: Final[dict[vol.Marker, Any]] = {
+    **TYPE_OPTION_SCHEMA,
+    vol.Required(ATTR_DISTANCE, default=DEFAULT_DISTANCE): cv.positive_float,
+    vol.Required(CONF_LOCATION, default=DEFAULT_LOCATION): cv.entity_domain(
+        LOCATION_DOMAINS
+    ),
+}
+
+
+def _home_areas(hass: HomeAssistant) -> list[str]:
+    """Return the areas configured on the integration, expanded."""
+    if (config_entry := find_config_entry(hass)) is None:
+        return []
+    return expand_areas_and_groups(config_entry.options[CONF_AREAS])
 
 
 def _attach_record_batch_listener(
@@ -164,7 +193,7 @@ class HomeAlertTrigger(_RecordTrigger):
     @override
     def _extra_matches(self, data: Mapping[str, Any]) -> bool:
         """Test if the record matches the areas configured on the integration."""
-        return data.get(ATTR_AREA) in home_areas(self._hass)
+        return data.get(ATTR_AREA) in _home_areas(self._hass)
 
 
 class AreaAlertTrigger(_RecordTrigger):

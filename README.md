@@ -147,6 +147,22 @@ All three fire once per update, with every new record matching the `type` filter
 
 It's not recommended to add more than one of these triggers to the same automation: each trigger listens independently, so a single record matching more than one of them (e.g. an area that's both in `oref_alert.area`'s `areas` and within `oref_alert.distance`'s radius) runs the automation's actions once per matching trigger instead of once.
 
+### `oref_alert` Conditions
+
+The integration also provides two dedicated conditions, checking an area's *current* status:
+
+```yaml
+conditions:
+  - condition: oref_alert.home
+    state: alert # a single value or a list of ok/pre_alert/alert; required, defaults to alert
+
+  - condition: oref_alert.area
+    state: alert
+    areas: תל אביב - מרכז העיר # a single area/district name, or a list of them; omitted matches any area
+```
+
+`condition: oref_alert.home` passes when an area configured on the integration currently has one of the selected `state`s. `condition: oref_alert.area` passes when one of the selected `areas` (any area in the country when omitted) currently has one of the selected `state`s. An area with no record at all, or whose most recent record has ended, is `ok`.
+
 ## Additional Sensors
 
 Additional sensor entities can be created and managed using the [`add_sensor`](#add_sensor), [`remove_sensor`](#remove_sensor), and [`edit_sensor`](#edit_sensor) actions described in the [Actions](#actions) section.

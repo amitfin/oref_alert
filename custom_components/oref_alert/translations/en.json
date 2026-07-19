@@ -209,12 +209,45 @@
             }
         }
     },
+    "conditions": {
+        "home": {
+            "name": "Oref Alert at home",
+            "description": "Passes when the home's area matches the selected state(s).",
+            "fields": {
+                "state": {
+                    "name": "State",
+                    "description": "State(s) to match."
+                }
+            }
+        },
+        "area": {
+            "name": "Oref Alert in area",
+            "description": "Passes when the selected areas match the selected state(s).",
+            "fields": {
+                "state": {
+                    "name": "State",
+                    "description": "State(s) to match."
+                },
+                "areas": {
+                    "name": "Areas",
+                    "description": "Areas and/or districts to match (Hebrew only). Omitted matches any area."
+                }
+            }
+        }
+    },
     "selector": {
         "record_type": {
             "options": {
                 "pre_alert": "Pre Alert",
                 "alert": "Alert",
                 "end": "End"
+            }
+        },
+        "area_status": {
+            "options": {
+                "ok": "OK",
+                "pre_alert": "Pre Alert",
+                "alert": "Alert"
             }
         }
     },

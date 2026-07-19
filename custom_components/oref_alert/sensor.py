@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Final
 import homeassistant.util.dt as dt_util
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor.const import SensorDeviceClass
-from homeassistant.const import STATE_OK, Platform, UnitOfTime
+from homeassistant.const import Platform, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import event as event_helper
 from homeassistant.util import slugify
@@ -23,10 +23,12 @@ from .const import (
     CONF_SENSORS,
     OREF_ALERT_UNIQUE_ID,
     TIME_TO_SHELTER_ID_SUFFIX,
+    AreaStatus,
     RecordAndMetadata,
     RecordType,
 )
 from .entity import OrefAlertCoordinatorEntity
+from .helpers import record_status
 from .metadata.area_to_migun_time import AREA_TO_MIGUN_TIME
 from .metadata.areas import AREAS
 
@@ -197,7 +199,7 @@ class OrefAlertStatusSensor(OrefAlertCoordinatorEntity, SensorEntity):
         """Initialize object with defaults."""
         super().__init__(config_entry)
         self._area: str = area
-        self._attr_options = [STATE_OK, RecordType.PRE_ALERT, RecordType.ALERT]
+        self._attr_options = list(AreaStatus)
         if not name:
             self.use_device_name = True
             self._attr_unique_id = OREF_ALERT_UNIQUE_ID
@@ -211,15 +213,7 @@ class OrefAlertStatusSensor(OrefAlertCoordinatorEntity, SensorEntity):
     @property
     def native_value(self) -> str:
         """Return the state value."""
-        if (
-            record := self.coordinator.data.areas.get(self._area)
-        ) is not None and record.record_type in (
-            RecordType.PRE_ALERT,
-            RecordType.ALERT,
-        ):
-            return str(record.record_type)
-
-        return STATE_OK
+        return str(record_status(self.coordinator.data.areas.get(self._area)))
 
     @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:

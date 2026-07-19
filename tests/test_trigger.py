@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 import voluptuous as vol
@@ -24,9 +24,11 @@ from custom_components.oref_alert.const import (
 )
 from custom_components.oref_alert.trigger import _attach_record_batch_listener
 
-from .utils import mock_urls
+from .utils import fire_synthetic_alert, mock_urls
 
 if TYPE_CHECKING:
+    import asyncio
+
     from homeassistant.core import HomeAssistant
     from pytest_homeassistant_custom_component.test_util.aiohttp import (
         AiohttpClientMocker,
@@ -78,19 +80,6 @@ async def _async_setup_automation(hass: HomeAssistant, trigger: dict[str, Any]) 
     return calls
 
 
-async def _async_fire_synthetic_alert(
-    hass: HomeAssistant, area: str, category: int = 1
-) -> None:
-    """Fire a synthetic alert and let it propagate to the bus."""
-    await hass.services.async_call(
-        DOMAIN,
-        SYNTHETIC_ALERT_ACTION,
-        {CONF_AREA: area, CONF_DURATION: 20, CATEGORY_FIELD: category},
-        blocking=True,
-    )
-    await hass.async_block_till_done()
-
-
 async def _async_fire_synthetic_alerts(
     hass: HomeAssistant, areas: list[str], category: int = 1
 ) -> None:
@@ -115,7 +104,7 @@ async def test_home_trigger_matching_area(
     config_id = await async_setup(hass)
     calls = await _async_setup_automation(hass, {"trigger": "oref_alert.home"})
 
-    await _async_fire_synthetic_alert(hass, "בארי")
+    await fire_synthetic_alert(hass, "בארי")
 
     assert len(calls) == 1
     assert calls[0].data["areas"] == ["בארי"]
@@ -132,7 +121,7 @@ async def test_home_trigger_non_matching_area(
     config_id = await async_setup(hass)
     calls = await _async_setup_automation(hass, {"trigger": "oref_alert.home"})
 
-    await _async_fire_synthetic_alert(hass, "תל אביב - מרכז העיר")
+    await fire_synthetic_alert(hass, "תל אביב - מרכז העיר")
 
     assert len(calls) == 0
 
@@ -147,7 +136,7 @@ async def test_home_trigger_default_type_is_alert_only(
     config_id = await async_setup(hass)
     calls = await _async_setup_automation(hass, {"trigger": "oref_alert.home"})
 
-    await _async_fire_synthetic_alert(hass, "בארי", category=14)
+    await fire_synthetic_alert(hass, "בארי", category=14)
 
     assert len(calls) == 0
 
@@ -164,7 +153,7 @@ async def test_home_trigger_explicit_type(
         hass, {"trigger": "oref_alert.home", "type": "pre_alert"}
     )
 
-    await _async_fire_synthetic_alert(hass, "בארי", category=14)
+    await fire_synthetic_alert(hass, "בארי", category=14)
 
     assert len(calls) == 1
     assert calls[0].data["types"] == ["pre_alert"]
@@ -195,7 +184,7 @@ async def test_area_trigger_matching_area(
         hass, {"trigger": "oref_alert.area", "areas": "בארי"}
     )
 
-    await _async_fire_synthetic_alert(hass, "בארי")
+    await fire_synthetic_alert(hass, "בארי")
 
     assert len(calls) == 1
     assert calls[0].data["areas"] == ["בארי"]
@@ -214,7 +203,7 @@ async def test_area_trigger_non_matching_area(
         hass, {"trigger": "oref_alert.area", "areas": "בארי"}
     )
 
-    await _async_fire_synthetic_alert(hass, "תל אביב - מרכז העיר")
+    await fire_synthetic_alert(hass, "תל אביב - מרכז העיר")
 
     assert len(calls) == 0
 
@@ -230,7 +219,7 @@ async def test_area_trigger_any_area_when_omitted(
     calls = await _async_setup_automation(hass, {"trigger": "oref_alert.area"})
 
     # Not one of the integration's configured areas, proving there's no fallback to it.
-    await _async_fire_synthetic_alert(hass, "תל אביב - מרכז העיר")
+    await fire_synthetic_alert(hass, "תל אביב - מרכז העיר")
 
     assert len(calls) == 1
     assert calls[0].data["areas"] == ["תל אביב - מרכז העיר"]
@@ -248,7 +237,7 @@ async def test_area_trigger_default_type_is_alert_only(
         hass, {"trigger": "oref_alert.area", "areas": "בארי"}
     )
 
-    await _async_fire_synthetic_alert(hass, "בארי", category=14)
+    await fire_synthetic_alert(hass, "בארי", category=14)
 
     assert len(calls) == 0
 
@@ -265,7 +254,7 @@ async def test_area_trigger_explicit_type(
         hass, {"trigger": "oref_alert.area", "areas": "בארי", "type": "pre_alert"}
     )
 
-    await _async_fire_synthetic_alert(hass, "בארי", category=14)
+    await fire_synthetic_alert(hass, "בארי", category=14)
 
     assert len(calls) == 1
     assert calls[0].data["types"] == ["pre_alert"]
@@ -332,7 +321,7 @@ async def test_distance_trigger_within_distance(
     config_id = await async_setup(hass)
     calls = await _async_setup_automation(hass, {"trigger": "oref_alert.distance"})
 
-    await _async_fire_synthetic_alert(hass, "בארי")
+    await fire_synthetic_alert(hass, "בארי")
 
     assert len(calls) == 1
     assert calls[0].data["areas"] == ["בארי"]
@@ -351,7 +340,7 @@ async def test_distance_trigger_outside_distance(
     config_id = await async_setup(hass)
     calls = await _async_setup_automation(hass, {"trigger": "oref_alert.distance"})
 
-    await _async_fire_synthetic_alert(hass, "בארי")
+    await fire_synthetic_alert(hass, "בארי")
 
     assert len(calls) == 0
 
@@ -371,7 +360,7 @@ async def test_distance_trigger_default_type_is_alert_only(
     config_id = await async_setup(hass)
     calls = await _async_setup_automation(hass, {"trigger": "oref_alert.distance"})
 
-    await _async_fire_synthetic_alert(hass, "בארי", category=14)
+    await fire_synthetic_alert(hass, "בארי", category=14)
 
     assert len(calls) == 0
 
@@ -393,7 +382,7 @@ async def test_distance_trigger_explicit_type(
         hass, {"trigger": "oref_alert.distance", "type": "pre_alert"}
     )
 
-    await _async_fire_synthetic_alert(hass, "בארי", category=14)
+    await fire_synthetic_alert(hass, "בארי", category=14)
 
     assert len(calls) == 1
     assert calls[0].data["types"] == ["pre_alert"]
@@ -422,7 +411,7 @@ async def test_distance_trigger_explicit_location_and_distance(
         },
     )
 
-    await _async_fire_synthetic_alert(hass, "בארי")
+    await fire_synthetic_alert(hass, "בארי")
 
     assert len(calls) == 1
 
@@ -440,7 +429,7 @@ async def test_distance_trigger_missing_location_entity(
         {"trigger": "oref_alert.distance", "location": "device_tracker.missing"},
     )
 
-    await _async_fire_synthetic_alert(hass, "בארי")
+    await fire_synthetic_alert(hass, "בארי")
 
     assert len(calls) == 0
 
@@ -500,11 +489,13 @@ async def test_batch_listener_cancels_pending_flush_on_unsub(
 ) -> None:
     """Test unsub cancels a not-yet-run flush so it can't fire stale."""
     calls: list[dict[str, Any]] = []
-    unsub = _attach_record_batch_listener(
-        hass,
-        lambda _data: True,
-        lambda payload, _description, _context=None: calls.append(payload),
-    )
+
+    def run_action(*args: Any, **_kwargs: Any) -> asyncio.Task[Any]:
+        """Record the payload, matching the TriggerActionRunner protocol."""
+        calls.append(args[0])
+        return cast("asyncio.Task[Any]", None)
+
+    unsub = _attach_record_batch_listener(hass, lambda _data: True, run_action)
 
     hass.bus.async_fire(OREF_ALERT_RECORD_EVENT, {"area": "בארי", "type": "alert"})
     unsub()

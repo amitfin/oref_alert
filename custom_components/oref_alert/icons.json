@@ -54,5 +54,13 @@
     "distance": {
       "trigger": "mdi:map-marker-distance"
     }
+  },
+  "conditions": {
+    "home": {
+      "condition": "mdi:home-alert-outline"
+    },
+    "area": {
+      "condition": "mdi:map-marker-alert-outline"
+    }
   }
 }

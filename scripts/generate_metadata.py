@@ -38,6 +38,7 @@ SEGMENT_TO_AREA_OUTPUT = "segment_to_area.py"
 TZEVAADOM_ID_TO_AREA_OUTPUT = "tzevaadom_id_to_area.py"
 SERVICES_YAML = "custom_components/oref_alert/services.yaml"
 TRIGGERS_YAML = "custom_components/oref_alert/triggers.yaml"
+CONDITIONS_YAML = "custom_components/oref_alert/conditions.yaml"
 TEST_AREAS_FIXTURE = "tests/fixtures/GetCitiesMix.json"
 DISTRICTS_URL = "https://alerts-history.oref.org.il/Shared/Ajax/GetDistricts.aspx"
 SEGMENTS_URL = "https://dist-android.meser-hadash.org.il/smart-dist/services/anonymous/segments/android?instance=1544803905&locale=iw_IL"
@@ -367,6 +368,19 @@ class OrefMetadata:
             encoding="utf-8",
         ) as output:
             yaml.dump(triggers, output, sort_keys=False, indent=2, allow_unicode=True)
+
+        with (self._root_directory / CONDITIONS_YAML).open(
+            encoding="utf-8",
+        ) as conditions_yaml:
+            conditions = yaml.load(conditions_yaml, Loader=yaml.SafeLoader)
+        conditions["area"]["fields"]["areas"]["selector"]["select"]["options"] = (
+            areas_and_groups
+        )
+        with (self._root_directory / CONDITIONS_YAML).open(
+            "w",
+            encoding="utf-8",
+        ) as output:
+            yaml.dump(conditions, output, sort_keys=False, indent=2, allow_unicode=True)
 
         with (
             zipfile.ZipFile(

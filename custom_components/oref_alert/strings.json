@@ -209,12 +209,45 @@
             }
         }
     },
+    "conditions": {
+        "home": {
+            "name": "Oref Alert at home",
+            "description": "Passes when the home's area matches the selected state(s).",
+            "fields": {
+                "state": {
+                    "name": "State",
+                    "description": "State(s) to match."
+                }
+            }
+        },
+        "area": {
+            "name": "Oref Alert in area",
+            "description": "Passes when the selected areas match the selected state(s).",
+            "fields": {
+                "state": {
+                    "name": "State",
+                    "description": "State(s) to match."
+                },
+                "areas": {
+                    "name": "Areas",
+                    "description": "Areas and/or districts to match (Hebrew only). Omitted matches any area."
+                }
+            }
+        }
+    },
     "selector": {
         "record_type": {
             "options": {
                 "pre_alert": "[%key:component::oref_alert::entity::event::alert::state_attributes::event_type::state::pre_alert%]",
                 "alert": "[%key:component::oref_alert::entity::event::alert::state_attributes::event_type::state::alert%]",
                 "end": "[%key:component::oref_alert::entity::event::alert::state_attributes::event_type::state::end%]"
+            }
+        },
+        "area_status": {
+            "options": {
+                "ok": "[%key:component::oref_alert::entity::sensor::status::state::ok%]",
+                "pre_alert": "[%key:component::oref_alert::entity::sensor::status::state::pre_alert%]",
+                "alert": "[%key:component::oref_alert::entity::sensor::status::state::alert%]"
             }
         }
     },
