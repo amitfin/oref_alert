@@ -78,13 +78,19 @@ The integration provides three dedicated triggers:
 
 <img width="957" height="425" alt="image" src="https://github.com/user-attachments/assets/ccca81dd-6437-4ec7-9e6a-b4605db11e7e" />
 
-`oref_alert.home` fires for records matching the areas configured on the integration. `oref_alert.area` fires for records matching the selected `areas` (any area in the country when omitted). `oref_alert.distance` fires for records within `distance` of `location`'s current position. Note that the record's distance is calculated from the alerted area's city center, not from the closest point of the area's polygon, so it can be a bit off for large areas.
+All three triggers accept a `type` parameter — a single value or a list of `pre_alert`, `alert`, or `end` — that selects which record types fire the trigger (defaults to `alert`).
+
+- `oref_alert.home` fires for records matching the home's area, as configured on the integration.
+- `oref_alert.area` fires for records matching its `areas` parameter — a single area/district name or a list of them, matching any area in the country when omitted.
+- `oref_alert.distance` fires for records within `distance` (in kilometers or miles, depending on the system's unit settings; defaults to 5) of `location`'s current position — a zone, device tracker, or person entity that defaults to `zone.home`. Note that the record's distance is calculated from the alerted area's city center, not from the closest point of the area's polygon, so it can be a bit off for large areas.
+
+A trigger processes all records of an update together; otherwise, a single update covering multiple areas could fire the trigger more than once.
 
 `trigger.records` is available for the rest of the automation, containing the matching records. The list of fields for each record can be found [here](#home-assistant-events).
 
 It's not recommended to add more than one of these triggers to the same automation: each trigger listens independently, so a single record matching more than one of them (e.g. an area that's both in `oref_alert.area`'s `areas` and within `oref_alert.distance`'s radius) runs the automation's actions once per matching trigger instead of once.
 
-Note: if `pre_alert` doesn't change to `alert` within 20 minutes, the integration generates a synthetic `end` record for the area.
+Note: if `pre_alert` doesn't follow `alert` or `end` within 20 minutes, the integration generates a synthetic `end` record for the area.
 
 #### Automation Conditions
 
@@ -92,7 +98,10 @@ The integration also provides two dedicated conditions, checking an area's *curr
 
 <img width="638" height="341" alt="image" src="https://github.com/user-attachments/assets/5506e7a8-973a-400a-9482-1862200c796a" />
 
-`oref_alert.home` passes when an area configured on the integration currently has one of the selected `state`s. `oref_alert.area` passes when one of the selected `areas` (any area in the country when omitted) currently has one of the selected `state`s. An area with no record at all, or whose most recent record has ended, is `ok`.
+Both conditions accept a `state` parameter — a single value or a list of `ok`, `pre_alert`, or `alert` (defaults to `alert`) — listing the statuses that satisfy the condition.
+
+- `oref_alert.home` passes when the home's area, as configured on the integration, currently has one of the selected states.
+- `oref_alert.area` passes when one of its `areas` (a single area/district name or a list of them; any area in the country when omitted) currently has one of the selected states. An area with no record at all, or whose most recent record is `end`, has the `ok` state.
 
 ## Advanced Usage
 
