@@ -154,7 +154,7 @@ async def test_external_task_cancellation(hass: HomeAssistant) -> None:
     ],
     ids=("plain", "drill", "invalid area", "pre alert", "end", "no cities"),
 )
-async def test_message(  # noqa: PLR0913
+async def test_message(  # noqa: PLR0913, PLR0917
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,

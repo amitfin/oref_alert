@@ -128,14 +128,18 @@ async def load_oref_integration(
         ),
         ("{{ 'פתח תקווה' is oref_test_distance 3 }}", True),
         (
-            "{{ ['פתח תקווה', 'תל אביב - מרכז העיר'] | "
-            "select('oref_test_distance', 5, 32.072, 34.879) | list }}",
+            (
+                "{{ ['פתח תקווה', 'תל אביב - מרכז העיר'] | "
+                "select('oref_test_distance', 5, 32.072, 34.879) | list }}"
+            ),
             ["פתח תקווה"],
         ),
         ("{{ oref_find_area(32.072, 34.879) }}", "פתח תקווה"),
         (
-            "{{ [oref_coordinate('פתח תקווה'), (32.0798, 34.7772)] | "
-            "map('oref_find_area') | list }}",
+            (
+                "{{ [oref_coordinate('פתח תקווה'), (32.0798, 34.7772)] | "
+                "map('oref_find_area') | list }}"
+            ),
             ["פתח תקווה", "תל אביב - מרכז העיר"],
         ),
         ("{{ oref_find_area(31.507, 34.460) }}", None),
