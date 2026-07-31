@@ -155,9 +155,10 @@ class _RecordTrigger(Trigger):
     @classmethod
     @override
     async def async_validate_config(
-        cls, _: HomeAssistant, config: ConfigType
+        cls, hass: HomeAssistant, config: ConfigType
     ) -> ConfigType:
         """Validate config against the options schema, wrapped in CONF_OPTIONS."""
+        del hass
         schema = vol.Schema({vol.Required(CONF_OPTIONS): cls._options_schema})
         return cast("ConfigType", schema(config))
 

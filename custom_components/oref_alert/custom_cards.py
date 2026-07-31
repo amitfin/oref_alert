@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Final
 import aiofiles
 import homeassistant.util.dt as dt_util
 from homeassistant.components.frontend import add_extra_js_url
-from homeassistant.components.http import StaticPathConfig
+from homeassistant.components.http.server import StaticPathConfig
 from homeassistant.loader import async_get_integration
 
 from .const import DOMAIN
@@ -55,11 +55,15 @@ async def _create_polygons() -> None:
     if not file_name.is_file():
         previous = None
     else:
-        async with aiofiles.open(file_name) as file:
+        async with aiofiles.open(
+            file_name,
+            "r",  # noqa: UP015
+            encoding="utf-8",
+        ) as file:
             previous = await file.read()
 
     if content != previous:
-        async with aiofiles.open(file_name, "w") as file:
+        async with aiofiles.open(file_name, "w", encoding="utf-8") as file:
             await file.write(content)
 
 

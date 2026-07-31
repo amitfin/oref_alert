@@ -29,7 +29,6 @@ from .const import (
     RecordAndMetadata,
     RecordType,
 )
-from .entity import OrefAlertEntity
 
 if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -49,9 +48,11 @@ async def async_setup_entry(
     OrefAlertLocationEventManager(hass, config_entry, async_add_entities)
 
 
-class OrefAlertLocationEvent(OrefAlertEntity, GeolocationEvent):
+class OrefAlertLocationEvent(GeolocationEvent):
     """Represents an oref alert."""
 
+    _attr_should_poll = False
+    _attr_has_entity_name = True
     _attr_source = DOMAIN
     _unrecorded_attributes = frozenset(
         {
@@ -76,7 +77,7 @@ class OrefAlertLocationEvent(OrefAlertEntity, GeolocationEvent):
         data: PublishedData,
     ) -> None:
         """Initialize entity."""
-        super().__init__(config_entry)
+        self._config_entry = config_entry
         self._attr_name = area
         self._attr_latitude = data[ATTR_LATITUDE]
         self._attr_longitude = data[ATTR_LONGITUDE]
