@@ -10,7 +10,9 @@ from typing import TYPE_CHECKING, Final
 import aiofiles
 import homeassistant.util.dt as dt_util
 from homeassistant.components.frontend import add_extra_js_url
-from homeassistant.components.http.server import StaticPathConfig
+from homeassistant.components.http import (  # type: ignore[attr-defined]
+    StaticPathConfig,  # pyright: ignore[reportPrivateImportUsage]
+)
 from homeassistant.loader import async_get_integration
 
 from .const import DOMAIN

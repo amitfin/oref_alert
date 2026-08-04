@@ -99,7 +99,7 @@ EXISTING_SENSOR_SELECTOR: Final = selector.EntitySelector(
             "binary_sensor.oref_alert",
             "binary_sensor.oref_alert_all_areas",
         ],
-        filter=selector.EntityWithDeviceFilterSelectorConfig(
+        filter=selector.EntityFilterSelectorConfig(  # type: ignore[typeddict-item]  # pyright: ignore[reportArgumentType]
             integration="oref_alert", domain="binary_sensor"
         ),
     )

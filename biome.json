@@ -1,7 +1,11 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.6/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.7/schema.json",
   "files": {
-    "includes": ["custom_components/oref_alert/cards/*", "js-tests/*"]
+    "includes": [
+      "custom_components/oref_alert/cards/*",
+      "js-tests/*",
+      "!custom_components/oref_alert/cards/oref-alert-polygons.js"
+    ]
   },
   "formatter": {
     "indentStyle": "space",
