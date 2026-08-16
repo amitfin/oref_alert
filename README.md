@@ -437,7 +437,7 @@ Below is an example of a card with the main entities and color coding of the ico
 
 ```yaml
 - type: entities
-  card_mod:
+  uix:
     style: |
       :host {
         --state-binary_sensor-off-color: green;
@@ -445,16 +445,14 @@ Below is an example of a card with the main entities and color coding of the ico
       }
   entities:
     - entity: sensor.oref_alert
-      card_mod:
+      uix:
         style: |
           :host {
-            {% if is_state('sensor.oref_alert', 'ok') %}
-            --card-mod-icon-color: green;
-            {% elif is_state('sensor.oref_alert', 'pre_alert') %}
-            --card-mod-icon-color: orange;
-            {% else %}
-            --card-mod-icon-color: red;
-            {% endif %}
+            --uix-icon-color: {{
+              'green' if is_state(config.entity, 'ok')
+              else 'orange' if is_state(config.entity, 'pre_alert')
+              else 'red'
+            }};
           }
     - entity: binary_sensor.oref_alert
     - entity: binary_sensor.oref_alert_all_areas
@@ -463,7 +461,7 @@ Below is an example of a card with the main entities and color coding of the ico
       attribute: display
 ```
 
-Note that is requires the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.
+Note that this requires the installation of the [UIX](https://github.com/Lint-Free-Technology/uix) integration.
 
 #### Presenting Active Alerts in Israel
 
@@ -483,14 +481,14 @@ content: >-
     </p>
   {% endfor %}
 entity_id: binary_sensor.oref_alert_all_areas
-card_mod:
+uix:
   style: |
     ha-card {
       direction: rtl;
     }
 ```
 
-(The `card_mod` section at the bottom is only required when the language is English. It forces RTL for this element. Note that it requires the installation of [card-mod](https://github.com/thomasloven/lovelace-card-mod) lovelace custom component.)
+(The `uix` section at the bottom is only required when the language is English. It forces RTL for this element. Note that it requires the installation of the [UIX](https://github.com/Lint-Free-Technology/uix) integration.)
 
 <kbd><img width="310" alt="image" src="https://github.com/user-attachments/assets/21ad82ea-6ff6-43c3-8c57-a1f6b2785498"></kbd>
 
@@ -515,7 +513,7 @@ content: >-
     {% set ns.count = ns.count + 1 %}
   {% endfor %}
 entity_id: binary_sensor.oref_alert_all_areas
-card_mod:
+uix:
   style: |
     ha-card {
       direction: rtl;
@@ -537,7 +535,7 @@ content: >-
     </p>
   {% endfor %}
 entity_id: binary_sensor.oref_alert
-card_mod:
+uix:
   style: |
     ha-card {
       direction: rtl;
