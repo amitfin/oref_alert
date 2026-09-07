@@ -27,6 +27,6 @@
     "@biomejs/biome": "^2",
     "@vitest/coverage-v8": "^4",
     "jsdom": "^30",
-    "vitest": "^4"
+    "vitest": "^5"
   }
 }
