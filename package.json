@@ -25,7 +25,7 @@
   "homepage": "https://github.com/amitfin/oref_alert#readme",
   "devDependencies": {
     "@biomejs/biome": "^2",
-    "@vitest/coverage-v8": "^4",
+    "@vitest/coverage-v8": "^5",
     "jsdom": "^30",
     "vitest": "^5"
   }
