@@ -138,7 +138,16 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         if stored:
             for area, raw_record in stored.get(CONF_AREAS, {}).items():
                 try:
-                    self._areas[area] = self.add_metadata(Record(**raw_record))
+                    record = self.add_metadata(Record(**raw_record))
+                    if record.raw.data not in ALL_AREAS_ALIASES:
+                        self._areas[area] = record
+                    else:
+                        self._areas[area] = replace(
+                            record,
+                            published_data=self._build_published_data(
+                                area, record.raw, record.time, record.record_type
+                            ),
+                        )
                 except Exception:  # noqa: BLE001
                     LOGGER.debug(
                         "Skipping invalid restored area '%s'",
@@ -160,41 +169,27 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 }
             )
 
-    def get_record_and_metadata(
-        self,
-        areas: Iterable[str] | None,
-        record_types: Iterable[RecordType | None] | None,
-        window: int | None,
-        newer_first: bool,  # noqa: FBT001
-    ) -> list[RecordAndMetadata]:
-        """Return the records and metadata, sorted and filtered."""
-        earliest = dt_util.now() - timedelta(minutes=window) if window else None
-        return sorted(
-            sorted(
-                {
-                    record
-                    for area, record in self.data.areas.items()
-                    if (areas is None or area in areas)
-                    and (record_types is None or record.record_type in record_types)
-                    and (earliest is None or record.time >= earliest)
-                },
-                key=lambda record: record.raw.data,
-            ),
-            key=lambda record: record.time,
-            reverse=newer_first,
-        )
-
     def get_records(
         self,
         areas: Iterable[str] | None,
         record_types: Iterable[RecordType | None] | None,
         window: int | None,
     ) -> list[dict[str, str | int]]:
-        """Get raw records, sorted from newest, and filtered."""
+        """Get unique raw records, sorted from newest, and filtered."""
+        earliest = dt_util.now() - timedelta(minutes=window) if window else None
+        records = {
+            record
+            for area, record in self.data.areas.items()
+            if (areas is None or area in areas)
+            and (record_types is None or record.record_type in record_types)
+            and (earliest is None or record.time >= earliest)
+        }
         return [
             record.raw_dict
-            for record in self.get_record_and_metadata(
-                areas, record_types, window, newer_first=True
+            for record in sorted(
+                sorted(records, key=lambda record: record.raw.data),
+                key=lambda record: record.time,
+                reverse=True,
             )
         ]
 
@@ -248,7 +243,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             ):
                 yield record
 
-    def _area_records(
+    def area_records(
         self, record: RecordAndMetadata
     ) -> Generator[tuple[str, RecordAndMetadata]]:
         """Yield area-specific records for the areas affected by a record."""
@@ -286,7 +281,7 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
                 continue
 
             # Handle "all areas" record.
-            for area, area_record in self._area_records(record):
+            for area, area_record in self.area_records(record):
                 # If we don't have anything else for this area.
                 if (current := self._areas.get(area)) is None:
                     self._areas[area] = area_record

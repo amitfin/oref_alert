@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
+import homeassistant.util.dt as dt_util
 from homeassistant.const import ATTR_DATE
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
@@ -41,7 +43,7 @@ class OrefAlertBusEventManager:
         """Initialize object with defaults."""
         self._hass = hass
         self._config_entry = config_entry
-        self._previous_items: TTLDeque[Record] = TTLDeque()
+        self._previous_items: TTLDeque[tuple[str, Record]] = TTLDeque()
         self.alert_history: TTLDeque[dict[str, Any]] = TTLDeque(ttl=60 * 24)
         self._history_records: TTLDeque[RecordAndMetadata] = TTLDeque(ttl=60 * 24)
         self._store = Store[dict[str, Any]](
@@ -76,22 +78,27 @@ class OrefAlertBusEventManager:
             record_metadata = self._config_entry.runtime_data.coordinator.add_metadata(
                 record
             )
-            self._history_records.add(record_metadata, record_metadata.time)
-            self._previous_items.add(record, record_metadata.time)
-            if event := self._compose_event(record_metadata):
-                self.alert_history.add(
-                    {**event, ATTR_DATE: record_metadata.time.isoformat()},
-                    record_metadata.time,
-                )
+            for area, area_record in sorted(
+                self._coordinator.area_records(record_metadata)
+            ):
+                self._history_records.add(area_record, area_record.time)
+                self._previous_items.add((area, area_record.raw), area_record.time)
+                if event := self._compose_event(area_record):
+                    self.alert_history.add(
+                        {**event, ATTR_DATE: area_record.time.isoformat()},
+                        area_record.time,
+                    )
 
     async def async_save(self) -> None:
         """Persist history records to storage."""
         await self._store.async_save(
             {
-                self._STORAGE_RECORDS_KEY: [
-                    record.raw_dict
-                    for record in reversed(list(self._history_records.items()))
-                ]
+                self._STORAGE_RECORDS_KEY: list(
+                    {
+                        record.raw: record.raw_dict
+                        for record in reversed(list(self._history_records.items()))
+                    }.values()
+                )
             }
         )
 
@@ -116,11 +123,15 @@ class OrefAlertBusEventManager:
         synchronous, or the triggers will start firing multiple times per
         refresh instead of once.
         """
-        for record in self._coordinator.get_record_and_metadata(
-            None, None, 3, newer_first=False
+        earliest = dt_util.now() - timedelta(minutes=3)
+        for area, record in sorted(
+            self._coordinator.data.areas.items(),
+            key=lambda item: (item[1].time, item[0]),
         ):
-            if record.raw in self._previous_items or not (
-                event := self._compose_event(record)
+            if (
+                record.time < earliest
+                or (area, record.raw) in self._previous_items
+                or not (event := self._compose_event(record))
             ):
                 continue
             self._hass.bus.async_fire(
@@ -141,4 +152,4 @@ class OrefAlertBusEventManager:
                     {**event, ATTR_DATE: record.time.isoformat()}, record.time
                 )
                 self._history_records.add(record, record.time)
-            self._previous_items.add(record.raw, record.time)
+            self._previous_items.add((area, record.raw), record.time)

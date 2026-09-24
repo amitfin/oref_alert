@@ -310,11 +310,11 @@ async def test_restore_ignores_invalid_stored_record(hass: HomeAssistant) -> Non
     assert "קריית שמונה" in coordinator._areas  # noqa: SLF001
 
 
-async def test_get_record_and_metadata_sorting_filters_and_window(
+async def test_get_records_sorting_filters_and_window(
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
 ) -> None:
-    """Test get_record_and_metadata sorting and filtering semantics."""
+    """Test get_records sorting and filtering semantics."""
     freezer.move_to("2026-01-02 12:00:00+00:00")
     coordinator = create_coordinator(hass)
     classify = coordinator.add_metadata
@@ -359,45 +359,33 @@ async def test_get_record_and_metadata_sorting_filters_and_window(
         )
     )
 
-    oldest_first = coordinator.get_record_and_metadata(
+    newest_first = coordinator.get_records(
         areas=None,
         record_types=None,
         window=None,
-        newer_first=False,
     )
-    assert [record.raw.data for record in oldest_first] == ["נחל עוז", "אילות", "בארי"]
+    assert [record["data"] for record in newest_first] == ["אילות", "בארי", "נחל עוז"]
 
-    newest_first = coordinator.get_record_and_metadata(
-        areas=None,
-        record_types=None,
-        window=None,
-        newer_first=True,
-    )
-    assert [record.raw.data for record in newest_first] == ["אילות", "בארי", "נחל עוז"]
-
-    alert_only = coordinator.get_record_and_metadata(
+    alert_only = coordinator.get_records(
         areas=None,
         record_types=[RecordType.ALERT],
         window=None,
-        newer_first=True,
     )
-    assert [record.raw.data for record in alert_only] == ["אילות", "בארי"]
+    assert [record["data"] for record in alert_only] == ["אילות", "בארי"]
 
-    area_filtered = coordinator.get_record_and_metadata(
+    area_filtered = coordinator.get_records(
         areas=["בארי"],
         record_types=None,
         window=None,
-        newer_first=False,
     )
-    assert [record.raw.data for record in area_filtered] == ["בארי"]
+    assert [record["data"] for record in area_filtered] == ["בארי"]
 
-    window_filtered = coordinator.get_record_and_metadata(
+    window_filtered = coordinator.get_records(
         areas=None,
         record_types=None,
         window=5,
-        newer_first=False,
     )
-    assert [record.raw.data for record in window_filtered] == ["אילות", "בארי"]
+    assert [record["data"] for record in window_filtered] == ["אילות", "בארי"]
 
 
 async def test_updates(

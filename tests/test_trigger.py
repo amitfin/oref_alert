@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 import voluptuous as vol
+from homeassistant.const import ATTR_LATITUDE, ATTR_LONGITUDE
 from homeassistant.helpers import trigger as trigger_helper
 from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import (
@@ -21,6 +22,8 @@ from custom_components.oref_alert.const import (
     DOMAIN,
     OREF_ALERT_RECORD_EVENT,
     SYNTHETIC_ALERT_ACTION,
+    Record,
+    RecordSource,
 )
 from custom_components.oref_alert.trigger import _attach_record_batch_listener
 
@@ -29,6 +32,7 @@ from .utils import fire_synthetic_alert, mock_urls
 if TYPE_CHECKING:
     import asyncio
 
+    from freezegun.api import FrozenDateTimeFactory
     from homeassistant.core import HomeAssistant
     from pytest_homeassistant_custom_component.test_util.aiohttp import (
         AiohttpClientMocker,
@@ -482,6 +486,75 @@ async def test_distance_trigger_batches_records_from_the_same_update(
     assert set(calls[0].data["areas"]) == {"בארי", "תל אביב - מרכז העיר"}
 
     await async_shutdown(hass, config_id)
+
+
+@pytest.mark.parametrize("alias", ["כל הארץ", "ברחבי הארץ"])
+@pytest.mark.parametrize(
+    "category_and_type",
+    [(1, "alert"), (14, "pre_alert"), (13, "end")],
+    ids=["alert", "pre_alert", "end"],
+)
+@pytest.mark.parametrize("platform", ["home", "area", "distance"])
+async def test_nationwide_alert_triggers_automation_once(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    alias: str,
+    category_and_type: tuple[int, str],
+    platform: str,
+) -> None:
+    """Test nationwide records trigger one action with all matching areas."""
+    category, record_type = category_and_type
+    freezer.move_to("2025-06-13 03:00:00+03:00")
+    config_id = await async_setup(hass, {CONF_AREAS: ["בארי", "אילת"]})
+    try:
+        options: dict[str, Any] = {
+            "trigger": f"oref_alert.{platform}",
+            "type": record_type,
+        }
+        if platform == "area":
+            options[CONF_AREAS] = ["בארי", "אילת"]
+        elif platform == "distance":
+            hass.states.async_set(
+                "device_tracker.test",
+                "home",
+                {
+                    ATTR_LATITUDE: BAARI_LATITUDE,
+                    ATTR_LONGITUDE: BAARI_LONGITUDE,
+                },
+            )
+            options.update(location="device_tracker.test", distance=0.001)
+        calls = await _async_setup_automation(hass, options)
+
+        config_entry = hass.config_entries.async_get_entry(config_id)
+        assert config_entry is not None
+        runtime = config_entry.runtime_data
+        runtime.pushy.alerts.append(
+            runtime.coordinator.add_metadata(
+                Record(
+                    data=alias,
+                    category=category,
+                    channel=RecordSource.MOBILE,
+                    alertDate="2025-06-13 03:00:00",
+                    title="Nationwide test notification",
+                )
+            )
+        )
+        await runtime.coordinator.async_refresh()
+        await hass.async_block_till_done()
+
+        assert len(calls) == 1
+        expected_areas = {"בארי"} if platform == "distance" else {"בארי", "אילת"}
+        assert set(calls[0].data["areas"]) == expected_areas
+        assert len(calls[0].data["areas"]) == len(expected_areas)
+        assert calls[0].data["types"] == [record_type] * len(expected_areas)
+        assert len(runtime.coordinator.get_records(None, None, None)) == 1
+
+        freezer.tick(20)
+        await runtime.coordinator.async_refresh()
+        await hass.async_block_till_done()
+        assert len(calls) == 1
+    finally:
+        await async_shutdown(hass, config_id)
 
 
 async def test_batch_listener_cancels_pending_flush_on_unsub(

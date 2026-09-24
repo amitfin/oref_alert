@@ -11,9 +11,14 @@ from pytest_homeassistant_custom_component.common import (
     async_fire_time_changed,
 )
 
-from custom_components.oref_alert.const import CONF_AREAS, DOMAIN
+from custom_components.oref_alert.const import (
+    ATTR_AREA,
+    CONF_AREAS,
+    DOMAIN,
+    OREF_ALERT_RECORD_EVENT,
+)
 
-from .utils import mock_urls
+from .utils import load_json_fixture, mock_urls
 
 if TYPE_CHECKING:
     from freezegun.api import FrozenDateTimeFactory
@@ -100,6 +105,66 @@ async def test_alert_event(
     }
 
     await async_shutdown(hass, config_id)
+
+
+async def test_nationwide_alert_fires_record_event_for_each_area(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Nationwide alerts must reach automation listeners for every affected area."""
+    freezer.move_to("2025-06-13 03:00:00+03:00")
+    mock_urls(aioclient_mock, None, "single_all_areas_alert_history.json")
+
+    records: list[Event] = []
+
+    async def record_listener(event: Event) -> None:
+        records.append(event)
+
+    hass.bus.async_listen(OREF_ALERT_RECORD_EVENT, record_listener)
+    config_id = await async_setup(hass)
+    try:
+        config_entry = hass.config_entries.async_get_entry(config_id)
+        assert config_entry is not None
+        affected_areas = set(config_entry.runtime_data.coordinator.get_areas_status())
+        assert {"אילת", "קריית שמונה"} <= affected_areas
+
+        # Each expanded area needs its own event for area/home/distance triggers.
+        assert len(records) == len(affected_areas)
+        assert {event.data[ATTR_AREA] for event in records} == affected_areas
+
+        expected_raw_records = load_json_fixture(
+            "single_all_areas_alert_history.json", "website-history"
+        )
+        bus_events = config_entry.runtime_data.bus_events
+        await bus_events.async_save()
+        stored = await bus_events._store.async_load()  # noqa: SLF001
+        assert stored == {"records": expected_raw_records}
+
+        freezer.tick(20)
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done(wait_background_tasks=True)
+        assert len(records) == len(affected_areas)
+
+        # Reload must preserve per-area history without replaying the alert.
+        assert await hass.config_entries.async_reload(config_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+        assert len(records) == len(affected_areas)
+        assert set(config_entry.runtime_data.coordinator.get_areas_status()) == (
+            affected_areas
+        )
+        history = list(config_entry.runtime_data.bus_events.alert_history.items())
+        assert len(history) == len(affected_areas)
+        assert {event[ATTR_AREA] for event in history} == affected_areas
+        assert all(
+            record.raw_dict == expected_raw_records[0]
+            for record in config_entry.runtime_data.coordinator.data.areas.values()
+        )
+        bus_events = config_entry.runtime_data.bus_events
+        await bus_events.async_save()
+        assert await bus_events._store.async_load() == stored  # noqa: SLF001
+    finally:
+        await async_shutdown(hass, config_id)
 
 
 async def test_update_event(
