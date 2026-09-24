@@ -244,7 +244,7 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
         sensor_key = _get_sensor_key(entity_id)
         config_entry = get_config_entry(hass)
         sensors = {**config_entry.options.get(CONF_SENSORS, {})}
-        if areas := sensors.get(sensor_key):
+        if (areas := sensors.get(sensor_key)) is not None:
             sensors[sensor_key] = [
                 area
                 for area in (areas + service_call.data[ADD_AREAS])

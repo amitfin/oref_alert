@@ -260,6 +260,62 @@ async def test_edit_sensor_actions(hass: HomeAssistant) -> None:
     assert state.attributes[CONF_AREAS] == ["גבעת שמואל", "פתח תקווה"]
 
 
+@pytest.mark.parametrize(
+    "initial_areas", [[], ["פתח תקווה"]], ids=["created-empty", "last-area-removed"]
+)
+async def test_edit_empty_sensor_adds_areas(
+    hass: HomeAssistant, initial_areas: list[str]
+) -> None:
+    """Test adding areas to a custom sensor whose area list is empty."""
+    config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    try:
+        await hass.services.async_call(
+            DOMAIN,
+            ADD_SENSOR_ACTION,
+            {CONF_NAME: "test", CONF_AREAS: initial_areas},
+            blocking=True,
+        )
+        await hass.async_block_till_done(wait_background_tasks=True)
+        entity_id = f"{ENTITY_ID}_test"
+
+        if initial_areas:
+            response = await hass.services.async_call(
+                DOMAIN,
+                EDIT_SENSOR_ACTION,
+                {CONF_ENTITY_ID: entity_id, REMOVE_AREAS: initial_areas},
+                blocking=True,
+                return_response=True,
+            )
+            await hass.async_block_till_done(wait_background_tasks=True)
+            assert response == {CONF_AREAS: []}
+
+        assert config_entry.options[CONF_SENSORS]["test"] == []
+        state = hass.states.get(entity_id)
+        assert state is not None
+        assert state.attributes[CONF_AREAS] == []
+
+        response = await hass.services.async_call(
+            DOMAIN,
+            EDIT_SENSOR_ACTION,
+            {CONF_ENTITY_ID: entity_id, ADD_AREAS: ["גבעת שמואל"]},
+            blocking=True,
+            return_response=True,
+        )
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+        assert response == {CONF_AREAS: ["גבעת שמואל"]}
+        assert config_entry.options[CONF_SENSORS]["test"] == ["גבעת שמואל"]
+        state = hass.states.get(entity_id)
+        assert state is not None
+        assert state.attributes[CONF_AREAS] == ["גבעת שמואל"]
+    finally:
+        assert await hass.config_entries.async_remove(config_entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+
 async def test_areas_status_action(hass: HomeAssistant) -> None:
     """Test areas_status custom action."""
     config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
