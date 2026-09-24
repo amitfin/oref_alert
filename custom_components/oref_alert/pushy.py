@@ -20,6 +20,7 @@ from paho.mqtt.client import Client as MQTTClient
 from paho.mqtt.client import MQTTMessage
 from paho.mqtt.enums import CallbackAPIVersion
 
+from .area_utils import expand_areas_and_groups
 from .categories import pushy_thread_id_to_history_category
 from .const import (
     CONF_AREAS,
@@ -178,18 +179,21 @@ class PushyNotifications:
 
     async def _subscribe(self) -> bool:
         """Subscribe to the relevant topics."""
-        topics = [
-            str(AREA_INFO[area]["segment"])
-            for area in (
-                self._config_entry.options[CONF_AREAS]
-                + list(
-                    chain.from_iterable(
-                        self._config_entry.options.get(CONF_SENSORS, {}).values()
-                    )
+        areas = expand_areas_and_groups(
+            self._config_entry.options[CONF_AREAS]
+            + list(
+                chain.from_iterable(
+                    self._config_entry.options.get(CONF_SENSORS, {}).values()
                 )
             )
-            if area in AREA_INFO and AREA_INFO[area]["segment"]
-        ]
+        )
+        topics = list(
+            dict.fromkeys(
+                str(AREA_INFO[area]["segment"])
+                for area in areas
+                if area in AREA_INFO and AREA_INFO[area]["segment"]
+            )
+        )
 
         previous_topics: list[str] = []
         if PUSHY_TOPICS_KEY not in self._config_entry.data:

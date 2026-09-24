@@ -186,13 +186,114 @@ async def test_subscribe_unsubscribe(
     for uri in ("subscribe", "unsubscribe"):
         for method, url, data, _headers in aioclient_mock.mock_calls:
             if method == "POST" and url == URL(f"{API_ENDPOINT}/devices/{uri}"):
-                assert data["topics"] == (segments if uri == "subscribe" else ["*"])
+                assert set(data["topics"]) == (
+                    set(segments) if uri == "subscribe" else {"*"}
+                )
                 break
         else:
             msg = f"{uri} call was not found"
             raise AssertionError(msg)
 
-    assert config.data["pushy_topics"] == segments
+    assert set(config.data["pushy_topics"]) == set(segments)
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {CONF_AREAS: ["מחוז אילת"]},
+        {CONF_AREAS: [], CONF_SENSORS: {"Test": ["מחוז אילת"]}},
+        {
+            CONF_AREAS: ["מחוז אילת", "אילת"],
+            CONF_SENSORS: {"Test": ["מחוז אילת", "אילת"]},
+        },
+    ],
+    ids=["home-district", "custom-sensor-district", "overlapping-selections"],
+)
+async def test_subscribe_to_district_areas_once(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    options: dict,
+) -> None:
+    """Subscribe to every district area once, including overlapping selections."""
+    config = await setup_test(hass, options=options)
+    try:
+        expected_topics = {
+            str(AREA_INFO[area]["segment"])
+            for area in ["אזור תעשייה שחורת", "אילות", "אילת"]
+        }
+        subscriptions = [
+            data["topics"]
+            for method, url, data, _headers in aioclient_mock.mock_calls
+            if method == "POST" and url == URL(f"{API_ENDPOINT}/devices/subscribe")
+        ]
+        assert len(subscriptions) == 1
+        assert set(subscriptions[0]) == expected_topics
+        assert len(subscriptions[0]) == len(expected_topics)
+        assert config.data["pushy_topics"] == subscriptions[0]
+
+        # Persisted topics must prevent redundant subscriptions after reload.
+        mock_pushy_urls(aioclient_mock)
+        assert await hass.config_entries.async_reload(config.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+        assert not any(
+            method == "POST"
+            and url
+            in {
+                URL(f"{API_ENDPOINT}/devices/subscribe"),
+                URL(f"{API_ENDPOINT}/devices/unsubscribe"),
+            }
+            for method, url, _data, _headers in aioclient_mock.mock_calls
+        )
+    finally:
+        await cleanup_test(hass, config)
+
+
+async def test_add_remove_district_keeps_area_selected_by_custom_sensor(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """Update district topics while retaining a custom sensor's subscription."""
+    config = await setup_test(
+        hass,
+        options={CONF_AREAS: [], CONF_SENSORS: {"Test": ["אילת"]}},
+    )
+    try:
+        district_only_topics = {
+            str(AREA_INFO[area]["segment"]) for area in ["אזור תעשייה שחורת", "אילות"]
+        }
+        mock_pushy_urls(aioclient_mock)
+        hass.config_entries.async_update_entry(
+            config, options={**config.options, CONF_AREAS: ["מחוז אילת"]}
+        )
+        await hass.async_block_till_done(wait_background_tasks=True)
+        added_topics = [
+            data["topics"]
+            for method, url, data, _headers in aioclient_mock.mock_calls
+            if method == "POST" and url == URL(f"{API_ENDPOINT}/devices/subscribe")
+        ]
+        assert len(added_topics) == 1
+        assert set(added_topics[0]) == district_only_topics
+        assert len(added_topics[0]) == len(district_only_topics)
+
+        mock_pushy_urls(aioclient_mock)
+        hass.config_entries.async_update_entry(
+            config, options={**config.options, CONF_AREAS: []}
+        )
+        await hass.async_block_till_done(wait_background_tasks=True)
+        removed_topics = [
+            data["topics"]
+            for method, url, data, _headers in aioclient_mock.mock_calls
+            if method == "POST" and url == URL(f"{API_ENDPOINT}/devices/unsubscribe")
+        ]
+        assert len(removed_topics) == 1
+        assert set(removed_topics[0]) == district_only_topics
+        assert config.data["pushy_topics"] == [str(AREA_INFO["אילת"]["segment"])]
+        assert not any(
+            method == "POST" and url == URL(f"{API_ENDPOINT}/devices/subscribe")
+            for method, url, _data, _headers in aioclient_mock.mock_calls
+        )
+    finally:
+        await cleanup_test(hass, config)
 
 
 async def test_selective_unsubscribe(
