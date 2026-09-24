@@ -412,6 +412,49 @@ describe("oref-alert-map", () => {
     expect(created[0].opts).toEqual({ color: "rgb(241, 146, 146)" });
   });
 
+  test.each([
+    ["alert", "rgb(241, 146, 146)"],
+    ["pre_alert", "rgb(253, 224, 71)"],
+  ])(
+    "createLayers replaces an end layer with a renewed %s",
+    async (type, color) => {
+      await ensureDefined();
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-03-13T08:05:00Z"));
+      const Card = customElements.get("oref-alert-map");
+      const el = new Card();
+      const { mapCard, innerMap } = createMapCardWithInnerMap();
+      const endedLayers = ["Area A", "Area B"].map((area) => ({
+        _oref_info: { area, type: "end", expire: Date.now() + 60_000 },
+      }));
+      el._mapCard = mapCard;
+      el._config = { show_end: true };
+      innerMap.layers = endedLayers;
+      innerMap.Leaflet = {
+        polygon: vi.fn().mockImplementation((points, opts) => ({
+          points,
+          opts,
+          bindTooltip: vi.fn(),
+        })),
+      };
+      vi.spyOn(el, "_getPolygons").mockResolvedValue({ "Area A": [[1, 1]] });
+
+      const renewedAlert = {
+        area: "Area A",
+        date: new Date().toISOString(),
+        emoji: "🚀",
+        type,
+      };
+      const layers = await el._createLayers([renewedAlert]);
+
+      expect(layers).toHaveLength(2);
+      expect(layers[0]._oref_info).toEqual(renewedAlert);
+      expect(layers[0].opts).toEqual({ color });
+      expect(layers).not.toContain(endedLayers[0]);
+      expect(layers[1]).toBe(endedLayers[1]);
+    },
+  );
+
   test("createLayers drops expired end layers", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");

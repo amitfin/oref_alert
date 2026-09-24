@@ -299,7 +299,10 @@ class OrefAlertMap extends HTMLElement {
             );
             layers.push(newLayer);
           }
-        } else if (layer._oref_info.expire > now.getTime()) {
+        } else if (
+          !existingAreas.has(layer._oref_info.area) &&
+          layer._oref_info.expire > now.getTime()
+        ) {
           layers.push(layer);
         }
       }
