@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING, Any, Final
 
 from homeassistant.components import binary_sensor
 from homeassistant.const import Platform
-from homeassistant.util import slugify
 
 from .entity import OrefAlertCoordinatorEntity
+from .helpers import custom_sensor_unique_id
 
 if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -88,15 +88,12 @@ class AlertSensor(AlertSensorBase):
             if not name
             else config_entry.options[CONF_SENSORS][name]
         )
-        self._sensor_key: str = name or ""
         if not name:
             self.use_device_name = True
             self._attr_unique_id = OREF_ALERT_UNIQUE_ID
         else:
             self._attr_name = name
-            self._attr_unique_id = slugify(
-                f"{OREF_ALERT_UNIQUE_ID}_{name.lower().replace(' ', '_')}"
-            )
+            self._attr_unique_id = custom_sensor_unique_id(name)
         self.entity_id = f"{Platform.BINARY_SENSOR}.{self._attr_unique_id}"
 
     def _default_to_device_class_name(self) -> bool:
@@ -133,10 +130,6 @@ class AlertSensor(AlertSensorBase):
                 UPDATE_RECORDS_WINDOW_MINUTES,
             ),
         }
-
-    def get_sensor_key(self) -> str:
-        """Get the key of the extra sensor."""
-        return self._sensor_key
 
 
 class AlertSensorAllAreas(AlertSensorBase):

@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from homeassistant.config_entries import ConfigEntryState
+from homeassistant.const import Platform
 from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
+from homeassistant.util import slugify
 
 from .const import (
+    ALL_AREAS_ID_SUFFIX,
     DOMAIN,
+    LEGACY_END_TIME_ID_SUFFIX,
+    LEGACY_PREEMPTIVE_UPDATE_ID_SUFFIX,
+    LEGACY_STATUS_ID_SUFFIX,
+    OREF_ALERT_UNIQUE_ID,
+    TIME_TO_SHELTER_ID_SUFFIX,
     AreaStatus,
     RecordType,
 )
@@ -18,6 +26,41 @@ if TYPE_CHECKING:
 
     from . import OrefAlertConfigEntry
     from .const import RecordAndMetadata
+
+
+def custom_sensor_unique_id(name: str, suffix: str | None = None) -> str:
+    """Return the unique ID of a custom sensor's entity (or companion by suffix)."""
+    return slugify(
+        f"{OREF_ALERT_UNIQUE_ID}_{name.lower().replace(' ', '_')}"
+        + (f"_{suffix}" if suffix else "")
+    )
+
+
+def sensor_unique_ids(name: str) -> set[tuple[str, str]]:
+    """
+    Return (domain, unique_id) of every entity a sensor may have.
+
+    Includes entities which are created conditionally or were used by older
+    versions. An empty name is the default sensor.
+    """
+    unique_id = custom_sensor_unique_id(name)
+    return {
+        (Platform.BINARY_SENSOR, unique_id),
+        (Platform.EVENT, unique_id),
+        (Platform.SENSOR, unique_id),
+        (Platform.SENSOR, custom_sensor_unique_id(name, TIME_TO_SHELTER_ID_SUFFIX)),
+        (Platform.SENSOR, custom_sensor_unique_id(name, LEGACY_END_TIME_ID_SUFFIX)),
+        (Platform.SENSOR, custom_sensor_unique_id(name, LEGACY_STATUS_ID_SUFFIX)),
+        (
+            Platform.BINARY_SENSOR,
+            custom_sensor_unique_id(name, LEGACY_PREEMPTIVE_UPDATE_ID_SUFFIX),
+        ),
+    }
+
+
+BUILT_IN_SENSORS_UNIQUE_IDS: Final = sensor_unique_ids("") | {
+    (Platform.BINARY_SENSOR, f"{OREF_ALERT_UNIQUE_ID}_{ALL_AREAS_ID_SUFFIX}"),
+}
 
 
 def find_config_entry(hass: HomeAssistant) -> OrefAlertConfigEntry | None:

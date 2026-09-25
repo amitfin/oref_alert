@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 from homeassistant.components.event import EventEntity
 from homeassistant.const import Platform
 from homeassistant.core import callback
-from homeassistant.util import slugify
 
 from .const import (
     ATTR_RECORD,
@@ -19,6 +18,7 @@ from .const import (
     RecordType,
 )
 from .entity import OrefAlertCoordinatorEntity
+from .helpers import custom_sensor_unique_id
 from .metadata.areas import AREAS
 
 if TYPE_CHECKING:
@@ -68,9 +68,7 @@ class AlertEvent(OrefAlertCoordinatorEntity, EventEntity):
             self._attr_unique_id = OREF_ALERT_UNIQUE_ID
         else:
             self._attr_name = name
-            self._attr_unique_id = slugify(
-                f"{OREF_ALERT_UNIQUE_ID}_{name.lower().replace(' ', '_')}"
-            )
+            self._attr_unique_id = custom_sensor_unique_id(name)
         self.entity_id = f"{Platform.EVENT}.{self._attr_unique_id}"
         self._record: RecordAndMetadata | None = None
 

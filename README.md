@@ -252,7 +252,7 @@ data:
 
 #### `add_sensor`
 
-Creates an additional sensor entity for a custom set of areas. The selected areas can be different (non-overlapping) from the primary entity.
+Creates an additional sensor entity for a custom set of areas. The selected areas can be different (non-overlapping) from the primary entity. The name must not collide with an existing sensor: names that differ only in case, spaces, or punctuation from an existing one are rejected. Use [`edit_sensor`](#edit_sensor) to change the areas of an existing sensor.
 
 [![Open your Home Assistant instance and show your action developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=oref_alert.add_sensor)
 

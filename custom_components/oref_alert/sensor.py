@@ -11,7 +11,6 @@ from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.const import Platform, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import event as event_helper
-from homeassistant.util import slugify
 
 from .const import (
     ATTR_ALERT,
@@ -28,7 +27,7 @@ from .const import (
     RecordType,
 )
 from .entity import OrefAlertCoordinatorEntity
-from .helpers import record_status
+from .helpers import custom_sensor_unique_id, record_status
 from .metadata.area_to_migun_time import AREA_TO_MIGUN_TIME
 from .metadata.areas import AREAS
 
@@ -96,10 +95,8 @@ class TimeToShelterSensor(OrefAlertCoordinatorEntity, SensorEntity):
         else:
             self._attr_translation_key = "named_time_to_shelter"
             self._attr_translation_placeholders = {"name": name}
-            self._attr_unique_id = slugify(
-                OREF_ALERT_UNIQUE_ID
-                + f"_{name.lower().replace(' ', '_')}_"
-                + TIME_TO_SHELTER_ID_SUFFIX
+            self._attr_unique_id = custom_sensor_unique_id(
+                name, TIME_TO_SHELTER_ID_SUFFIX
             )
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
         self._unsub_update: Callable[[], None] | None = None
@@ -205,9 +202,7 @@ class OrefAlertStatusSensor(OrefAlertCoordinatorEntity, SensorEntity):
             self._attr_unique_id = OREF_ALERT_UNIQUE_ID
         else:
             self._attr_name = name
-            self._attr_unique_id = slugify(
-                f"{OREF_ALERT_UNIQUE_ID}_{name.lower().replace(' ', '_')}"
-            )
+            self._attr_unique_id = custom_sensor_unique_id(name)
         self.entity_id = f"{Platform.SENSOR}.{self._attr_unique_id}"
 
     @property

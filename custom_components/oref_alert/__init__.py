@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import itertools
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, Final
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
@@ -19,17 +19,22 @@ from homeassistant.const import (
 from homeassistant.exceptions import (
     ConfigEntryNotReady,
     IntegrationError,
+    ServiceValidationError,
 )
 from homeassistant.helpers import entity_registry, selector
 from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.entity_platform import async_get_platforms
 from homeassistant.helpers.service import async_register_admin_service
 
 from custom_components.oref_alert.custom_cards import publish_cards
 
 from .areas_checker import AreasChecker
 from .bus_events import OrefAlertBusEventManager
-from .helpers import get_config_entry
+from .helpers import (
+    BUILT_IN_SENSORS_UNIQUE_IDS,
+    custom_sensor_unique_id,
+    get_config_entry,
+    sensor_unique_ids,
+)
 from .metadata.areas_and_groups import AREAS_AND_GROUPS
 from .pushy import PushyNotifications
 from .template import inject_template_extensions
@@ -45,8 +50,6 @@ if TYPE_CHECKING:
         ServiceResponse,
     )
     from homeassistant.helpers.typing import ConfigType
-
-    from .binary_sensor import AlertSensor
 
 from homeassistant.core import SupportsResponse
 
@@ -68,7 +71,6 @@ from .const import (
     REMOVE_AREAS,
     REMOVE_SENSOR_ACTION,
     SYNTHETIC_ALERT_ACTION,
-    TIME_TO_SHELTER_ID_SUFFIX,
     TITLE,
     TITLE_FIELD,
     RecordType,
@@ -180,7 +182,16 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
         """Add an additional sensor (different areas)."""
         config_entry = get_config_entry(hass)
         sensors = {**config_entry.options.get(CONF_SENSORS, {})}
-        sensors[service_call.data[CONF_NAME]] = service_call.data[CONF_AREAS]
+        name = service_call.data[CONF_NAME]
+        if sensor_unique_ids(name) & BUILT_IN_SENSORS_UNIQUE_IDS.union(
+            *(sensor_unique_ids(existing) for existing in sensors)
+        ):
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="sensor_name_collision",
+                translation_placeholders={"name": name},
+            )
+        sensors[name] = service_call.data[CONF_AREAS]
         hass.config_entries.async_update_entry(
             config_entry,
             options={**config_entry.options, CONF_SENSORS: sensors},
@@ -194,37 +205,41 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
         ADD_SENSOR_SCHEMA,
     )
 
-    def _get_sensor_key(entity_id: str) -> str:
-        """Return the entity by a given entity_id."""
-        sensor_key = ""
-        for platform in async_get_platforms(hass, DOMAIN):
-            if entity_id in platform.entities:
-                sensor_key = cast(
-                    "AlertSensor", platform.entities[entity_id]
-                ).get_sensor_key()
-                break
-        return sensor_key
+    def _get_custom_sensor(entity_id: str) -> tuple[OrefAlertConfigEntry, str]:
+        """Return the config entry and sensor key of a custom binary sensor."""
+        config_entry = get_config_entry(hass)
+        entry = entity_registry.async_get(hass).async_get(entity_id)
+        if (
+            entry is not None
+            and entry.domain == Platform.BINARY_SENSOR
+            and entry.platform == DOMAIN
+            and entry.config_entry_id == config_entry.entry_id
+            and (entry.domain, entry.unique_id) not in BUILT_IN_SENSORS_UNIQUE_IDS
+        ):
+            for name in config_entry.options.get(CONF_SENSORS, {}):
+                if custom_sensor_unique_id(name) == entry.unique_id:
+                    return config_entry, name
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="not_custom_sensor",
+            translation_placeholders={"entity_id": entity_id},
+        )
 
     async def remove_sensor(service_call: ServiceCall) -> None:
         """Remove an additional sensor."""
+        config_entry, sensor_key = _get_custom_sensor(service_call.data[CONF_ENTITY_ID])
         entity_reg = entity_registry.async_get(hass)
-        entity_id = service_call.data[CONF_ENTITY_ID]
-        sensor_key = _get_sensor_key(entity_id)
-        config_entry = get_config_entry(hass)
+        companions = sensor_unique_ids(sensor_key)
+        for entry in entity_registry.async_entries_for_config_entry(
+            entity_reg, config_entry.entry_id
+        ):
+            if (entry.domain, entry.unique_id) in companions:
+                entity_reg.async_remove(entry.entity_id)
         sensors = {
             name: areas
             for name, areas in config_entry.options.get(CONF_SENSORS, {}).items()
             if name != sensor_key
         }
-        entity_reg.async_remove(entity_id)
-        for platform, suffix in [
-            (Platform.SENSOR, f"_{TIME_TO_SHELTER_ID_SUFFIX}"),
-            (Platform.SENSOR, None),
-            (Platform.EVENT, None),
-        ]:
-            delete_entity = f"{platform}.{entity_id.split('.')[1]}{suffix or ''}"
-            if entity_reg.async_get(delete_entity) is not None:
-                entity_reg.async_remove(delete_entity)
         hass.config_entries.async_update_entry(
             config_entry,
             options={**config_entry.options, CONF_SENSORS: sensors},
@@ -240,22 +255,21 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
 
     async def edit_sensor(service_call: ServiceCall) -> ServiceResponse | None:
         """Edit sensor."""
-        entity_id = service_call.data[CONF_ENTITY_ID]
-        sensor_key = _get_sensor_key(entity_id)
-        config_entry = get_config_entry(hass)
+        config_entry, sensor_key = _get_custom_sensor(service_call.data[CONF_ENTITY_ID])
         sensors = {**config_entry.options.get(CONF_SENSORS, {})}
-        if (areas := sensors.get(sensor_key)) is not None:
-            sensors[sensor_key] = [
-                area
-                for area in (areas + service_call.data[ADD_AREAS])
-                if area not in service_call.data[REMOVE_AREAS]
-            ]
-            hass.config_entries.async_update_entry(
-                config_entry,
-                options={**config_entry.options, CONF_SENSORS: sensors},
+        sensors[sensor_key] = [
+            area
+            for area in dict.fromkeys(
+                sensors[sensor_key] + service_call.data[ADD_AREAS]
             )
-            if service_call.return_response:
-                return {CONF_AREAS: sensors[sensor_key]}
+            if area not in service_call.data[REMOVE_AREAS]
+        ]
+        hass.config_entries.async_update_entry(
+            config_entry,
+            options={**config_entry.options, CONF_SENSORS: sensors},
+        )
+        if service_call.return_response:
+            return {CONF_AREAS: list(sensors[sensor_key])}
         return None
 
     async_register_admin_service(

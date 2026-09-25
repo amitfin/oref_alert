@@ -79,6 +79,12 @@
         },
         "pushy_invalid_response": {
             "message": "{url} reply payload is invalid: {content}"
+        },
+        "not_custom_sensor": {
+            "message": "{entity_id} is not a custom Oref Alert sensor"
+        },
+        "sensor_name_collision": {
+            "message": "Sensor name {name} collides with an existing sensor"
         }
     },
     "services": {
