@@ -2386,7 +2386,7 @@ describe("oref-alert-map on the engine-based ha-map", () => {
         { entity: "person.bob" },
         "person.nowhere",
         "zone.passive",
-        "zone.noradius",
+        "zone.without_radius",
       ],
     });
     const { engine, bounds } = createLeafletEngine();
@@ -2399,7 +2399,7 @@ describe("oref-alert-map on the engine-based ha-map", () => {
         "person.alice": { attributes: { latitude: 31, longitude: 34 } },
         "person.hidden": { attributes: { latitude: 10, longitude: 10 } },
         "person.bob": { attributes: { latitude: 30, longitude: 33 } },
-        "zone.noradius": { attributes: { latitude: 29, longitude: 32 } },
+        "zone.without_radius": { attributes: { latitude: 29, longitude: 32 } },
         "person.nowhere": { attributes: { latitude: null, longitude: null } },
         "zone.passive": {
           attributes: { latitude: 5, longitude: 5, radius: 100, passive: true },

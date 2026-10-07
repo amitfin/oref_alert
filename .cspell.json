@@ -38,6 +38,7 @@
     "KEEPALIVE",
     "levelname",
     "levelno",
+    "maplibre",
     "migun",
     "MIGUN",
     "mqtt",
