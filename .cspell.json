@@ -52,6 +52,7 @@
     "pipefail",
     "popleft",
     "prek",
+    "probatio",
     "pytest",
     "PYTHONPATH",
     "pytz",

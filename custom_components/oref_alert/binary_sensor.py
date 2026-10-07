@@ -53,7 +53,7 @@ async def async_setup_entry(
 class AlertSensorBase(OrefAlertCoordinatorEntity, binary_sensor.BinarySensorEntity):
     """Representation of the alert sensor base."""
 
-    _attr_device_class = binary_sensor.BinarySensorDeviceClass.SAFETY
+    _attr_device_class = binary_sensor.BinarySensorDeviceClass.SAFETY  # type: ignore[attr-defined]
     _attr_translation_key = "home_alert"
     _unrecorded_attributes = frozenset(
         {
