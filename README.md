@@ -54,14 +54,14 @@ The setup identifies the area according to the [Home location in the Zones setti
 The integration adds a map card for displaying all active alerts. It's recommended to place the map card inside a [panel view](https://www.home-assistant.io/dashboards/panel/), so it can take full width and provide the best map experience.
 
 Card configuration (all parameters are optional with the common defaults):
-- `auto_fit` (optional, default: `true`): Automatically adjust the map view to include all currently active alerts and pre-alerts.
+- `auto_fit` (optional, default: `true`): Automatically adjust the map view to include all currently active alerts and pre-alerts, as well as `zone.home` (when `show_home` is enabled) and any additional `entities`.
 - `show_home` (optional, default: `false`): Show `zone.home` on the map. This option is typically used together with `auto_fit: false`, allowing the map to stay centered on the home area. This view is useful for users who are interested in their home's surroundings.
 - `hebrew_basemap` (optional, default: `true`): Use a Hebrew basemap tile layer. It is not recommended to enable this option when both `auto_fit` and `show_home` are enabled. The Hebrew basemap supports zoom levels only up to 15, while most other map providers support zoom levels up to 19–20. When `show_home` is enabled, `auto_fit` often selects a higher zoom level, which may exceed the Hebrew basemap's maximum supported zoom level.
 - `show_pre_alert` (optional, default: `true`): include `pre_alert` areas on the map (in yellow).
 - `show_end` (optional, default: `true`): briefly show recently ended alert areas on the map (in green) for about 60 seconds after they clear.
 - `show_location` (optional, default: `true`): Show the device's location on the map when browser geolocation is available and allowed. This marker is client-side only and is not used for map fitting (`auto_fit` still fits to alerts/pre-alerts only).
 - `entities` (optional, YAML only, no UI): additional entities passed to the [map card](https://www.home-assistant.io/dashboards/map). See also [here](https://www.home-assistant.io/dashboards/map/#entities) and [here](https://www.home-assistant.io/dashboards/map/#options-for-entities).
-- Additional [map card options](https://www.home-assistant.io/dashboards/map/#yaml-configuration) can be passed through in YAML and are forwarded to the underlying Home Assistant map card. This card still enforces `type`, `geo_location_sources`, `fit_zones`, and computes `entities` and `auto_fit` from its own settings.
+- Additional [map card options](https://www.home-assistant.io/dashboards/map/#yaml-configuration) can be passed through in YAML and are forwarded to the underlying Home Assistant map card. This card still enforces `type`, `geo_location_sources`, `fit_zones`, and computes `entities` and `auto_fit` from its own settings. Note that `map_style` doesn't work together with `hebrew_basemap`.
 
 | <img width="344" height="551" alt="image" src="https://github.com/user-attachments/assets/f2d17037-4e40-4edb-ae21-0375bd32f224" /> |
 |---|

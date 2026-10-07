@@ -20,13 +20,17 @@ const PRE_ALERT_COLOR = "rgb(253, 224, 71)";
 const END_ALERT_COLOR = "rgb(16, 205, 83)";
 const RELOAD_GUARD_KEY = "oref-alert-map-reload-version";
 const CURRENT_VERSION = new URL(import.meta.url).searchParams.get("v");
+const LEAFLET_ENGINE = Symbol("oref-alert-leaflet-engine");
 const MAP_CONFIG_PASSTHROUGH_KEYS = [
   "aspect_ratio",
   "cluster",
   "conditions",
   "default_zoom",
   "hours_to_show",
+  "map_style",
+  "scale_ruler",
   "show_all",
+  "show_zone_radius",
   "theme_mode",
   "title",
 ];
@@ -133,6 +137,7 @@ class OrefAlertMap extends HTMLElement {
     }
 
     mapCard.hass = this._hass;
+    this._prepareMap();
     this._setTileLayer();
     void this._startLocationWatch();
 
@@ -213,6 +218,7 @@ class OrefAlertMap extends HTMLElement {
     const map = this._map;
     if (map && layers.length >= areas.length) {
       map.layers = layers;
+      this._fitToLayers(layers);
       this._lastUpdated = lastUpdated;
       this._startRefresh();
     }
@@ -402,6 +408,10 @@ class OrefAlertMap extends HTMLElement {
         } else {
           found = true;
         }
+      } else if (typeof layer.getMaplibreMap === "function") {
+        // Home Assistant 2026.9 draws a vector basemap with MapLibre. It would
+        // keep rendering (and holding a WebGL context) under our basemap.
+        leafletMap.removeLayer(layer);
       }
     });
 
@@ -418,6 +428,129 @@ class OrefAlertMap extends HTMLElement {
         leafletMap.setMinZoom(tileLayer.options.minZoom);
       }
     }
+  }
+
+  // Home Assistant 2026.10 replaced the Leaflet-only "ha-map" with a pluggable
+  // engine (MapLibre GL by default) and removed "layers", "Leaflet" and
+  // "leafletMap". Polygons need Leaflet, so we ask "ha-map" to rebuild itself
+  // on its Leaflet engine and re-expose the old members on the element.
+  _prepareMap() {
+    const map = this._map;
+    const engine = map?._engine;
+    if (!map) {
+      return;
+    }
+
+    if (!engine?.leafletMap || !engine.Leaflet) {
+      if (
+        map._handleEngineFatal &&
+        !map._forceLeaflet &&
+        (engine || map._loading)
+      ) {
+        map._handleEngineFatal();
+      }
+      return;
+    }
+
+    if (!map[LEAFLET_ENGINE]) {
+      const state = { layers: [], leafletMap: null, fitPending: false };
+      map[LEAFLET_ENGINE] = state;
+      Object.defineProperties(map, {
+        Leaflet: { configurable: true, get: () => map._engine?.Leaflet },
+        leafletMap: { configurable: true, get: () => map._engine?.leafletMap },
+        layers: {
+          configurable: true,
+          get: () => state.layers,
+          set: (layers) => {
+            for (const layer of state.layers) {
+              layer.remove();
+            }
+            state.layers = layers;
+            for (const layer of layers) {
+              map._engine?.leafletMap?.addLayer(layer);
+            }
+          },
+        },
+      });
+    }
+
+    const state = map[LEAFLET_ENGINE];
+    if (state.leafletMap !== engine.leafletMap) {
+      // First run, or "ha-map" rebuilt its engine: the layers are gone with it.
+      state.leafletMap = engine.leafletMap;
+      for (const layer of state.layers) {
+        state.leafletMap.addLayer(layer);
+      }
+      state.fitPending = true;
+    }
+    if (state.fitPending) {
+      this._fitToLayers(state.layers);
+    }
+  }
+
+  // "ha-map" no longer fits the map to "layers" (on the Leaflet engine too).
+  _fitToLayers(layers) {
+    const map = this._map;
+    const state = map?.[LEAFLET_ENGINE];
+    if (!state) {
+      return;
+    }
+    const leafletMap = map.leafletMap;
+    const leaflet = map.Leaflet;
+    if (!layers.length || !(this._config?.auto_fit ?? true)) {
+      state.fitPending = false;
+      return;
+    }
+    const container = leafletMap.getContainer();
+    if (!container.clientWidth || !container.clientHeight) {
+      state.fitPending = true;
+      return;
+    }
+    const bounds = leaflet.latLngBounds([]);
+    for (const layer of layers) {
+      bounds.extend(layer.getBounds());
+    }
+    for (const corner of this._getFocusCorners()) {
+      bounds.extend(corner);
+    }
+    const size = leafletMap.getSize();
+    if (size.x !== container.clientWidth || size.y !== container.clientHeight) {
+      // Leaflet ignores "invalidateSize" until the first view is set, and a
+      // new engine's map starts out with the size it had before layout.
+      leafletMap.setView(bounds.getCenter(), map.zoom, { animate: false });
+      leafletMap.invalidateSize(false);
+    }
+    leafletMap.fitBounds(bounds.pad(0.5), { maxZoom: map.zoom });
+    state.fitPending = false;
+  }
+
+  // "ha-map" used to include the map card's entities (home zone included) when
+  // fitting, so we do the same. Zones contribute their radius, as they did.
+  _getFocusCorners() {
+    const corners = [];
+    for (const entity of this._buildMapConfig().entities) {
+      if (entity.focus === false) {
+        continue;
+      }
+      const id = entity.entity ?? entity;
+      const { latitude, longitude, radius, passive } =
+        this._hass?.states?.[id]?.attributes ?? {};
+      const isZone = id.startsWith("zone.");
+      if (
+        !Number.isFinite(latitude) ||
+        !Number.isFinite(longitude) ||
+        (isZone && passive)
+      ) {
+        continue;
+      }
+      const latDelta = (isZone ? (radius ?? 0) : 0) / 111_320;
+      const lonDelta = latDelta / Math.cos((latitude * Math.PI) / 180);
+      corners.push(
+        [latitude - latDelta, longitude - lonDelta],
+        [latitude + latDelta, longitude + lonDelta],
+      );
+    }
+    return corners;
   }
 
   _supportsLocation() {
@@ -522,6 +655,11 @@ class OrefAlertMap extends HTMLElement {
     const leaflet = map?.Leaflet;
     if (!leafletMap || !leaflet?.marker || !leaflet?.divIcon) {
       return;
+    }
+
+    if (this._locationMarker && !leafletMap.hasLayer(this._locationMarker)) {
+      // The map was rebuilt, and the marker went with the old one.
+      this._locationMarker = null;
     }
 
     if (!this._locationMarker) {

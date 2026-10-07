@@ -946,9 +946,11 @@ describe("oref-alert-map", () => {
     const oldLayer = new TileLayer();
     oldLayer._url = "https://old.example/{z}/{x}/{y}.png";
     const nonTileLayer = {};
+    const vectorLayer = { getMaplibreMap: vi.fn() };
     const removeLayer = vi.fn();
     const eachLayer = vi.fn((cb) => {
       cb(nonTileLayer);
+      cb(vectorLayer);
       cb(oldLayer);
       cb(matchingLayer);
     });
@@ -973,7 +975,8 @@ describe("oref-alert-map", () => {
       },
     };
     el._setTileLayer();
-    expect(removeLayer).toHaveBeenCalledTimes(1);
+    expect(removeLayer).toHaveBeenCalledTimes(2);
+    expect(removeLayer).toHaveBeenCalledWith(vectorLayer);
     expect(removeLayer).toHaveBeenCalledWith(oldLayer);
     expect(tileLayerFactory).not.toHaveBeenCalled();
     expect(addTo).not.toHaveBeenCalled();
@@ -1399,7 +1402,10 @@ describe("oref-alert-map", () => {
     };
     const markerFactory = vi.fn(() => marker);
     const divIconFactory = vi.fn(() => ({ id: "icon" }));
-    const leafletMap = { removeLayer: vi.fn() };
+    const leafletMap = {
+      removeLayer: vi.fn(),
+      hasLayer: vi.fn().mockReturnValue(true),
+    };
     innerMap.Leaflet = {
       marker: markerFactory,
       divIcon: divIconFactory,
@@ -1426,6 +1432,11 @@ describe("oref-alert-map", () => {
     el._syncLocationMarker(31.79, 35.23);
     expect(markerFactory).toHaveBeenCalledTimes(1);
     expect(marker.setLatLng).toHaveBeenCalledWith([31.79, 35.23]);
+
+    // The map was rebuilt on another engine: the old marker is recreated.
+    leafletMap.hasLayer.mockReturnValue(false);
+    el._syncLocationMarker(31.8, 35.3);
+    expect(markerFactory).toHaveBeenCalledTimes(2);
   });
 
   test("syncLocationMarker no-ops when map marker prerequisites are missing", async () => {
@@ -1552,6 +1563,22 @@ describe("oref-alert-map", () => {
       geo_location_sources: ["dummy"],
       entities: ["zone.home"],
       fit_zones: true,
+    });
+
+    el._config = {
+      map_style: "gray",
+      scale_ruler: true,
+      show_zone_radius: false,
+    };
+    expect(el._buildMapConfig()).toEqual({
+      type: "map",
+      geo_location_sources: ["dummy"],
+      entities: [],
+      auto_fit: true,
+      fit_zones: true,
+      map_style: "gray",
+      scale_ruler: true,
+      show_zone_radius: false,
     });
   });
 
@@ -2159,5 +2186,249 @@ describe("oref-alert-map", () => {
     await waitForTasks();
 
     expect(defineSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+function createLeafletEngine({
+  size = { x: 800, y: 600 },
+  container = { clientWidth: 800, clientHeight: 600 },
+} = {}) {
+  const bounds = {
+    extend: vi.fn(),
+    pad: vi.fn(() => "padded"),
+    getCenter: vi.fn(() => "center"),
+  };
+  const leafletMap = {
+    addLayer: vi.fn(),
+    invalidateSize: vi.fn(),
+    getSize: vi.fn(() => size),
+    getContainer: vi.fn(() => container),
+    setView: vi.fn(),
+    fitBounds: vi.fn(),
+  };
+  const Leaflet = { latLngBounds: vi.fn(() => bounds) };
+  return { engine: { leafletMap, Leaflet }, leafletMap, Leaflet, bounds };
+}
+
+function createLayer(id) {
+  return {
+    id,
+    remove: vi.fn(),
+    getBounds: vi.fn(() => `bounds-${id}`),
+  };
+}
+
+describe("oref-alert-map on the engine-based ha-map", () => {
+  async function setup(config = {}) {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    el._config = config;
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+    el._mapCard = mapCard;
+    return { el, innerMap };
+  }
+
+  test("prepareMap does nothing without a map or an engine", async () => {
+    const { el, innerMap } = await setup();
+    el._mapCard = null;
+    el._prepareMap();
+
+    el._mapCard = innerMap.getRootNode().host;
+    el._prepareMap();
+    expect(innerMap.layers).toBeUndefined();
+  });
+
+  test("prepareMap switches a MapLibre engine to Leaflet", async () => {
+    const { el, innerMap } = await setup();
+    innerMap._handleEngineFatal = vi.fn();
+    innerMap._engine = {};
+    el._prepareMap();
+    expect(innerMap._handleEngineFatal).toHaveBeenCalledTimes(1);
+
+    // Also while the engine is still loading.
+    innerMap._engine = undefined;
+    innerMap._loading = true;
+    el._prepareMap();
+    expect(innerMap._handleEngineFatal).toHaveBeenCalledTimes(2);
+
+    // Not when it was already requested, or when nothing is loading.
+    innerMap._forceLeaflet = true;
+    el._prepareMap();
+    innerMap._forceLeaflet = false;
+    innerMap._loading = false;
+    el._prepareMap();
+    expect(innerMap._handleEngineFatal).toHaveBeenCalledTimes(2);
+
+    // Older Home Assistant versions have no such method.
+    innerMap._engine = {};
+    innerMap._handleEngineFatal = undefined;
+    el._prepareMap();
+  });
+
+  test("prepareMap exposes Leaflet members and manages layers", async () => {
+    const { el, innerMap } = await setup();
+    const { engine, leafletMap, Leaflet, bounds } = createLeafletEngine();
+    innerMap._engine = engine;
+    innerMap.zoom = 12;
+
+    el._prepareMap();
+    expect(innerMap.Leaflet).toBe(Leaflet);
+    expect(innerMap.leafletMap).toBe(leafletMap);
+    expect(innerMap.layers).toEqual([]);
+
+    const first = [createLayer(1), createLayer(2)];
+    innerMap.layers = first;
+    expect(innerMap.layers).toBe(first);
+    expect(leafletMap.addLayer).toHaveBeenCalledTimes(2);
+    el._fitToLayers(first);
+    expect(bounds.extend).toHaveBeenCalledWith("bounds-1");
+    expect(bounds.extend).toHaveBeenCalledWith("bounds-2");
+    expect(leafletMap.fitBounds).toHaveBeenCalledWith("padded", {
+      maxZoom: 12,
+    });
+
+    const second = [createLayer(3)];
+    innerMap.layers = second;
+    expect(first[0].remove).toHaveBeenCalled();
+    expect(first[1].remove).toHaveBeenCalled();
+    expect(leafletMap.addLayer).toHaveBeenCalledTimes(3);
+
+    // Same engine: nothing is redrawn.
+    el._prepareMap();
+    expect(leafletMap.addLayer).toHaveBeenCalledTimes(3);
+  });
+
+  test("prepareMap redraws layers and refits after the engine is rebuilt", async () => {
+    const { el, innerMap } = await setup();
+    const old = createLeafletEngine();
+    innerMap._engine = old.engine;
+    el._prepareMap();
+    const layers = [createLayer(1)];
+    innerMap.layers = layers;
+
+    const rebuilt = createLeafletEngine();
+    innerMap._engine = rebuilt.engine;
+    el._prepareMap();
+
+    expect(innerMap.leafletMap).toBe(rebuilt.leafletMap);
+    expect(rebuilt.leafletMap.addLayer).toHaveBeenCalledWith(layers[0]);
+    expect(rebuilt.leafletMap.fitBounds).toHaveBeenCalled();
+
+    // The engine is gone for a moment: layers are kept, nothing is drawn.
+    innerMap._engine = undefined;
+    innerMap.layers = [createLayer(2)];
+    expect(rebuilt.leafletMap.addLayer).toHaveBeenCalledTimes(1);
+  });
+
+  test("fitToLayers skips when there is nothing to fit or auto_fit is off", async () => {
+    const { el, innerMap } = await setup({ auto_fit: false });
+    const { engine, leafletMap } = createLeafletEngine();
+
+    // No adapter (older Home Assistant): "ha-map" fits by itself.
+    el._fitToLayers([createLayer(1)]);
+
+    innerMap._engine = engine;
+    el._prepareMap();
+    el._fitToLayers([createLayer(1)]);
+    el._config = {};
+    el._fitToLayers([]);
+    expect(leafletMap.fitBounds).not.toHaveBeenCalled();
+  });
+
+  test("fitToLayers waits for a sized map", async () => {
+    const { el, innerMap } = await setup();
+    const container = { clientWidth: 0, clientHeight: 0 };
+    const { engine, leafletMap } = createLeafletEngine({ container });
+    innerMap._engine = engine;
+    el._prepareMap();
+    innerMap.layers = [createLayer(1)];
+    el._fitToLayers(innerMap.layers);
+    expect(leafletMap.fitBounds).not.toHaveBeenCalled();
+
+    container.clientWidth = 800;
+    container.clientHeight = 600;
+    el._prepareMap();
+    expect(leafletMap.fitBounds).toHaveBeenCalledTimes(1);
+    expect(leafletMap.setView).not.toHaveBeenCalled();
+
+    // Fit is done: later applies do not refit.
+    el._prepareMap();
+    expect(leafletMap.fitBounds).toHaveBeenCalledTimes(1);
+  });
+
+  test("fitToLayers refreshes a stale Leaflet size before fitting", async () => {
+    const { el, innerMap } = await setup();
+    const { engine, leafletMap } = createLeafletEngine({
+      size: { x: 0, y: 0 },
+    });
+    innerMap._engine = engine;
+    innerMap.zoom = 11;
+    el._prepareMap();
+    innerMap.layers = [createLayer(1)];
+    el._fitToLayers(innerMap.layers);
+
+    expect(leafletMap.setView).toHaveBeenCalledWith("center", 11, {
+      animate: false,
+    });
+    expect(leafletMap.invalidateSize).toHaveBeenCalledWith(false);
+    expect(leafletMap.fitBounds).toHaveBeenCalledWith("padded", {
+      maxZoom: 11,
+    });
+  });
+
+  test("fitToLayers includes the home zone and focused entities", async () => {
+    const { el, innerMap } = await setup({
+      show_home: true,
+      entities: [
+        "person.alice",
+        { entity: "person.hidden", focus: false },
+        { entity: "person.bob" },
+        "person.nowhere",
+        "zone.passive",
+        "zone.noradius",
+      ],
+    });
+    const { engine, bounds } = createLeafletEngine();
+    innerMap._engine = engine;
+    el._hass = {
+      states: {
+        "zone.home": {
+          attributes: { latitude: 32, longitude: 35, radius: 111_320 },
+        },
+        "person.alice": { attributes: { latitude: 31, longitude: 34 } },
+        "person.hidden": { attributes: { latitude: 10, longitude: 10 } },
+        "person.bob": { attributes: { latitude: 30, longitude: 33 } },
+        "zone.noradius": { attributes: { latitude: 29, longitude: 32 } },
+        "person.nowhere": { attributes: { latitude: null, longitude: null } },
+        "zone.passive": {
+          attributes: { latitude: 5, longitude: 5, radius: 100, passive: true },
+        },
+      },
+    };
+    el._prepareMap();
+    innerMap.layers = [createLayer(1)];
+    el._fitToLayers(innerMap.layers);
+
+    const corners = bounds.extend.mock.calls.map(([corner]) => corner);
+    expect(corners).toContainEqual([
+      31,
+      expect.closeTo(35 - 1 / Math.cos((32 * Math.PI) / 180), 6),
+    ]);
+    expect(corners).toContainEqual([
+      33,
+      expect.closeTo(35 + 1 / Math.cos((32 * Math.PI) / 180), 6),
+    ]);
+    expect(corners).toContainEqual([31, 34]);
+    expect(corners).toContainEqual([30, 33]);
+    expect(corners).toContainEqual([29, 32]);
+    expect(corners).not.toContainEqual([10, 10]);
+    expect(corners).not.toContainEqual([5, 5]);
+
+    // Without states nothing is added.
+    el._hass = undefined;
+    bounds.extend.mockClear();
+    el._fitToLayers(innerMap.layers);
+    expect(bounds.extend).toHaveBeenCalledTimes(1);
   });
 });
