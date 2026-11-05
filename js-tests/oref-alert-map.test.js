@@ -155,48 +155,30 @@ describe("oref-alert-map", () => {
     expect(createCardElement).toHaveBeenCalledTimes(2);
   });
 
-  test("getPolygons caches after success and handles unresolved/missing polygons", async () => {
+  test("getPolygons fetches once, caches, and retries after failures", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
+    const polygons = { "Area A": [[1, 1]] };
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValueOnce({ ok: false })
+      .mockResolvedValue({ ok: true, json: async () => polygons });
+    vi.stubGlobal("fetch", fetchMock);
 
-    if (!customElements.get("oref-alert-polygons")) {
-      customElements.define(
-        "oref-alert-polygons",
-        class extends HTMLElement {
-          constructor() {
-            super();
-            this.polygons = { "Area A": [[1, 1]] };
-          }
-        },
+    try {
+      const el = new Card();
+      await expect(el._getPolygons()).resolves.toBeNull();
+      await expect(el._getPolygons()).resolves.toBeNull();
+      await expect(el._getPolygons()).resolves.toEqual(polygons);
+      await expect(el._getPolygons()).resolves.toEqual(polygons);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(String(fetchMock.mock.calls[0][0])).toContain(
+        "oref-alert-polygons.json",
       );
+    } finally {
+      vi.unstubAllGlobals();
     }
-
-    const el = new Card();
-    await expect(el._getPolygons()).resolves.toEqual({ "Area A": [[1, 1]] });
-    const createSpy = vi.spyOn(document, "createElement");
-    await expect(el._getPolygons()).resolves.toEqual({ "Area A": [[1, 1]] });
-    expect(createSpy).not.toHaveBeenCalled();
-
-    const waitingEl = new Card();
-    const whenDefinedSpy = vi
-      .spyOn(customElements, "whenDefined")
-      .mockImplementation(() => new Promise(() => {}));
-
-    let settled = false;
-    void waitingEl._getPolygons().then(() => {
-      settled = true;
-    });
-    await waitForTasks();
-    expect(settled).toBe(false);
-    expect(whenDefinedSpy).toHaveBeenCalledWith("oref-alert-polygons");
-
-    const nullCreateEl = new Card();
-    whenDefinedSpy.mockResolvedValue(undefined);
-    const createElementSpy = vi
-      .spyOn(document, "createElement")
-      .mockReturnValue(null);
-    await expect(nullCreateEl._getPolygons()).resolves.toBeNull();
-    createElementSpy.mockRestore();
   });
 
   test("createLayers handles missing dependencies and creates layers", async () => {

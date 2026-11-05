@@ -4,7 +4,7 @@
     "includes": [
       "custom_components/oref_alert/cards/*",
       "js-tests/*",
-      "!custom_components/oref_alert/cards/oref-alert-polygons.js"
+      "!custom_components/oref_alert/cards/oref-alert-polygons.json"
     ]
   },
   "formatter": {

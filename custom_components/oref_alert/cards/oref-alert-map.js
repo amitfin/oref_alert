@@ -20,6 +20,7 @@ const PRE_ALERT_COLOR = "rgb(253, 224, 71)";
 const END_ALERT_COLOR = "rgb(16, 205, 83)";
 const RELOAD_GUARD_KEY = "oref-alert-map-reload-version";
 const CURRENT_VERSION = new URL(import.meta.url).searchParams.get("v");
+const POLYGONS_FILE = "oref-alert-polygons.json";
 const LEAFLET_ENGINE = Symbol("oref-alert-leaflet-engine");
 const MAP_CONFIG_PASSTHROUGH_KEYS = [
   "aspect_ratio",
@@ -366,11 +367,15 @@ class OrefAlertMap extends HTMLElement {
 
   async _getPolygons() {
     if (!this._polygons) {
-      const polygonsTag = "oref-alert-polygons";
-      await customElements.whenDefined(polygonsTag);
-      const card = document.createElement(polygonsTag);
-      if (card) {
-        this._polygons = card.polygons;
+      try {
+        const url = new URL(POLYGONS_FILE, import.meta.url);
+        url.search = new URL(import.meta.url).search;
+        const response = await fetch(url);
+        if (response.ok) {
+          this._polygons = await response.json();
+        }
+      } catch (_) {
+        // Leave unset so the next call retries.
       }
     }
     return this._polygons;

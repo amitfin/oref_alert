@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock, call, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -50,13 +51,9 @@ async def test_setup_js_url(
         assert await hass.config_entries.async_setup(config_entry.entry_id)
         await hass.async_block_till_done(wait_background_tasks=True)
 
-    mock_add_extra_js_url.assert_has_calls(
-        [
-            call(hass, f"/oref_alert_internal_static/oref-alert-polygons.js?v={ts}"),
-            call(hass, f"/oref_alert_internal_static/oref-alert-map.js?v={ts}"),
-        ]
+    mock_add_extra_js_url.assert_called_once_with(
+        hass, f"/oref_alert_internal_static/oref-alert-map.js?v={ts}"
     )
-    assert mock_add_extra_js_url.call_count == 2
 
 
 async def test_create_polygons_writes_then_skips_then_rewrites(
@@ -71,9 +68,9 @@ async def test_create_polygons_writes_then_skips_then_rewrites(
     monkeypatch.setattr(custom_cards, "init_area_to_polygon", polygons_v1)
 
     await custom_cards._create_polygons()  # noqa: SLF001
-    out_file = tmp_path / custom_cards.POLYGONS_CARD_FILE
+    out_file = tmp_path / custom_cards.POLYGONS_FILE
     first = out_file.read_text()
-    assert '"Area A":[[1,2],[3,4]]' in first
+    assert json.loads(first) == {"Area A": [[1, 2], [3, 4]]}
 
     await custom_cards._create_polygons()  # noqa: SLF001
     second = out_file.read_text()
@@ -86,7 +83,7 @@ async def test_create_polygons_writes_then_skips_then_rewrites(
     await custom_cards._create_polygons()  # noqa: SLF001
     third = out_file.read_text()
     assert third != first
-    assert '"Area B":[[8,8]]' in third
+    assert json.loads(third) == {"Area A": [[9, 9]], "Area B": [[8, 8]]}
 
 
 async def test_publish_cards_uses_integration_version_when_not_dev() -> None:
@@ -111,13 +108,7 @@ async def test_publish_cards_uses_integration_version_when_not_dev() -> None:
     ):
         version = await custom_cards.publish_cards(fake_hass)  # pyright: ignore[reportArgumentType]
 
-    mock_add_extra_js_url.assert_has_calls(
-        [
-            call(
-                fake_hass, "/oref_alert_internal_static/oref-alert-polygons.js?v=2.3.4"
-            ),
-            call(fake_hass, "/oref_alert_internal_static/oref-alert-map.js?v=2.3.4"),
-        ]
+    mock_add_extra_js_url.assert_called_once_with(
+        fake_hass, "/oref_alert_internal_static/oref-alert-map.js?v=2.3.4"
     )
-    assert mock_add_extra_js_url.call_count == 2
     assert version == "2.3.4"
