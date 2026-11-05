@@ -11,7 +11,7 @@ from homeassistant.helpers import event
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import DOMAIN, LOGGER
+from .const import DOMAIN, LOGGER, OREF_HEADERS
 from .metadata import CITIES_MIX_URL, DEPRECATION_SUFFIX, SOME_PARTS_OF_THE_COUNTRY
 from .metadata.areas import AREAS
 
@@ -47,7 +47,9 @@ class AreasChecker:
     async def _check(self, _: datetime | None = None) -> None:
         """Check if  the list of areas was changed."""
         try:
-            async with self._http_client.get(CITIES_MIX_URL) as response:
+            async with self._http_client.get(
+                CITIES_MIX_URL, headers=OREF_HEADERS
+            ) as response:
                 data = await response.json()
             areas = {
                 area["label"]

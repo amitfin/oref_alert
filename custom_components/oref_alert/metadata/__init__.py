@@ -5,7 +5,7 @@ from typing import Final
 ALL_AREAS_ALIASES: Final = {"כל הארץ", "ברחבי הארץ"}
 
 CITIES_MIX_URL: Final = (
-    "https://alerts-history.oref.org.il/Shared/Ajax/GetCitiesMix.aspx"
+    "https://www.oref.org.il/api/v1/AlertHistory/districts/heb"
 )
 DEPRECATION_SUFFIX: Final = " (אזור התרעה ישן)"
 

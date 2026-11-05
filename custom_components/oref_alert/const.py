@@ -18,6 +18,17 @@ TITLE: Final = "Oref Alert"
 LOGGER = logging.getLogger(__package__)
 IST = zoneinfo.ZoneInfo("Asia/Jerusalem")
 
+# The official website rejects requests using aiohttp's default User-Agent.
+OREF_HEADERS: Final = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 OrefAlert"
+    ),
+    "Referer": "https://www.oref.org.il/",
+    "X-Requested-With": "XMLHttpRequest",
+    "Content-Type": "application/json",
+}
+
 ATTR_ALERT: Final = "alert"
 ATTR_AREA: Final = "area"
 ATTR_COUNTRY_ACTIVE_ALERTS: Final = "country_active_alerts"
