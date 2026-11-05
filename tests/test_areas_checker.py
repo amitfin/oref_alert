@@ -2,13 +2,14 @@
 
 from datetime import timedelta
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import pytest
 from homeassistant.helpers import issue_registry as ir
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
 from custom_components.oref_alert.areas_checker import CITIES_MIX_URL, AreasChecker
-from custom_components.oref_alert.const import DOMAIN
+from custom_components.oref_alert.const import DOMAIN, OREF_HEADERS
 
 if TYPE_CHECKING:
     from freezegun.api import FrozenDateTimeFactory
@@ -68,3 +69,16 @@ async def test_areas_check_pass(
     """Test successful areas check."""
     await _areas_check(hass, freezer)
     assert "The following Oref Alert areas were" not in caplog.text
+
+
+async def test_areas_check_headers(hass: HomeAssistant) -> None:
+    """Use the same accepted website headers for the districts request."""
+    checker = AreasChecker(hass)
+    with patch.object(
+        checker._http_client,  # noqa: SLF001
+        "get",
+        wraps=checker._http_client.get,  # noqa: SLF001
+    ) as get:
+        await checker._check()  # noqa: SLF001
+    checker.stop()
+    get.assert_called_once_with(CITIES_MIX_URL, headers=OREF_HEADERS)

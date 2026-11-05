@@ -56,6 +56,7 @@ from .const import (
     IST,
     LOGGER,
     MANUAL_EVENT_END_TITLE,
+    OREF_HEADERS,
     TITLE_FIELD,
     PublishedData,
     Record,
@@ -86,12 +87,9 @@ OREF_ALERTS_URL: Final = "https://www.oref.org.il/warningMessages/alert/Alerts.j
 OREF_HISTORY_URL: Final = (
     "https://www.oref.org.il/warningMessages/alert/History/AlertsHistory.json"
 )
-OREF_HISTORY2_URL: Final = "https://alerts-history.oref.org.il/Shared/Ajax/GetAlarmsHistory.aspx?lang=he&mode=1"
-OREF_HEADERS: Final = {
-    "Referer": "https://www.oref.org.il/",
-    "X-Requested-With": "XMLHttpRequest",
-    "Content-Type": "application/json",
-}
+OREF_HISTORY2_URL: Final = (
+    "https://www.oref.org.il/api/v1/AlertHistory/heb?period=lastDay&cities="
+)
 REQUEST_RETRIES: Final = 3
 REQUEST_THROTTLING: Final = 0.8
 DEDUP_WINDOW_SECONDS: Final = 180
@@ -238,7 +236,9 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             )
             for record in itertools.chain(
                 self._process_history_alerts(history, self._history_to_record),
-                self._process_history_alerts(history2, self._history2_to_record),
+                self._process_history_alerts(
+                    self._history2_records(history2), self._history2_to_record
+                ),
                 self._current_to_history_format(current),
             ):
                 yield record
@@ -496,12 +496,27 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             channel=RecordSource.HISTORY,
         )
 
+    @staticmethod
+    def _history2_records(history: Any) -> list[dict[str, Any]]:
+        """Flatten grouped history, keeping the newest record per area first."""
+        if not isinstance(history, dict):
+            return []
+        return sorted(
+            (
+                record
+                for group in history.get("alarmsGroupedByDate", [])
+                for record in group["value"]
+            ),
+            key=lambda record: record["dateTime"][:11] + record["time"],
+            reverse=True,
+        )
+
     @classmethod
     def _history2_to_record(cls, record: dict[str, Any]) -> Record:
         """Convert history2 raw record to to Record."""
         return Record(
-            alertDate=record[DATE_FIELD].replace("T", " "),
-            title=record["category_desc"],
+            alertDate=(record["dateTime"][:11] + record["time"]).replace("T", " "),
+            title=record["category_Desc"],
             data=cls._fix_area_spelling(record[AREA_FIELD]),
             category=record[CATEGORY_FIELD],
             channel=RecordSource.HISTORY,

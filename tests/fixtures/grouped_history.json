@@ -1,0 +1,38 @@
+{
+  "alarmsGroupedByDate": [
+    {
+      "key": "07.06.2026",
+      "value": [
+        {
+          "data": "אילת",
+          "dateTime": "2026-06-07T09:50:00",
+          "time": "09:50:20",
+          "category": 1,
+          "category_Desc": "ירי רקטות וטילים",
+          "rid": 1
+        }
+      ]
+    },
+    {
+      "key": "08.06.2026",
+      "value": [
+        {
+          "data": "אילת",
+          "dateTime": "2026-06-08T09:50:00",
+          "time": "09:50:20",
+          "category": 1,
+          "category_Desc": "ירי רקטות וטילים",
+          "rid": 2
+        },
+        {
+          "data": "אילת",
+          "dateTime": "2026-06-08T09:50:00",
+          "time": "09:50:38",
+          "category": 13,
+          "category_Desc": "האירוע הסתיים",
+          "rid": 3
+        }
+      ]
+    }
+  ]
+}

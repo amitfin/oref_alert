@@ -7,7 +7,7 @@ from datetime import timedelta
 from http import HTTPStatus
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import homeassistant.util.dt as dt_util
 import pytest
@@ -31,6 +31,7 @@ from custom_components.oref_alert.const import (
     EXPIRED_EVENT_END_TITLE,
     IST,
     MANUAL_EVENT_END_TITLE,
+    OREF_HEADERS,
     TITLE_FIELD,
     Record,
     RecordAndMetadata,
@@ -77,6 +78,59 @@ async def test_init(hass: HomeAssistant) -> None:
     assert coordinator.update_interval == timedelta(seconds=20)
     await coordinator.async_config_entry_first_refresh()
     # No pending refresh since there are no listeners
+
+
+async def test_official_feed_headers(hass: HomeAssistant) -> None:
+    """Send the official website headers to each polling source."""
+    coordinator = create_coordinator(hass)
+    with patch.object(
+        coordinator._http_client,  # noqa: SLF001
+        "get",
+        wraps=coordinator._http_client.get,  # noqa: SLF001
+    ) as get:
+        await coordinator.async_config_entry_first_refresh()
+    assert {call.args[0] for call in get.call_args_list} == {
+        OREF_ALERTS_URL,
+        OREF_HISTORY_URL,
+        OREF_HISTORY2_URL,
+    }
+    assert all(call.kwargs["headers"] == OREF_HEADERS for call in get.call_args_list)
+
+
+@pytest.mark.parametrize("payload", [None, [], {}, {"alarmsGroupedByDate": []}])
+def test_empty_grouped_history(payload: Any) -> None:
+    """Accept empty API replies and the fetcher's empty failure/304 result."""
+    assert OrefAlertDataUpdateCoordinator._history2_records(payload) == []  # noqa: SLF001
+
+
+def test_grouped_history_order() -> None:
+    """Order across groups and within a rounded minute using precise seconds."""
+    payload = load_json_fixture("grouped_history.json")
+    records = OrefAlertDataUpdateCoordinator._history2_records(payload)  # noqa: SLF001
+    assert [record["rid"] for record in records] == [3, 2, 1]
+
+
+async def test_grouped_history_refresh(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Use the newest grouped record so an older alert cannot replace its end."""
+    freezer.move_to("2026-06-08 09:52:00+03:00")
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(OREF_ALERTS_URL, text="")
+    aioclient_mock.get(OREF_HISTORY_URL, text="")
+    aioclient_mock.get(
+        OREF_HISTORY2_URL, json=load_json_fixture("grouped_history.json")
+    )
+    coordinator = create_coordinator(hass)
+    await coordinator.async_config_entry_first_refresh()
+    record = coordinator.get_record("אילת")
+    assert record is not None
+    assert record["category"] == END_ALERT_CATEGORY
+    assert record["alertDate"] == "2026-06-08 09:50:38"
+    assert record["title"] == "האירוע הסתיים"
+    assert record["channel"] == "website-history"
 
 
 async def test_save_and_restore_areas(hass: HomeAssistant) -> None:
@@ -588,21 +642,21 @@ def test_process_history_alerts_skips_duplicate_area(hass: HomeAssistant) -> Non
 
 
 def test_history2_to_record_uses_category_desc_as_title() -> None:
-    """Test history2 payload conversion uses category_desc for title."""
+    """Test grouped history conversion preserves its title and exact seconds."""
     record = OrefAlertDataUpdateCoordinator._history2_to_record(  # noqa: SLF001
         {
             "data": "האון",
             "date": "28.02.2026",
             "time": "19:00:07",
-            "alertDate": "2026-02-28T19:00:00",
+            "dateTime": "2026-02-28T19:00:00",
             "category": 13,
-            "category_desc": "ניתן לצאת מהמרחב המוגן אך יש להישאר בקרבתו",
+            "category_Desc": "ניתן לצאת מהמרחב המוגן אך יש להישאר בקרבתו",
             "matrix_id": 10,
             "rid": 262817,
         },
     )
 
-    assert record.alertDate == "2026-02-28 19:00:00"
+    assert record.alertDate == "2026-02-28 19:00:07"
     assert record.title == "ניתן לצאת מהמרחב המוגן אך יש להישאר בקרבתו"
     assert record.data == "האון"
     assert record.category == 13
