@@ -20,10 +20,12 @@ sys.path.insert(
 
 from metadata import (  # pyright: ignore[reportMissingImports]
     ALL_AREAS_ALIASES,
-    CITIES_MIX_URL,
     DEPRECATION_SUFFIX,
+    OREF_HEADERS,
+    SEGMENTS_URL,
     SOME_PARTS_OF_THE_COUNTRY,
     TZEVAADOM_SPELLING_FIX,
+    is_area_segment,
 )
 
 RELATIVE_OUTPUT_DIRECTORY = "custom_components/oref_alert/metadata/"
@@ -39,9 +41,8 @@ TZEVAADOM_ID_TO_AREA_OUTPUT = "tzevaadom_id_to_area.py"
 SERVICES_YAML = "custom_components/oref_alert/services.yaml"
 TRIGGERS_YAML = "custom_components/oref_alert/triggers.yaml"
 CONDITIONS_YAML = "custom_components/oref_alert/conditions.yaml"
-TEST_AREAS_FIXTURE = "tests/fixtures/GetCitiesMix.json"
-DISTRICTS_URL = "https://alerts-history.oref.org.il/Shared/Ajax/GetDistricts.aspx"
-SEGMENTS_URL = "https://dist-android.meser-hadash.org.il/smart-dist/services/anonymous/segments/android?instance=1544803905&locale=iw_IL"
+TEST_SEGMENTS_FIXTURE = "tests/fixtures/segments.json"
+DISTRICTS_URL = "https://www.oref.org.il/districts/districts_heb.json"
 POLYGON_URL = "https://services.meser-hadash.org.il/smart-dist/services/anonymous/polygon/id/android?instance=1544803905&id="
 TZEVAADOM_CITIES_URL = "https://www.tzevaadom.co.il/static/cities.json"
 CITY_ALL_AREAS_SUFFIX = " - כל האזורים"
@@ -64,6 +65,7 @@ class AreaInfoType(TypedDict):
 
 SPELLING_FIX = {"חדרה כל - האזורים": "חדרה - כל האזורים"}
 DISTRICT_FIX = {"סביון": "דן"}
+ALL_AREAS_MIGUN_TIME = dict.fromkeys(ALL_AREAS, 0)
 
 TZEVAADOM_ALL_AREAS = {10000000: next(iter(ALL_AREAS))}
 
@@ -81,8 +83,10 @@ class OrefMetadata:
         self._http_client = aiohttp.ClientSession()
         self._root_directory = Path(__file__).parent.parent
         self._output_directory = self._root_directory / RELATIVE_OUTPUT_DIRECTORY
-        self._cities_mix: list[Any] = self._fix_areas(
-            await self._fetch_url_json(CITIES_MIX_URL)
+        segments = (await self._fetch_url_json(SEGMENTS_URL))["segments"]
+        self._segments_snapshot = self._get_segments_snapshot(segments)
+        self._segment_areas: list[Any] = self._fix_areas(
+            self._get_segment_areas(segments)
         )
         self._backend_areas: list[str] = self._get_areas()
         self._areas_no_group = list(
@@ -100,7 +104,7 @@ class OrefMetadata:
         )
         self._areas_and_groups.sort()
         assert len(self._areas_and_groups) == len(set(self._areas_and_groups))
-        self._segments_data = await self._get_segments_data()
+        self._segments_data = self._get_segments_data(segments)
         self._segments = self._get_segments_to_area()
         self._area_info = self._get_area_info()
         self._area_to_polygon = await self._get_area_to_polygon()
@@ -117,10 +121,35 @@ class OrefMetadata:
         """Fetch URL and return JSON reply."""
         async with self._http_client.get(
             url,
+            headers=OREF_HEADERS if "oref.org.il" in url else None,
             proxy=self.proxy or None,
         ) as response:
             response.raise_for_status()
             return await response.json()
+
+    def _get_segments_snapshot(self, segments: dict[str, Any]) -> dict[str, Any]:
+        """Return the segments fields used by AreasChecker, for its tests."""
+        return {
+            "segments": {
+                segment: {"name": data["name"], "isParent": bool(data.get("isParent"))}
+                for segment, data in segments.items()
+            }
+        }
+
+    def _get_segment_areas(self, segments: dict[str, Any]) -> list[dict[str, Any]]:
+        """Return areas and their migun time, based on the segments data."""
+        areas = [
+            {
+                "label": data["name"],
+                "migun_time": data["szSeconds"],
+            }
+            for data in segments.values()
+            if is_area_segment(data)
+        ]
+        return areas + [
+            {"label": area, "migun_time": migun_time}
+            for area, migun_time in ALL_AREAS_MIGUN_TIME.items()
+        ]
 
     def _fix_areas(self, data: list[dict[str, Any]]) -> Any:
         """Fix spelling error and remove irrelevant and duplicated items."""
@@ -143,7 +172,7 @@ class OrefMetadata:
 
     def _get_areas(self) -> list[str]:
         """Return the list of areas."""
-        areas = list({area["label"] for area in self._cities_mix})
+        areas = list({area["label"] for area in self._segment_areas})
         areas.sort()
         return areas
 
@@ -151,7 +180,7 @@ class OrefMetadata:
         """Build a mpa between a city and the migun time."""
         migun_time = {
             area["label"]: int(area["migun_time"])
-            for area in self._cities_mix
+            for area in self._segment_areas
             if area["label"] in self._areas_no_group
         }
         return {area: migun_time[area] for area in sorted(migun_time.keys())}
@@ -173,6 +202,13 @@ class OrefMetadata:
                 areas.add(area["label"])
                 area["areaname"] = DISTRICT_FIX.get(area["label"], area["areaname"])
                 result.append(area)
+
+        # The web source and the mobile source (segments) must have the same areas.
+        segments_areas = set(self._areas_no_group) - ALL_AREAS_ALIASES
+        assert areas == segments_areas, (
+            sorted(areas - segments_areas),
+            sorted(segments_areas - areas),
+        )
         return result
 
     def _district_to_areas_map(self) -> dict[str, list[str]]:
@@ -199,9 +235,8 @@ class OrefMetadata:
             )
         )
 
-    async def _get_segments_data(self) -> dict[int, dict[str, Any]]:
+    def _get_segments_data(self, segments: dict[str, Any]) -> dict[int, dict[str, Any]]:
         """Get segments data as a sorted dict of segment to its data."""
-        segments = (await self._fetch_url_json(SEGMENTS_URL))["segments"]
         return dict(
             sorted(
                 {
@@ -382,44 +417,25 @@ class OrefMetadata:
         ) as output:
             yaml.dump(conditions, output, sort_keys=False, indent=2, allow_unicode=True)
 
-        with (
-            zipfile.ZipFile(
-                f"{self._output_directory / AREA_TO_POLYGON_OUTPUT}.zip",
-            ) as zip_file,
-            zip_file.open(AREA_TO_POLYGON_OUTPUT) as json_file,
-        ):
-            previous_area_to_polygon = json.load(json_file)
-
-        if self._area_to_polygon != previous_area_to_polygon:
-            with zipfile.ZipFile(
-                f"{self._output_directory / AREA_TO_POLYGON_OUTPUT}.zip",
-                "w",
-                compression=zipfile.ZIP_DEFLATED,
+        # A fixed timestamp keeps the file identical when its content is unchanged.
+        polygon_info = zipfile.ZipInfo(AREA_TO_POLYGON_OUTPUT)
+        polygon_info.compress_type = zipfile.ZIP_DEFLATED
+        with zipfile.ZipFile(
+            f"{self._output_directory / AREA_TO_POLYGON_OUTPUT}.zip",
+            "w",
+        ) as zip_file:
+            zip_file.writestr(
+                polygon_info,
+                json.dumps(
+                    self._area_to_polygon, separators=(",", ":"), ensure_ascii=False
+                ),
                 compresslevel=9,
-            ) as zip_file:
-                zip_file.writestr(
-                    AREA_TO_POLYGON_OUTPUT,
-                    json.dumps(
-                        self._area_to_polygon, separators=(",", ":"), ensure_ascii=False
-                    ),
-                )
+            )
 
-        with (self._root_directory / TEST_AREAS_FIXTURE).open(
+        with (self._root_directory / TEST_SEGMENTS_FIXTURE).open(
             "w", encoding="utf-8"
         ) as fixture:
-            json.dump(
-                [
-                    {"label": label}
-                    for label in sorted(
-                        {
-                            area["label"]
-                            for area in (await self._fetch_url_json(CITIES_MIX_URL))
-                        }
-                    )
-                ],
-                fixture,
-                ensure_ascii=False,
-            )
+            json.dump(self._segments_snapshot, fixture, ensure_ascii=False)
 
         await (
             await asyncio.create_subprocess_exec(
