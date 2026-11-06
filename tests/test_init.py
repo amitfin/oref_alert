@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 import homeassistant.util.dt as dt_util
 import pytest
@@ -78,6 +78,20 @@ async def test_setup(hass: HomeAssistant, entity_registry: er.EntityRegistry) ->
     assert await hass.config_entries.async_remove(config_entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert not hass.states.get(ENTITY_ID)
+
+
+async def test_setup_loads_history(hass: HomeAssistant) -> None:
+    """Test setup starts loading the history in the background."""
+    config_entry = MockConfigEntry(domain=DOMAIN, options=DEFAULT_OPTIONS)
+    config_entry.add_to_hass(hass)
+    with patch.object(
+        OrefAlertDataUpdateCoordinator, "async_load_history", AsyncMock()
+    ) as load_history:
+        assert await hass.config_entries.async_setup(config_entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+    load_history.assert_awaited_once()
+    assert await hass.config_entries.async_remove(config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_stop_on_homeassistant_stop(hass: HomeAssistant) -> None:

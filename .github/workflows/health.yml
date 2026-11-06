@@ -1,0 +1,27 @@
+name: Health
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */4 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    name: Endpoints health check
+    runs-on: self-hosted
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+        with:
+          path: repo
+
+      - name: Set up Python
+        uses: ./repo/.github/actions/python
+        with:
+          packages: aiohttp
+
+      - name: Check endpoints
+        run: .venv/bin/python repo/scripts/check_endpoints.py

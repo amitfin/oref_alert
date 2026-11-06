@@ -284,7 +284,7 @@ class PushyNotifications:
             self._mqtt.subscribe(self._credentials.get(TOKEN_KEY, ""), MQTT_QOS)
             LOGGER.debug("MQTT subscribe is done.")
         else:
-            LOGGER.warning(f"MQTT connection failed: {reason_code.getName()}.")  # type: ignore[no-untyped-call]
+            LOGGER.warning(f"MQTT connection failed: {reason_code}.")
 
     def on_message(self, message: MQTTMessage) -> None:
         """MQTT message processing."""

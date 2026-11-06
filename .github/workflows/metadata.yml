@@ -14,26 +14,15 @@ jobs:
     name: Metadata sync
     runs-on: self-hosted
     steps:
-      - name: Clean up workspace
-        run: |
-          set -euo pipefail
-          find "${GITHUB_WORKSPACE:?}" -mindepth 1 -maxdepth 1 ! -name '.uv-cache' -exec rm -rf -- {} +
-
       - name: Checkout the repository
         uses: actions/checkout@v7
         with:
           path: repo
 
       - name: Set up Python
-        run: |
-          set -euo pipefail
-          curl -LsSf https://astral.sh/uv/install.sh | env UV_UNMANAGED_INSTALL="$(pwd)" sh
-          ./uv venv .venv --python 3.14
-
-      - name: Install requirements
-        env:
-          UV_CACHE_DIR: ${{ github.workspace }}/.uv-cache
-        run: ./uv pip install --python .venv/bin/python aiohttp pyyaml ruff
+        uses: ./repo/.github/actions/python
+        with:
+          packages: aiohttp pyyaml ruff
 
       - name: Regenerate metadata
         shell: bash

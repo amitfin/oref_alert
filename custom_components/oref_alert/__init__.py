@@ -434,6 +434,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
             entry.runtime_data.bus_events.async_restore(),
         )
         await entry.runtime_data.coordinator.async_config_entry_first_refresh()
+        entry.async_create_background_task(
+            hass,
+            entry.runtime_data.coordinator.async_load_history(),
+            f"{DOMAIN} history",
+        )
 
         await asyncio.gather(
             entry.runtime_data.pushy.start(), entry.runtime_data.tzevaadom.start()

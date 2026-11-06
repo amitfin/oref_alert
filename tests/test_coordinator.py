@@ -7,7 +7,7 @@ from datetime import timedelta
 from http import HTTPStatus
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import homeassistant.util.dt as dt_util
 import pytest
@@ -37,13 +37,16 @@ from custom_components.oref_alert.const import (
     RecordType,
 )
 from custom_components.oref_alert.coordinator import (
-    OREF_ALERTS_URL,
-    OREF_HISTORY2_URL,
-    OREF_HISTORY_URL,
     OrefAlertCoordinatorData,
     OrefAlertDataUpdateCoordinator,
 )
-from custom_components.oref_alert.metadata import SOME_PARTS_OF_THE_COUNTRY
+from custom_components.oref_alert.metadata import (
+    OREF_ALERTS_URL,
+    OREF_HISTORY2_URL,
+    OREF_HISTORY_URL,
+    SOME_PARTS_OF_THE_COUNTRY,
+)
+from custom_components.oref_alert.metadata.areas import AREAS
 
 from .utils import load_json_fixture, mock_urls
 
@@ -587,22 +590,312 @@ def test_process_history_alerts_skips_duplicate_area(hass: HomeAssistant) -> Non
     assert len(processed) == 1
 
 
+@pytest.mark.parametrize(
+    "payload",
+    [
+        ["unexpected"],
+        {"error": "unexpected"},
+        {"alarmsGroupedByDate": [{"key": "19.10.2026"}]},
+    ],
+)
+async def test_history2_unexpected_reply(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    payload: Any,
+) -> None:
+    """Test an unexpected history2 reply is ignored."""
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(OREF_HISTORY2_URL, json=payload)
+    coordinator = create_coordinator(hass)
+
+    assert await coordinator._async_fetch_history2() == []  # noqa: SLF001
+    assert aioclient_mock.call_count == 1
+
+
+async def test_history2_payload_updates_areas(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test a history2 reply is processed by the coordinator refresh."""
+    freezer.move_to("2026-10-19 20:32:00+03:00")
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(OREF_ALERTS_URL, text="")
+    aioclient_mock.get(OREF_HISTORY_URL, text="")
+    aioclient_mock.get(
+        OREF_HISTORY2_URL,
+        json={
+            "alarmsGroupedByDate": [
+                {
+                    "key": "19.10.2026",
+                    "value": [
+                        {
+                            "data": "בארי",
+                            "date": "19.10.2026",
+                            "time": "20:31:16",
+                            "dateTime": "2026-10-19T20:31:00",
+                            "category": 13,
+                            "category_Desc": "האירוע הסתיים",
+                        },
+                        {
+                            "data": "בארי",
+                            "date": "19.10.2026",
+                            "time": "20:30:42",
+                            "dateTime": "2026-10-19T20:30:00",
+                            "category": 10,
+                            "category_Desc": "חדירת מחבלים",
+                        },
+                    ],
+                }
+            ]
+        },
+    )
+    coordinator = create_coordinator(hass)
+    await coordinator.async_refresh()
+
+    records = coordinator.get_records(None, None, None)
+    assert len(records) == 1
+    assert records[0]["data"] == "בארי"
+    assert records[0]["category"] == 13
+    assert records[0]["alertDate"] == "2026-10-19 20:31:16"
+    assert records[0]["channel"] == "website-history"
+
+
+PAGE_SIZE = 200
+
+
+def _history2_page(time: str, size: int = PAGE_SIZE) -> dict[str, Any]:
+    """Return a history2 page of records for different areas."""
+    records: list[dict[str, Any]] = [
+        {
+            "data": area,
+            "date": "19.10.2026",
+            "time": time,
+            "dateTime": f"2026-10-19T{time[:5]}:00",
+            "category": 1,
+            "category_Desc": "ירי רקטות וטילים",
+        }
+        for area in sorted(AREAS)[:size]
+    ]
+    return {
+        "alarmsGroupedByDate": [{"key": "19.10.2026", "value": records}]
+        if records
+        else []
+    }
+
+
+def _history2_page_url(page: dict[str, Any]) -> str:
+    """Return the URL of the page that follows the given page."""
+    return OrefAlertDataUpdateCoordinator._history2_page_url(  # noqa: SLF001
+        page["alarmsGroupedByDate"][-1]["value"][-1]
+    )
+
+
+async def test_history2_paging(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test history2 pages are fetched until an empty page."""
+    freezer.move_to("2026-10-19 20:32:00+03:00")
+    first, second = _history2_page("20:31:10"), _history2_page("20:30:10", 3)
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(_history2_page_url(second), json=_history2_page("", 0))
+    aioclient_mock.get(_history2_page_url(first), json=second)
+    aioclient_mock.get(OREF_HISTORY2_URL, json=first)
+    coordinator = create_coordinator(hass)
+
+    records = await coordinator._async_fetch_history2()  # noqa: SLF001
+
+    assert len(records) == PAGE_SIZE + 3
+    assert aioclient_mock.call_count == 3
+    assert "lastCityName=" in str(aioclient_mock.mock_calls[1][1])
+    assert list(coordinator._http_replies) == [OREF_HISTORY2_URL]  # noqa: SLF001
+
+
+async def test_history2_date_groups(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test records of all date groups are returned, newest first."""
+    freezer.move_to("2026-10-20 00:02:00+03:00")
+    after_midnight = {
+        "data": "בארי",
+        "date": "20.10.2026",
+        "time": "00:01:10",
+        "dateTime": "2026-10-20T00:01:00",
+        "category": 1,
+        "category_Desc": "ירי רקטות וטילים",
+    }
+    before_midnight = {
+        "data": "נחל עוז",
+        "date": "19.10.2026",
+        "time": "23:59:10",
+        "dateTime": "2026-10-19T23:59:00",
+        "category": 1,
+        "category_Desc": "ירי רקטות וטילים",
+    }
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(
+        OrefAlertDataUpdateCoordinator._history2_page_url(before_midnight),  # noqa: SLF001
+        json={"alarmsGroupedByDate": []},
+    )
+    aioclient_mock.get(
+        OREF_HISTORY2_URL,
+        json={
+            "alarmsGroupedByDate": [
+                {"key": "20.10.2026", "value": [after_midnight]},
+                {"key": "19.10.2026", "value": [before_midnight]},
+            ]
+        },
+    )
+    coordinator = create_coordinator(hass)
+
+    assert await coordinator._async_fetch_history2() == [  # noqa: SLF001
+        after_midnight,
+        before_midnight,
+    ]
+    assert aioclient_mock.call_count == 2
+
+
+async def test_load_history(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test the records of the last day are loaded, and listeners are updated."""
+    freezer.move_to("2026-10-19 22:30:00+03:00")
+    alert = {
+        "data": "בארי",
+        "date": "19.10.2026",
+        "time": "21:00:10",
+        "dateTime": "2026-10-19T21:00:00",
+        "category": 1,
+        "category_Desc": "ירי רקטות וטילים",
+    }
+    end = {
+        "data": "נחל עוז",
+        "date": "19.10.2026",
+        "time": "08:00:10",
+        "dateTime": "2026-10-19T08:00:00",
+        "category": 13,
+        "category_Desc": "האירוע הסתיים",
+    }
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(
+        OrefAlertDataUpdateCoordinator._history2_page_url(end),  # noqa: SLF001
+        json={"alarmsGroupedByDate": []},
+    )
+    aioclient_mock.get(
+        OREF_HISTORY2_URL,
+        json={"alarmsGroupedByDate": [{"key": "19.10.2026", "value": [alert, end]}]},
+    )
+    coordinator = create_coordinator(hass)
+    # A refresh has just fetched the first page.
+    coordinator._http_replies[OREF_HISTORY2_URL] = ("", dt_util.now().timestamp())  # noqa: SLF001
+
+    with patch.object(coordinator, "async_update_listeners") as update_listeners:
+        await coordinator.async_load_history()
+        assert update_listeners.call_count == 1
+        assert aioclient_mock.call_count == 2
+        assert {
+            area: record.raw.category for area, record in coordinator.data.areas.items()
+        } == {"בארי": 1, "נחל עוז": 13}
+
+        # The same records again don't update anything.
+        freezer.tick(1)
+        await coordinator.async_load_history()
+        assert update_listeners.call_count == 1
+        assert aioclient_mock.call_count == 4
+
+
+async def test_history2_paging_stops_at_old_records(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test paging stops at records older than the recent records window."""
+    freezer.move_to("2026-10-19 20:32:00+03:00")
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(OREF_HISTORY2_URL, json=_history2_page("20:26:10"))
+    coordinator = create_coordinator(hass)
+
+    assert len(await coordinator._async_fetch_history2()) == PAGE_SIZE  # noqa: SLF001
+    assert aioclient_mock.call_count == 1
+
+
+async def test_history2_paging_failure(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test a failed page stops the paging."""
+    freezer.move_to("2026-10-19 20:32:00+03:00")
+    first = _history2_page("20:31:10")
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(_history2_page_url(first), text="Access Denied")
+    aioclient_mock.get(OREF_HISTORY2_URL, json=first)
+    coordinator = create_coordinator(hass)
+
+    assert len(await coordinator._async_fetch_history2()) == PAGE_SIZE  # noqa: SLF001
+    assert list(coordinator._http_replies) == [OREF_HISTORY2_URL]  # noqa: SLF001
+
+
+async def test_history2_paging_max_pages(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test paging stops at the maximal number of pages."""
+    freezer.move_to("2026-10-19 20:32:00+03:00")
+    first = _history2_page("20:31:10")
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(_history2_page_url(first), json=_history2_page("20:30:10"))
+    aioclient_mock.get(OREF_HISTORY2_URL, json=first)
+    coordinator = create_coordinator(hass)
+
+    with patch("custom_components.oref_alert.coordinator.HISTORY2_MAX_PAGES", 2):
+        records = await coordinator._async_fetch_history2()  # noqa: SLF001
+
+    assert len(records) == 2 * PAGE_SIZE
+    assert aioclient_mock.call_count == 2
+
+
+async def test_history2_paging_stuck(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test paging stops when the next page doesn't move forward."""
+    freezer.move_to("2026-10-19 20:32:00+03:00")
+    first = _history2_page("20:31:10")
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(_history2_page_url(first), json=first)
+    aioclient_mock.get(OREF_HISTORY2_URL, json=first)
+    coordinator = create_coordinator(hass)
+
+    await coordinator._async_fetch_history2()  # noqa: SLF001
+
+    assert aioclient_mock.call_count == 2
+
+
 def test_history2_to_record_uses_category_desc_as_title() -> None:
-    """Test history2 payload conversion uses category_desc for title."""
+    """Test history2 payload conversion uses category_Desc for title."""
     record = OrefAlertDataUpdateCoordinator._history2_to_record(  # noqa: SLF001
         {
             "data": "האון",
             "date": "28.02.2026",
             "time": "19:00:07",
-            "alertDate": "2026-02-28T19:00:00",
+            "dateTime": "2026-02-28T19:00:00",
             "category": 13,
-            "category_desc": "ניתן לצאת מהמרחב המוגן אך יש להישאר בקרבתו",
-            "matrix_id": 10,
+            "category_Desc": "ניתן לצאת מהמרחב המוגן אך יש להישאר בקרבתו",
+            "matrixId": 10,
             "rid": 262817,
         },
     )
 
-    assert record.alertDate == "2026-02-28 19:00:00"
+    assert record.alertDate == "2026-02-28 19:00:07"
     assert record.title == "ניתן לצאת מהמרחב המוגן אך יש להישאר בקרבתו"
     assert record.data == "האון"
     assert record.category == 13
