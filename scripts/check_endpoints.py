@@ -20,6 +20,7 @@ sys.path.insert(
 
 from metadata import (  # pyright: ignore[reportMissingImports]
     OREF_ALERTS_URL,
+    OREF_HEADERS,
     OREF_HISTORY2_URL,
     OREF_HISTORY_URL,
     SEGMENTS_URL,
@@ -42,7 +43,9 @@ RETRY_DELAY = 30
 
 async def fetch_json(session: aiohttp.ClientSession, url: str) -> Any:
     """Fetch URL and return its JSON content (or None for an empty reply)."""
-    async with session.get(url) as response:
+    async with session.get(
+        url, headers=OREF_HEADERS if "oref.org.il" in url else None
+    ) as response:
         response.raise_for_status()
         text = (await response.read()).decode("utf-8-sig").replace("\x00", "").strip()
         return json.loads(text) if text else None
@@ -136,12 +139,13 @@ async def run_check(
         except Exception as ex:  # noqa: BLE001
             print(  # noqa: T201
                 f"FAIL {check.__name__} ({attempt}/{ATTEMPTS}): "
-                f"{type(ex).__name__}: {ex}"
+                f"{type(ex).__name__}: {ex}",
+                flush=True,
             )
             if attempt < ATTEMPTS:
                 await asyncio.sleep(RETRY_DELAY)
         else:
-            print(f"OK   {check.__name__}")  # noqa: T201
+            print(f"OK   {check.__name__}", flush=True)  # noqa: T201
             return True
     return False
 
