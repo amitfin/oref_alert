@@ -1,0 +1,29 @@
+name: Python environment
+description: Clean the workspace and set up Python with the given packages.
+
+inputs:
+  packages:
+    description: Packages to install.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Clean up workspace
+      shell: bash
+      run: |
+        set -euo pipefail
+        find "${GITHUB_WORKSPACE:?}" -mindepth 1 -maxdepth 1 ! -name '.uv-cache' ! -name repo -exec rm -rf -- {} +
+
+    - name: Set up Python
+      shell: bash
+      run: |
+        set -euo pipefail
+        curl -LsSf https://astral.sh/uv/install.sh | env UV_UNMANAGED_INSTALL="$(pwd)" sh
+        ./uv venv .venv --python 3.14
+
+    - name: Install requirements
+      shell: bash
+      env:
+        UV_CACHE_DIR: ${{ github.workspace }}/.uv-cache
+      run: ./uv pip install --python .venv/bin/python ${{ inputs.packages }}

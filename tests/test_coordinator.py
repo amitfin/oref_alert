@@ -37,13 +37,15 @@ from custom_components.oref_alert.const import (
     RecordType,
 )
 from custom_components.oref_alert.coordinator import (
-    OREF_ALERTS_URL,
-    OREF_HISTORY2_URL,
-    OREF_HISTORY_URL,
     OrefAlertCoordinatorData,
     OrefAlertDataUpdateCoordinator,
 )
-from custom_components.oref_alert.metadata import SOME_PARTS_OF_THE_COUNTRY
+from custom_components.oref_alert.metadata import (
+    OREF_ALERTS_URL,
+    OREF_HISTORY2_URL,
+    OREF_HISTORY_URL,
+    SOME_PARTS_OF_THE_COUNTRY,
+)
 from custom_components.oref_alert.metadata.areas import AREAS
 
 from .utils import load_json_fixture, mock_urls

@@ -29,7 +29,11 @@ from .const import (
     RecordAndMetadata,
     RecordSource,
 )
-from .metadata import TZEVAADOM_SPELLING_FIX
+from .metadata import (
+    TZEVAADOM_ORIGIN,
+    TZEVAADOM_SPELLING_FIX,
+    TZEVAADOM_WS_URL,
+)
 from .metadata.areas import AREAS
 from .metadata.tzevaadom_id_to_area import (
     TZEVAADOM_ID_TO_AREA,
@@ -41,8 +45,6 @@ if TYPE_CHECKING:
 
     from . import OrefAlertConfigEntry
 
-WS_URL: Final = "wss://ws.tzevaadom.co.il/socket?platform=WEB"
-ORIGIN_HEADER: Final = "https://www.tzevaadom.co.il"
 WS_HEARTBEAT: Final = 45
 
 THREAT_TITLES = {
@@ -113,8 +115,8 @@ class TzevaAdomNotifications:
         while True:
             try:
                 async with self._http_client.ws_connect(
-                    WS_URL,
-                    origin=ORIGIN_HEADER,
+                    TZEVAADOM_WS_URL,
+                    origin=TZEVAADOM_ORIGIN,
                     heartbeat=WS_HEARTBEAT,
                 ) as self._ws:
                     while True:

@@ -16,7 +16,7 @@ from custom_components.oref_alert.const import (
     DOMAIN,
     SYNTHETIC_ALERT_ACTION,
 )
-from custom_components.oref_alert.coordinator import (
+from custom_components.oref_alert.metadata import (
     OREF_ALERTS_URL,
     OREF_HISTORY2_URL,
     OREF_HISTORY_URL,

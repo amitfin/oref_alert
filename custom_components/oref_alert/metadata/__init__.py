@@ -10,6 +10,16 @@ OREF_HEADERS: Final = {
     "X-Requested-With": "XMLHttpRequest",
     "Content-Type": "application/json",
 }
+OREF_ALERTS_URL: Final = "https://www.oref.org.il/warningMessages/alert/Alerts.json"
+OREF_HISTORY_URL: Final = (
+    "https://www.oref.org.il/warningMessages/alert/History/AlertsHistory.json"
+)
+OREF_HISTORY2_URL: Final = (
+    "https://www.oref.org.il/api/v1/AlertHistory/heb?period=lastDay&cities="
+)
+
+TZEVAADOM_WS_URL: Final = "wss://ws.tzevaadom.co.il/socket?platform=WEB"
+TZEVAADOM_ORIGIN: Final = "https://www.tzevaadom.co.il"
 
 SEGMENTS_URL: Final = "https://dist-android.meser-hadash.org.il/smart-dist/services/anonymous/segments/android?instance=1544803905&locale=iw_IL"
 SEGMENTS_TEST_AREA: Final = "בדיקה"

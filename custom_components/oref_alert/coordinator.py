@@ -64,7 +64,12 @@ from .const import (
     RecordSource,
     RecordType,
 )
-from .metadata import OREF_HEADERS
+from .metadata import (
+    OREF_ALERTS_URL,
+    OREF_HEADERS,
+    OREF_HISTORY2_URL,
+    OREF_HISTORY_URL,
+)
 from .metadata.area_info import AREA_INFO
 from .metadata.areas import AREAS
 
@@ -84,13 +89,6 @@ RECORD_EXPIRATION_MINUTES: Final[dict[RecordType, int]] = {
     RecordType.PRE_ALERT: 20,
     RecordType.ALERT: 180,
 }
-OREF_ALERTS_URL: Final = "https://www.oref.org.il/warningMessages/alert/Alerts.json"
-OREF_HISTORY_URL: Final = (
-    "https://www.oref.org.il/warningMessages/alert/History/AlertsHistory.json"
-)
-OREF_HISTORY2_URL: Final = (
-    "https://www.oref.org.il/api/v1/AlertHistory/heb?period=lastDay&cities="
-)
 HISTORY2_MAX_PAGES: Final = 300
 RECENT_RECORDS_WINDOW: Final = timedelta(minutes=5)
 REQUEST_RETRIES: Final = 3
