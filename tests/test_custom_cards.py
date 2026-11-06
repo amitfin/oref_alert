@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import gzip
 import json
 from datetime import UTC, datetime
+from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
+import brotli
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -15,8 +18,6 @@ from custom_components.oref_alert import custom_cards
 from custom_components.oref_alert.const import CONF_AREAS, DOMAIN
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from freezegun.api import FrozenDateTimeFactory
     from homeassistant.core import HomeAssistant
 
@@ -56,34 +57,61 @@ async def test_setup_js_url(
     )
 
 
-async def test_create_polygons_writes_then_skips_then_rewrites(
+def _read_and_verify(name: Path) -> bytes:
+    """Return the file's content, verifying its compressed versions are identical."""
+    raw = name.read_bytes()
+    gz = gzip.decompress(Path(f"{name}.gz").read_bytes())
+    br = brotli.decompress(Path(f"{name}.br").read_bytes())
+    assert raw == gz == br
+    return raw
+
+
+async def test_update_files_writes_then_skips_then_rewrites(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Test _create_polygons file creation and update behavior."""
+    """Test _update_files creates, skips and updates the files."""
+    name = tmp_path / "file.json"
+    compress = Mock(wraps=brotli.compress)
+    monkeypatch.setattr(brotli, "compress", compress)
+
+    await custom_cards._update_files(name, b"first")  # noqa: SLF001
+    assert _read_and_verify(name) == b"first"
+    assert compress.call_count == 1
+
+    await custom_cards._update_files(name, b"first")  # noqa: SLF001
+    assert _read_and_verify(name) == b"first"
+    assert compress.call_count == 1
+
+    await custom_cards._update_files(name, b"second")  # noqa: SLF001
+    assert _read_and_verify(name) == b"second"
+    assert compress.call_count == 2
+
+
+@pytest.mark.parametrize("suffix", [".gz", ".br"])
+async def test_update_files_restores_missing_compressed_file(
+    tmp_path: Path, suffix: str
+) -> None:
+    """Test a missing compressed file is created even if the content is the same."""
+    name = tmp_path / "file.json"
+    await custom_cards._update_files(name, b"data")  # noqa: SLF001
+    Path(f"{name}{suffix}").unlink()  # noqa: ASYNC240
+
+    await custom_cards._update_files(name, b"data")  # noqa: SLF001
+    assert _read_and_verify(name) == b"data"
+
+
+async def test_create_polygons(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test _create_polygons writes the polygons as JSON."""
     monkeypatch.setattr(custom_cards, "FRONTEND_PATH", tmp_path)
 
-    async def polygons_v1() -> dict[str, list[list[int]]]:
+    async def polygons() -> dict[str, list[list[int]]]:
         return {"Area A": [[1, 2], [3, 4]]}
 
-    monkeypatch.setattr(custom_cards, "init_area_to_polygon", polygons_v1)
+    monkeypatch.setattr(custom_cards, "init_area_to_polygon", polygons)
 
     await custom_cards._create_polygons()  # noqa: SLF001
-    out_file = tmp_path / custom_cards.POLYGONS_FILE
-    first = out_file.read_text()
-    assert json.loads(first) == {"Area A": [[1, 2], [3, 4]]}
-
-    await custom_cards._create_polygons()  # noqa: SLF001
-    second = out_file.read_text()
-    assert second == first
-
-    async def polygons_v2() -> dict[str, list[list[int]]]:
-        return {"Area A": [[9, 9]], "Area B": [[8, 8]]}
-
-    monkeypatch.setattr(custom_cards, "init_area_to_polygon", polygons_v2)
-    await custom_cards._create_polygons()  # noqa: SLF001
-    third = out_file.read_text()
-    assert third != first
-    assert json.loads(third) == {"Area A": [[9, 9]], "Area B": [[8, 8]]}
+    content = _read_and_verify(tmp_path / custom_cards.POLYGONS_FILE)
+    assert json.loads(content) == {"Area A": [[1, 2], [3, 4]]}
 
 
 async def test_publish_cards_uses_integration_version_when_not_dev() -> None:

@@ -22,5 +22,5 @@ coverage.xml
 config/*
 !config/configuration.yaml
 
-# Generated polygons file
-custom_components/oref_alert/cards/oref-alert-polygons.json
+# Generated polygons file (and its pre-compressed versions)
+custom_components/oref_alert/cards/oref-alert-polygons.json*
