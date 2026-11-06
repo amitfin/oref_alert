@@ -12,14 +12,11 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, LOGGER
-from .metadata import CITIES_MIX_URL, DEPRECATION_SUFFIX, SOME_PARTS_OF_THE_COUNTRY
+from .metadata import ALL_AREAS_ALIASES, SEGMENTS_URL, is_area_segment
 from .metadata.areas import AREAS
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-FILTER_SUFFIX1 = " - כל האזורים"
-FILTER_SUFFIX2 = " כל - האזורים"
 
 
 class AreasChecker:
@@ -47,18 +44,15 @@ class AreasChecker:
     async def _check(self, _: datetime | None = None) -> None:
         """Check if  the list of areas was changed."""
         try:
-            async with self._http_client.get(CITIES_MIX_URL) as response:
+            async with self._http_client.get(SEGMENTS_URL) as response:
                 data = await response.json()
             areas = {
-                area["label"]
-                for area in data
-                if not area["label"].endswith(FILTER_SUFFIX1)
-                and not area["label"].endswith(FILTER_SUFFIX2)
-                and not area["label"].endswith(DEPRECATION_SUFFIX)
-                and area["label"] != SOME_PARTS_OF_THE_COUNTRY
+                segment["name"]
+                for segment in data["segments"].values()
+                if is_area_segment(segment)
             }
             new = sorted(areas.difference(AREAS))
-            old = sorted(AREAS.difference(areas))
+            old = sorted(AREAS.difference(areas, ALL_AREAS_ALIASES))
             if old:
                 LOGGER.warning(
                     "The following Oref Alert areas were removed: "
@@ -81,6 +75,8 @@ class AreasChecker:
                     severity=ir.IssueSeverity.WARNING,
                     translation_key="upgrade_required",
                 )
+        except Exception as ex:  # noqa: BLE001
+            LOGGER.warning("Failed to check the list of areas: %s", ex)
         finally:
             if not self._stop:
                 self._unsub_next_check = event.async_track_point_in_time(

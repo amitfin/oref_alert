@@ -7,7 +7,7 @@ import pytest
 from homeassistant.helpers import issue_registry as ir
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
-from custom_components.oref_alert.areas_checker import CITIES_MIX_URL, AreasChecker
+from custom_components.oref_alert.areas_checker import SEGMENTS_URL, AreasChecker
 from custom_components.oref_alert.const import DOMAIN
 
 if TYPE_CHECKING:
@@ -48,7 +48,7 @@ async def test_areas_check_failure(
         lambda event, repairs=repairs: repairs.append(event),
     )
     aioclient_mock.clear_requests()
-    aioclient_mock.get(CITIES_MIX_URL, text='[{"label": "test"}]')
+    aioclient_mock.get(SEGMENTS_URL, json={"segments": {"1": {"name": "test"}}})
     await _areas_check(hass, freezer)
     assert "The following Oref Alert areas were removed:" in caplog.text
     assert "The following Oref Alert areas were added:" in caplog.text
@@ -58,6 +58,21 @@ async def test_areas_check_failure(
     assert repairs[0].data["issue_id"] == "upgrade_required"
     unregister()
     await hass.async_block_till_done(wait_background_tasks=True)
+
+
+@pytest.mark.allowed_logs(["Failed to check the list of areas:"])
+async def test_areas_check_bad_response(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test a bad reply is logged and doesn't raise."""
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(SEGMENTS_URL, text="Access Denied")
+    await _areas_check(hass, freezer)
+    assert "Failed to check the list of areas:" in caplog.text
+    assert "The following Oref Alert areas were" not in caplog.text
 
 
 async def test_areas_check_pass(

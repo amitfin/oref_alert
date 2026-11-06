@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from http import HTTPStatus
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Final
+from urllib.parse import quote, urlencode
 
 import homeassistant.util.dt as dt_util
 from homeassistant.const import (
@@ -63,6 +64,7 @@ from .const import (
     RecordSource,
     RecordType,
 )
+from .metadata import OREF_HEADERS
 from .metadata.area_info import AREA_INFO
 from .metadata.areas import AREAS
 
@@ -86,12 +88,11 @@ OREF_ALERTS_URL: Final = "https://www.oref.org.il/warningMessages/alert/Alerts.j
 OREF_HISTORY_URL: Final = (
     "https://www.oref.org.il/warningMessages/alert/History/AlertsHistory.json"
 )
-OREF_HISTORY2_URL: Final = "https://alerts-history.oref.org.il/Shared/Ajax/GetAlarmsHistory.aspx?lang=he&mode=1"
-OREF_HEADERS: Final = {
-    "Referer": "https://www.oref.org.il/",
-    "X-Requested-With": "XMLHttpRequest",
-    "Content-Type": "application/json",
-}
+OREF_HISTORY2_URL: Final = (
+    "https://www.oref.org.il/api/v1/AlertHistory/heb?period=lastDay&cities="
+)
+HISTORY2_MAX_PAGES: Final = 300
+RECENT_RECORDS_WINDOW: Final = timedelta(minutes=5)
 REQUEST_RETRIES: Final = 3
 REQUEST_THROTTLING: Final = 0.8
 DEDUP_WINDOW_SECONDS: Final = 180
@@ -231,10 +232,9 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             self.hass.async_create_task(self.async_refresh())
         else:
             current, history, history2 = await asyncio.gather(
-                *[
-                    self._async_fetch_url(url)
-                    for url in (OREF_ALERTS_URL, OREF_HISTORY_URL, OREF_HISTORY2_URL)
-                ]
+                self._async_fetch_url(OREF_ALERTS_URL),
+                self._async_fetch_url(OREF_HISTORY_URL),
+                self._async_fetch_history2(),
             )
             for record in itertools.chain(
                 self._process_history_alerts(history, self._history_to_record),
@@ -269,41 +269,65 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         # Update the latest areas' records.
         now = dt_util.now()
         async for record in self._records_to_process():
-            # Check if a valid record.
-            if (
-                (
-                    not category_is_alert(record.raw.category)
-                    and not category_is_update(record.raw.category)
-                )
-                or (record.expire and record.expire <= now)
-                or record.raw.data == SOME_PARTS_OF_THE_COUNTRY
-            ):
-                continue
-
-            # Handle "all areas" record.
-            for area, area_record in self.area_records(record):
-                # If we don't have anything else for this area.
-                if (current := self._areas.get(area)) is None:
-                    self._areas[area] = area_record
-                    self._last_update = now
-                    if area not in AREAS:
-                        LOGGER.error("Alert has an unrecognized area: %s", area)
-                # If this is not a newer record, or this is "pre" after "alert".
-                elif area_record.time <= current.time or (
-                    area_record.record_type == RecordType.PRE_ALERT
-                    and current.record_type == RecordType.ALERT
-                ):
-                    continue
-                # Same category records within the dedup window are ignored.
-                elif (
-                    area_record.raw.category != current.raw.category
-                    or area_record.time - current.time
-                    > timedelta(seconds=DEDUP_WINDOW_SECONDS)
-                ):
-                    self._areas[area] = area_record
-                    self._last_update = now
+            self._apply_record(record, now)
 
         return OrefAlertCoordinatorData(MappingProxyType(self._areas))
+
+    def _apply_record(self, record: RecordAndMetadata, now: datetime) -> bool:
+        """Update the areas' records with a record. Return if an area was updated."""
+        # Check if a valid record.
+        if (
+            (
+                not category_is_alert(record.raw.category)
+                and not category_is_update(record.raw.category)
+            )
+            or (record.expire and record.expire <= now)
+            or record.raw.data == SOME_PARTS_OF_THE_COUNTRY
+        ):
+            return False
+
+        updated = False
+        # Handle "all areas" record.
+        for area, area_record in self.area_records(record):
+            # If we don't have anything else for this area.
+            if (current := self._areas.get(area)) is None:
+                self._areas[area] = area_record
+                updated = True
+                if area not in AREAS:
+                    LOGGER.error("Alert has an unrecognized area: %s", area)
+            # If this is not a newer record, or this is "pre" after "alert".
+            elif area_record.time <= current.time or (
+                area_record.record_type == RecordType.PRE_ALERT
+                and current.record_type == RecordType.ALERT
+            ):
+                continue
+            # Same category records within the dedup window are ignored.
+            elif (
+                area_record.raw.category != current.raw.category
+                or area_record.time - current.time
+                > timedelta(seconds=DEDUP_WINDOW_SECONDS)
+            ):
+                self._areas[area] = area_record
+                updated = True
+
+        if updated:
+            self._last_update = now
+        return updated
+
+    async def async_load_history(self) -> None:
+        """Load the history2 records of the last day, which takes a while."""
+        # Not throttled by the refresh that has just fetched the first page.
+        self._http_replies.pop(OREF_HISTORY2_URL, None)
+        records = await self._async_fetch_history2(window=None)
+        now = dt_util.now()
+        updated = False
+        for record in self._process_history_alerts(
+            records, self._history2_to_record, initial_cutoff=False
+        ):
+            updated = self._apply_record(record, now) or updated
+        if updated:
+            self.data = OrefAlertCoordinatorData(MappingProxyType(self._areas))
+            self.async_update_listeners()
 
     def _build_published_data(
         self,
@@ -427,6 +451,48 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         )
         return []
 
+    async def _async_fetch_history2(
+        self, window: timedelta | None = RECENT_RECORDS_WINDOW
+    ) -> list[dict[str, Any]]:
+        """Fetch history2 records, paging back to the window (or all of them)."""
+        # dateTime is in local time and ISO format, so it's compared as a string.
+        since = (
+            (dt_util.now(IST) - window).strftime("%Y-%m-%dT%H:%M:%S") if window else ""
+        )
+        records: list[dict[str, Any]] = []
+        last: dict[str, Any] | None = None
+        url = OREF_HISTORY2_URL
+        for page_number in range(HISTORY2_MAX_PAGES):
+            payload = await self._async_fetch_url(url)
+            groups = (
+                payload.get("alarmsGroupedByDate", [])
+                if isinstance(payload, dict)
+                else []
+            )
+            page = [record for group in groups for record in group.get("value", [])]
+            if page_number:
+                # Page URLs are unique, so don't keep their replies.
+                self._http_replies.pop(url, None)
+            records.extend(page)
+            # Stop at the end, at old records, or if paging doesn't move forward.
+            if not page or page[-1]["dateTime"] < since or page[-1] == last:
+                break
+            last = page[-1]
+            url = self._history2_page_url(last)
+        return records
+
+    @staticmethod
+    def _history2_page_url(last: dict[str, Any]) -> str:
+        """Return the URL of the history2 page after the given record."""
+        return f"{OREF_HISTORY2_URL}&" + urlencode(
+            {
+                "lastCreatedOn": last["dateTime"],
+                "lastTitle": last["category_Desc"],
+                "lastCityName": last[AREA_FIELD],
+            },
+            quote_via=quote,
+        )
+
     def _current_to_history_format(self, current: Any) -> Generator[RecordAndMetadata]:
         """Yield current alerts payload converted to history format."""
         if (
@@ -499,9 +565,10 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
     @classmethod
     def _history2_to_record(cls, record: dict[str, Any]) -> Record:
         """Convert history2 raw record to to Record."""
+        day, month, year = record["date"].split(".")
         return Record(
-            alertDate=record[DATE_FIELD].replace("T", " "),
-            title=record["category_desc"],
+            alertDate=f"{year}-{month}-{day} {record['time']}",
+            title=record["category_Desc"],
             data=cls._fix_area_spelling(record[AREA_FIELD]),
             category=record[CATEGORY_FIELD],
             channel=RecordSource.HISTORY,
@@ -509,8 +576,10 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
 
     def _process_history_alerts(
         self,
-        records: list[dict[str, Any]],
+        records: Iterable[dict[str, Any]],
         payload_to_record: Callable[[dict[str, Any]], Record],
+        *,
+        initial_cutoff: bool = True,
     ) -> Generator[RecordAndMetadata]:
         """Yield latest history record per area with metadata."""
         now = dt_util.now()
@@ -523,8 +592,10 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             yield record_meta
 
             # Post initial fetch, take only recent records.
-            if not self._last_update and (now - record_meta.time) > timedelta(
-                minutes=5
+            if (
+                initial_cutoff
+                and not self._last_update
+                and (now - record_meta.time) > RECENT_RECORDS_WINDOW
             ):
                 break
 
