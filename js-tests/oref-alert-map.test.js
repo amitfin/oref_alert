@@ -155,27 +155,39 @@ describe("oref-alert-map", () => {
     expect(createCardElement).toHaveBeenCalledTimes(2);
   });
 
-  test("getPolygons fetches once, caches, and retries after failures", async () => {
+  test("getPolygons shares one fetch across cards and retries after failures", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
     const polygons = { "Area A": [[1, 1]] };
     const fetchMock = vi
       .fn()
       .mockRejectedValueOnce(new Error("network"))
-      .mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({ ok: false, status: 500 })
       .mockResolvedValue({ ok: true, json: async () => polygons });
     vi.stubGlobal("fetch", fetchMock);
 
     try {
-      const el = new Card();
-      await expect(el._getPolygons()).resolves.toBeNull();
-      await expect(el._getPolygons()).resolves.toBeNull();
-      await expect(el._getPolygons()).resolves.toEqual(polygons);
-      await expect(el._getPolygons()).resolves.toEqual(polygons);
-      expect(fetchMock).toHaveBeenCalledTimes(3);
+      // Concurrent cards share a single (failing) request.
+      const [first, second] = [new Card(), new Card()];
+      await expect(
+        Promise.all([first._getPolygons(), second._getPolygons()]),
+      ).resolves.toEqual([null, null]);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(String(fetchMock.mock.calls[0][0])).toContain(
         "oref-alert-polygons.json",
       );
+
+      // Failures are not cached.
+      await expect(first._getPolygons()).resolves.toBeNull();
+      await expect(first._getPolygons()).resolves.toEqual(polygons);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+
+      // Success is shared with every card, including new ones.
+      const third = new Card();
+      await expect(second._getPolygons()).resolves.toBe(
+        await third._getPolygons(),
+      );
+      expect(fetchMock).toHaveBeenCalledTimes(3);
     } finally {
       vi.unstubAllGlobals();
     }

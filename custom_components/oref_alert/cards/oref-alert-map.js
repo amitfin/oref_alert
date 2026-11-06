@@ -21,6 +21,29 @@ const END_ALERT_COLOR = "rgb(16, 205, 83)";
 const RELOAD_GUARD_KEY = "oref-alert-map-reload-version";
 const CURRENT_VERSION = new URL(import.meta.url).searchParams.get("v");
 const POLYGONS_FILE = "oref-alert-polygons.json";
+
+// One shared fetch and one parsed copy for all card instances.
+let polygonsPromise;
+
+function _loadPolygons() {
+  if (!polygonsPromise) {
+    const url = new URL(POLYGONS_FILE, import.meta.url);
+    url.search = new URL(import.meta.url).search;
+    polygonsPromise = fetch(url)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+      })
+      .catch(() => {
+        polygonsPromise = undefined; // retry on the next call
+        return null;
+      });
+  }
+  return polygonsPromise;
+}
+
 const LEAFLET_ENGINE = Symbol("oref-alert-leaflet-engine");
 const MAP_CONFIG_PASSTHROUGH_KEYS = [
   "aspect_ratio",
@@ -43,7 +66,6 @@ class OrefAlertMap extends HTMLElement {
     this._config = null;
     this._layout = undefined;
     this._mapCard = null;
-    this._polygons = null;
     this._applyHassPromise = null;
     this._lastUpdated = undefined;
     this._refreshId = null;
@@ -365,20 +387,8 @@ class OrefAlertMap extends HTMLElement {
     return this._mapCard?.shadowRoot?.querySelector("ha-map") ?? null;
   }
 
-  async _getPolygons() {
-    if (!this._polygons) {
-      try {
-        const url = new URL(POLYGONS_FILE, import.meta.url);
-        url.search = new URL(import.meta.url).search;
-        const response = await fetch(url);
-        if (response.ok) {
-          this._polygons = await response.json();
-        }
-      } catch (_) {
-        // Leave unset so the next call retries.
-      }
-    }
-    return this._polygons;
+  _getPolygons() {
+    return _loadPolygons();
   }
 
   _setTileLayer() {
