@@ -1,6 +1,7 @@
 shapely==2.2.0
 paho-mqtt
 aiofiles
+brotli
 home-assistant-frontend
 types-aiofiles
 types-shapely

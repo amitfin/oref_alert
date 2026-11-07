@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import gzip
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
 import aiofiles
+import aiofiles.os
+import brotli
 import homeassistant.util.dt as dt_util
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import (  # type: ignore[attr-defined]
@@ -23,50 +26,51 @@ if TYPE_CHECKING:
 
 FRONTEND_PATH: Final = Path(__file__).parent / "cards"
 MAP_CARD_FILE: Final = "oref-alert-map.js"
-POLYGONS_CARD_FILE: Final = "oref-alert-polygons.js"
+POLYGONS_FILE: Final = "oref-alert-polygons.json"
 URL_BASE: Final = f"/{DOMAIN}_internal_static"
 
-POLYGON_CARD: Final = """const _polygons = %s;
 
-class OrefAlertPolygons extends HTMLElement {
-  constructor() {
-    super();
-    this.polygons = _polygons;
-  }
-}
+async def _write(name: Path, data: bytes) -> None:
+    """Write the data to the file."""
+    async with aiofiles.open(name, "wb") as file:
+        await file.write(data)
 
-const elementTag = "oref-alert-polygons";
-customElements.define(elementTag, OrefAlertPolygons);
-customElements.whenDefined("home-assistant").then(() => {
-  if (!customElements.get(elementTag)) {
-    customElements.define(elementTag, OrefAlertPolygons);
-  }
-});
-"""
+
+async def _update_files(name: Path, data: bytes) -> None:
+    """
+    Write the file and its pre-compressed versions (.gz and .br), if needed.
+
+    Home Assistant doesn't compress static files, but it serves the
+    pre-compressed versions when the browser accepts them.
+    """
+    gz_name = Path(f"{name}.gz")
+    br_name = Path(f"{name}.br")
+
+    if (
+        await aiofiles.os.path.isfile(name)
+        and await aiofiles.os.path.isfile(gz_name)
+        and await aiofiles.os.path.isfile(br_name)
+    ):
+        async with aiofiles.open(name, "rb") as file:
+            if await file.read() == data:
+                return
+
+    gz, br = await asyncio.gather(
+        asyncio.to_thread(gzip.compress, data, 9, mtime=0),
+        asyncio.to_thread(brotli.compress, data, quality=11),
+    )
+    await _write(name, data)
+    await _write(gz_name, gz)
+    await _write(br_name, br)
 
 
 async def _create_polygons() -> None:
-    """Create the polygons cards."""
-    file_name = FRONTEND_PATH / POLYGONS_CARD_FILE
-
+    """Create the polygons file (loaded on demand by the map card)."""
     polygons = await init_area_to_polygon()
-    content = POLYGON_CARD % json.dumps(
-        polygons, ensure_ascii=False, separators=(",", ":")
+    await _update_files(
+        FRONTEND_PATH / POLYGONS_FILE,
+        json.dumps(polygons, ensure_ascii=False, separators=(",", ":")).encode("utf-8"),
     )
-
-    if not file_name.is_file():
-        previous = None
-    else:
-        async with aiofiles.open(
-            file_name,
-            "r",  # noqa: UP015
-            encoding="utf-8",
-        ) as file:
-            previous = await file.read()
-
-    if content != previous:
-        async with aiofiles.open(file_name, "w", encoding="utf-8") as file:
-            await file.write(content)
 
 
 async def publish_cards(hass: HomeAssistant) -> str:
@@ -84,7 +88,6 @@ async def publish_cards(hass: HomeAssistant) -> str:
     else:
         version = str(int(dt_util.now().timestamp()))
 
-    for file_name in (POLYGONS_CARD_FILE, MAP_CARD_FILE):
-        add_extra_js_url(hass, f"{URL_BASE}/{file_name}?v={version}")
+    add_extra_js_url(hass, f"{URL_BASE}/{MAP_CARD_FILE}?v={version}")
 
     return version

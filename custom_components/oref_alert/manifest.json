@@ -17,6 +17,7 @@
   ],
   "requirements": [
     "aiofiles",
+    "brotli",
     "paho-mqtt",
     "shapely==2.2.0"
   ],
