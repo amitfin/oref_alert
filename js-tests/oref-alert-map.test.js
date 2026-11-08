@@ -49,6 +49,11 @@ function createMapCardWithInnerMap() {
 }
 
 afterEach(() => {
+  // The polygons are shared by all cards; don't leak them between tests.
+  const Card = customElements.get("oref-alert-map");
+  if (Card) {
+    Card._polygons = { promise: undefined, failures: 0, retryAt: 0 };
+  }
   document.body.innerHTML = "";
   delete window.loadCardHelpers;
   delete window.L;
@@ -155,48 +160,125 @@ describe("oref-alert-map", () => {
     expect(createCardElement).toHaveBeenCalledTimes(2);
   });
 
-  test("getPolygons caches after success and handles unresolved/missing polygons", async () => {
+  test("getPolygons shares one fetch, backs off after failures and caches success", async () => {
     await ensureDefined();
     const Card = customElements.get("oref-alert-map");
+    const polygons = { "Area A": [[1, 1]] };
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValueOnce({ ok: false, status: 500 })
+      .mockResolvedValue({ ok: true, json: async () => polygons });
+    vi.stubGlobal("fetch", fetchMock);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    const start = new Date("2026-01-01T00:00:00Z").getTime();
+    vi.setSystemTime(start);
 
-    if (!customElements.get("oref-alert-polygons")) {
-      customElements.define(
-        "oref-alert-polygons",
-        class extends HTMLElement {
-          constructor() {
-            super();
-            this.polygons = { "Area A": [[1, 1]] };
-          }
-        },
+    try {
+      // Concurrent cards share a single (failing) request.
+      const [first, second] = [new Card(), new Card()];
+      await expect(
+        Promise.all([first._getPolygons(), second._getPolygons()]),
+      ).resolves.toEqual([null, null]);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [url] = fetchMock.mock.calls[0];
+      expect(new URL(url).pathname).toBe("/oref_alert_polygons.json");
+      expect(errorSpy).toHaveBeenCalledWith(
+        "oref-alert-map: failed to load polygons",
+        expect.any(Error),
       );
+
+      // Waits 1s before the first retry.
+      await expect(first._getPolygons()).resolves.toBeNull();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      vi.setSystemTime(start + 1000);
+      await expect(first._getPolygons()).resolves.toBeNull();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      // Then 2s before the next one.
+      vi.setSystemTime(start + 2999);
+      await expect(first._getPolygons()).resolves.toBeNull();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      vi.setSystemTime(start + 3000);
+      await expect(first._getPolygons()).resolves.toEqual(polygons);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+
+      // Success is shared with every card, including new ones.
+      const third = new Card();
+      await expect(second._getPolygons()).resolves.toBe(
+        await third._getPolygons(),
+      );
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.unstubAllGlobals();
     }
+  });
 
-    const el = new Card();
-    await expect(el._getPolygons()).resolves.toEqual({ "Area A": [[1, 1]] });
-    const createSpy = vi.spyOn(document, "createElement");
-    await expect(el._getPolygons()).resolves.toEqual({ "Area A": [[1, 1]] });
-    expect(createSpy).not.toHaveBeenCalled();
+  test("getPolygons aborts a stalled fetch and caps the retry delay", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    // Never resolves on its own; rejects only when aborted.
+    const fetchMock = vi.fn(
+      (_url, { signal }) =>
+        new Promise((_resolve, reject) => {
+          signal.addEventListener("abort", () => reject(signal.reason));
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    const start = new Date("2026-01-01T00:00:00Z").getTime();
+    vi.setSystemTime(start);
+    Card._polygons.failures = 10; // 2^10 seconds, beyond the cap.
 
-    const waitingEl = new Card();
-    const whenDefinedSpy = vi
-      .spyOn(customElements, "whenDefined")
-      .mockImplementation(() => new Promise(() => {}));
+    try {
+      const el = new Card();
+      const result = el._getPolygons();
+      vi.advanceTimersByTime(119_999);
+      expect(Card._polygons.promise).toBeDefined();
+      vi.advanceTimersByTime(1);
+      await expect(result).resolves.toBeNull();
+      expect(errorSpy).toHaveBeenCalledWith(
+        "oref-alert-map: failed to load polygons",
+        expect.objectContaining({ name: "AbortError" }),
+      );
+      expect(Card._polygons.retryAt).toBe(start + 120_000 + 60_000);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 
-    let settled = false;
-    void waitingEl._getPolygons().then(() => {
-      settled = true;
-    });
-    await waitForTasks();
-    expect(settled).toBe(false);
-    expect(whenDefinedSpy).toHaveBeenCalledWith("oref-alert-polygons");
+  test("getPolygons re-renders connected cards when the retry delay ends", async () => {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    const start = new Date("2026-01-01T00:00:00Z").getTime();
+    vi.setSystemTime(start);
+    Card._polygons.retryAt = start + 5000; // In the retry delay.
 
-    const nullCreateEl = new Card();
-    whenDefinedSpy.mockResolvedValue(undefined);
-    const createElementSpy = vi
-      .spyOn(document, "createElement")
-      .mockReturnValue(null);
-    await expect(nullCreateEl._getPolygons()).resolves.toBeNull();
-    createElementSpy.mockRestore();
+    const connected = new Card();
+    const detached = new Card();
+    const removed = new Card();
+    document.body.append(connected, removed);
+    const spies = [connected, detached, removed].map((card) =>
+      vi.spyOn(card, "_applyHass").mockResolvedValue(undefined),
+    );
+
+    for (const card of [connected, detached, removed]) {
+      await expect(card._getPolygons()).resolves.toBeNull();
+    }
+    // A second miss doesn't schedule another re-render.
+    await expect(connected._getPolygons()).resolves.toBeNull();
+    removed.remove(); // Cancels its pending re-render.
+
+    vi.advanceTimersByTime(4999);
+    expect(spies[0]).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(spies[0]).toHaveBeenCalledTimes(1);
+    expect(spies[1]).not.toHaveBeenCalled();
+    expect(spies[2]).not.toHaveBeenCalled();
+    expect(connected._polygonsRetryId).toBeNull();
   });
 
   test("createLayers handles missing dependencies and creates layers", async () => {

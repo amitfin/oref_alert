@@ -65,6 +65,7 @@
     "timedelta",
     "Tzeva",
     "tzevaadom",
+    "unstub",
     "unsub",
     "venv",
     "vincenty",

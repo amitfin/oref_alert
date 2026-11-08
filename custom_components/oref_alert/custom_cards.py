@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
-import aiofiles
 import homeassistant.util.dt as dt_util
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import (  # type: ignore[attr-defined]
@@ -16,65 +14,28 @@ from homeassistant.components.http import (  # type: ignore[attr-defined]
 from homeassistant.loader import async_get_integration
 
 from .const import DOMAIN
-from .metadata.area_to_polygon import init_area_to_polygon
+from .metadata.area_to_polygon import POLYGONS_FILE
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 FRONTEND_PATH: Final = Path(__file__).parent / "cards"
 MAP_CARD_FILE: Final = "oref-alert-map.js"
-POLYGONS_CARD_FILE: Final = "oref-alert-polygons.js"
 URL_BASE: Final = f"/{DOMAIN}_internal_static"
-
-POLYGON_CARD: Final = """const _polygons = %s;
-
-class OrefAlertPolygons extends HTMLElement {
-  constructor() {
-    super();
-    this.polygons = _polygons;
-  }
-}
-
-const elementTag = "oref-alert-polygons";
-customElements.define(elementTag, OrefAlertPolygons);
-customElements.whenDefined("home-assistant").then(() => {
-  if (!customElements.get(elementTag)) {
-    customElements.define(elementTag, OrefAlertPolygons);
-  }
-});
-"""
-
-
-async def _create_polygons() -> None:
-    """Create the polygons cards."""
-    file_name = FRONTEND_PATH / POLYGONS_CARD_FILE
-
-    polygons = await init_area_to_polygon()
-    content = POLYGON_CARD % json.dumps(
-        polygons, ensure_ascii=False, separators=(",", ":")
-    )
-
-    if not file_name.is_file():
-        previous = None
-    else:
-        async with aiofiles.open(
-            file_name,
-            "r",  # noqa: UP015
-            encoding="utf-8",
-        ) as file:
-            previous = await file.read()
-
-    if content != previous:
-        async with aiofiles.open(file_name, "w", encoding="utf-8") as file:
-            await file.write(content)
+# Loaded on demand by the map card (POLYGONS_URL in oref-alert-map.js).
+# A release ships only the .gz version, which is served as-is (browsers
+# always accept gzip).
+POLYGONS_URL: Final = f"/{DOMAIN}_polygons.json"
 
 
 async def publish_cards(hass: HomeAssistant) -> str:
     """Publish the custom cards."""
-    _, _, integration = await asyncio.gather(
-        _create_polygons(),
+    _, integration = await asyncio.gather(
         hass.http.async_register_static_paths(
-            [StaticPathConfig(URL_BASE, str(FRONTEND_PATH), cache_headers=True)]
+            [
+                StaticPathConfig(URL_BASE, str(FRONTEND_PATH), cache_headers=True),
+                StaticPathConfig(POLYGONS_URL, str(POLYGONS_FILE), cache_headers=True),
+            ]
         ),
         async_get_integration(hass, DOMAIN),
     )
@@ -84,7 +45,6 @@ async def publish_cards(hass: HomeAssistant) -> str:
     else:
         version = str(int(dt_util.now().timestamp()))
 
-    for file_name in (POLYGONS_CARD_FILE, MAP_CARD_FILE):
-        add_extra_js_url(hass, f"{URL_BASE}/{file_name}?v={version}")
+    add_extra_js_url(hass, f"{URL_BASE}/{MAP_CARD_FILE}?v={version}")
 
     return version
