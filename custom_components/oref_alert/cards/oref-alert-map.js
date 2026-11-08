@@ -31,6 +31,10 @@ const POLYGONS_FETCH_URL = new URL(
 const POLYGONS_FETCH_TIMEOUT_MS = 120_000;
 const POLYGONS_MAX_RETRY_DELAY_MS = 60_000;
 const LEAFLET_ENGINE = Symbol("oref-alert-leaflet-engine");
+// Shared by every copy of this module, so a reloaded one recognizes the map
+// cards of another and doesn't wrap "ha-map" twice.
+const OREF_MAP_CARD = Symbol.for("oref-alert-map-card");
+const OREF_LOAD_MAP = Symbol.for("oref-alert-map-load-map");
 const MAP_CONFIG_PASSTHROUGH_KEYS = [
   "aspect_ratio",
   "cluster",
@@ -351,6 +355,7 @@ class OrefAlertMap extends HTMLElement {
   async _createMapCard() {
     const helpers = await window.loadCardHelpers();
     const mapCard = await helpers.createCardElement(this._buildMapConfig());
+    mapCard[OREF_MAP_CARD] = true;
     if (this._layout !== undefined) {
       mapCard.layout = this._layout;
     }
@@ -495,6 +500,27 @@ class OrefAlertMap extends HTMLElement {
     }
   }
 
+  // Home Assistant 2026.10+ starts "ha-map" on MapLibre and moves to Leaflet
+  // only after a fatal error, so our map was drawn twice. Flagging the maps of
+  // our map cards as already on that fallback before they load starts them on
+  // Leaflet. "_loadMap" is wrapped, since browsers read "connectedCallback"
+  // only at definition. Older versions have no engines and ignore the flag,
+  // and "_prepareMap" still switches a map that loaded without it.
+  static _startMapsOnLeaflet(HaMap) {
+    const proto = HaMap?.prototype;
+    const loadMap = proto?._loadMap;
+    if (typeof loadMap !== "function" || Object.hasOwn(proto, OREF_LOAD_MAP)) {
+      return;
+    }
+    proto[OREF_LOAD_MAP] = true;
+    proto._loadMap = function (...args) {
+      if (this.getRootNode()?.host?.[OREF_MAP_CARD]) {
+        this._forceLeaflet = true;
+      }
+      return loadMap.apply(this, args);
+    };
+  }
+
   // Home Assistant 2026.10 replaced the Leaflet-only "ha-map" with a pluggable
   // engine (MapLibre GL by default) and removed "layers", "Leaflet" and
   // "leafletMap". Polygons need Leaflet, so we ask "ha-map" to rebuild itself
@@ -507,10 +533,12 @@ class OrefAlertMap extends HTMLElement {
     }
 
     if (!engine?.leafletMap || !engine.Leaflet) {
+      // A non-Leaflet engine is switched even when "_forceLeaflet" is set, as
+      // we set it ourselves and a newer "ha-map" might not read it. "ha-map"
+      // ignores the call while it's already on the fallback.
       if (
         map._handleEngineFatal &&
-        !map._forceLeaflet &&
-        (engine || map._loading)
+        (engine || (map._loading && !map._forceLeaflet))
       ) {
         map._handleEngineFatal();
       }
@@ -832,6 +860,10 @@ class OrefAlertMap extends HTMLElement {
     };
   }
 }
+
+customElements
+  .whenDefined("ha-map")
+  .then(() => OrefAlertMap._startMapsOnLeaflet(customElements.get("ha-map")));
 
 const elementTag = "oref-alert-map";
 customElements.define(elementTag, OrefAlertMap);
