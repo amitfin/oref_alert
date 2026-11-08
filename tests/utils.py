@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from pytest_homeassistant_custom_component.common import load_fixture
+from pytest_homeassistant.common import load_fixture
 
 from custom_components.oref_alert.areas_checker import SEGMENTS_URL
 from custom_components.oref_alert.const import (
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from homeassistant.core import HomeAssistant
-    from pytest_homeassistant_custom_component.test_util.aiohttp import (
+    from pytest_homeassistant.test_util.aiohttp import (
         AiohttpClientMocker,
     )
 

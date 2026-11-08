@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from homeassistant.helpers import issue_registry as ir
-from pytest_homeassistant_custom_component.common import async_fire_time_changed
+from pytest_homeassistant.common import async_fire_time_changed
 
 from custom_components.oref_alert.areas_checker import SEGMENTS_URL, AreasChecker
 from custom_components.oref_alert.const import DOMAIN
@@ -13,7 +13,7 @@ from custom_components.oref_alert.const import DOMAIN
 if TYPE_CHECKING:
     from freezegun.api import FrozenDateTimeFactory
     from homeassistant.core import HomeAssistant
-    from pytest_homeassistant_custom_component.test_util.aiohttp import (
+    from pytest_homeassistant.test_util.aiohttp import (
         AiohttpClientMocker,
     )
 

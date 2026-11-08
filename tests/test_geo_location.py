@@ -19,7 +19,7 @@ from homeassistant.const import (
 )
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.template import Template, result_as_boolean
-from pytest_homeassistant_custom_component.common import (
+from pytest_homeassistant.common import (
     MockConfigEntry,
     async_fire_time_changed,
 )
@@ -43,7 +43,7 @@ from .utils import mock_urls, refresh_coordinator
 if TYPE_CHECKING:
     from freezegun.api import FrozenDateTimeFactory
     from homeassistant.core import Event, HomeAssistant
-    from pytest_homeassistant_custom_component.test_util.aiohttp import (
+    from pytest_homeassistant.test_util.aiohttp import (
         AiohttpClientMocker,
     )
 

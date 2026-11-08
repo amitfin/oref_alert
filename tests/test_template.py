@@ -6,7 +6,7 @@ import pytest
 from homeassistant.const import ATTR_DATE, ATTR_LATITUDE, ATTR_LONGITUDE
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.template import Template
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.oref_alert.const import (
     CONF_AREAS,
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
     from freezegun.api import FrozenDateTimeFactory
     from homeassistant.core import HomeAssistant
-    from pytest_homeassistant_custom_component.test_util.aiohttp import (
+    from pytest_homeassistant.test_util.aiohttp import (
         AiohttpClientMocker,
     )
 
