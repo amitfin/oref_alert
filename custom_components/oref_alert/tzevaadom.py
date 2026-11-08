@@ -119,7 +119,7 @@ class TzevaAdomNotifications:
                     origin=TZEVAADOM_ORIGIN,
                     heartbeat=WS_HEARTBEAT,
                 ) as self._ws:
-                    while True:
+                    while not self._stop.is_set():
                         message = await self._ws.receive()
                         match message.type:
                             case aiohttp.WSMsgType.TEXT:

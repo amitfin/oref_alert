@@ -270,3 +270,38 @@ async def test_duplicate(hass: HomeAssistant) -> None:
         await ws.messages_processed()
         assert len(tzevaadom.alerts) == 1
         await tzevaadom.stop()
+
+
+async def test_stop_while_connecting(hass: HomeAssistant) -> None:
+    """Test that stop doesn't hang when called while the WS is still connecting."""
+    connecting = Event()
+    connect_released = Event()
+    closed: asyncio.Future[WSMessage] = hass.loop.create_future()
+    ws = AsyncMock()
+
+    async def receive() -> WSMessage:
+        return await closed
+
+    async def connect(*_: object) -> AsyncMock:
+        connecting.set()
+        await connect_released.wait()
+        return ws
+
+    async def close() -> None:
+        if not closed.done():
+            closed.set_result(WSMessage(type=WSMsgType.CLOSED, data=None, extra=None))
+
+    ws.receive = AsyncMock(side_effect=receive)
+    ws.close = AsyncMock(side_effect=close)
+    tzevaadom = TzevaAdomNotifications(hass, MockConfigEntry(domain=DOMAIN))
+    with patch("aiohttp.ClientSession.ws_connect") as ws_connect:
+        ws_connect.return_value = AsyncMock(__aenter__=AsyncMock(side_effect=connect))
+        await tzevaadom.start()
+        await connecting.wait()
+        stop = asyncio.create_task(tzevaadom.stop())
+        await tzevaadom._stop.wait()  # noqa: SLF001
+        connect_released.set()
+        done, _ = await asyncio.wait([stop], timeout=1)
+        if not done:
+            stop.cancel()  # Don't leave a lingering task behind.
+        assert done, "stop() hung since the WS connected after it was called"
