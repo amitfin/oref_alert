@@ -17,8 +17,13 @@ from custom_components.oref_alert.const import (
     DOMAIN,
     OREF_ALERT_RECORD_EVENT,
 )
+from custom_components.oref_alert.coordinator import (
+    OREF_HISTORY2_URL,
+    OREF_HISTORY_URL,
+    OrefAlertDataUpdateCoordinator,
+)
 
-from .utils import load_json_fixture, mock_urls
+from .utils import load_json_fixture, mock_pushy_urls, mock_urls
 
 if TYPE_CHECKING:
     from freezegun.api import FrozenDateTimeFactory
@@ -381,3 +386,119 @@ async def test_restore_prevents_duplicate_event_for_same_record(
     assert alerts == []
 
     await async_shutdown(hass, config_id)
+
+
+def _history2_record(area: str, time: str) -> dict[str, Any]:
+    """Return a history2 rockets alert record."""
+    return {
+        "data": area,
+        "date": "07.10.2023",
+        "time": time,
+        "dateTime": f"2023-10-07T{time[:5]}:00",
+        "category": 1,
+        "category_Desc": "ירי רקטות וטילים",
+    }
+
+
+async def test_backfill_alert_history(
+    hass: HomeAssistant,
+    hass_storage: dict[str, Any],
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test the last day's alerts are added to the history, without events."""
+    freezer.move_to("2023-10-07 07:00:00+03:00")
+    hass_storage[f"{DOMAIN}_history"] = {
+        "version": 1,
+        "key": f"{DOMAIN}_history",
+        "data": {
+            "records": [
+                {
+                    "alertDate": "2023-10-07 06:40:05",
+                    "title": "ירי רקטות וטילים",
+                    "data": "נחל עוז",
+                    "category": 1,
+                    "channel": "mobile",
+                }
+            ]
+        },
+    }
+    history = [
+        # Recent, so it's handled as a regular alert.
+        ("נחל עוז", "2023-10-07 06:58:30", 1),
+        ("בארי", "2023-10-07 06:50:00", 1),
+        # Not an alert.
+        ("אילת", "2023-10-07 06:45:00", 13),
+        # Already restored (by another channel).
+        ("נחל עוז", "2023-10-07 06:40:00", 1),
+        ("בארי", "2023-10-07 06:30:00", 1),
+    ]
+    history2_last = _history2_record("האון", "06:20:00")
+    history2 = {
+        "alarmsGroupedByDate": [
+            {
+                "key": "07.10.2023",
+                "value": [
+                    # Same alert as in history.
+                    _history2_record("בארי", "06:50:20"),
+                    history2_last,
+                ],
+            }
+        ]
+    }
+
+    def mock_history() -> None:
+        aioclient_mock.get(
+            OREF_HISTORY_URL,
+            json=[
+                {
+                    "alertDate": date,
+                    "title": "ירי רקטות וטילים",
+                    "data": area,
+                    "category": category,
+                }
+                for area, date, category in history
+            ],
+        )
+        aioclient_mock.get(
+            OrefAlertDataUpdateCoordinator._history2_page_url(history2_last),  # noqa: SLF001
+            json={"alarmsGroupedByDate": []},
+        )
+        aioclient_mock.get(OREF_HISTORY2_URL, json=history2)
+
+    mock_pushy_urls(aioclient_mock, mock_history, valid_credentials=False)
+
+    alerts: list[Event] = []
+
+    async def alert_listener(event: Event) -> None:
+        alerts.append(event)
+
+    hass.bus.async_listen(f"{DOMAIN}_event", alert_listener)
+
+    config_id = await async_setup(hass)
+    config_entry = hass.config_entries.async_get_entry(config_id)
+    assert config_entry is not None
+
+    assert [alert.data[ATTR_AREA] for alert in alerts] == ["נחל עוז"]
+    assert [
+        (item[ATTR_AREA], item[ATTR_DATE], item["channel"])
+        for item in config_entry.runtime_data.bus_events.alert_history.items()
+    ] == [
+        ("נחל עוז", "2023-10-07T06:58:30+03:00", "website-history"),
+        ("בארי", "2023-10-07T06:50:00+03:00", "website-history"),
+        ("נחל עוז", "2023-10-07T06:40:05+03:00", "mobile"),
+        ("בארי", "2023-10-07T06:30:00+03:00", "website-history"),
+        ("האון", "2023-10-07T06:20:00+03:00", "website-history"),
+    ]
+
+    await async_shutdown(hass, config_id)
+    assert [
+        (record["data"], record["alertDate"])
+        for record in hass_storage[f"{DOMAIN}_history"]["data"]["records"]
+    ] == [
+        ("האון", "2023-10-07 06:20:00"),
+        ("בארי", "2023-10-07 06:30:00"),
+        ("נחל עוז", "2023-10-07 06:40:05"),
+        ("בארי", "2023-10-07 06:50:00"),
+        ("נחל עוז", "2023-10-07 06:58:30"),
+    ]

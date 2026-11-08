@@ -46,3 +46,23 @@ def test_contains_respects_ttl(freezer: FrozenDateTimeFactory) -> None:
 
     freezer.tick(timedelta(minutes=1))
     assert value not in deque
+
+
+def test_out_of_order(freezer: FrozenDateTimeFactory) -> None:
+    """Test items are kept from newest to oldest when added out of order."""
+    deque = TTLDeque(10)
+    now = datetime.now().astimezone()
+    deque.add(3, now - timedelta(minutes=3))
+    deque.add(1, now - timedelta(minutes=1))
+    deque.add(2, now - timedelta(minutes=2))
+    deque.add_many(
+        [
+            (4, now - timedelta(minutes=4)),
+            (20, now - timedelta(minutes=20)),
+            (0, now),
+        ]
+    )
+    assert list(deque.items()) == [0, 1, 2, 3, 4]
+    assert deque.changed() == now
+    freezer.tick(timedelta(minutes=7))
+    assert list(deque.items()) == [0, 1, 2]

@@ -17,6 +17,7 @@ coverage/
 coverage.xml
 .ruff_cache
 .mypy_cache
+.claude
 
 # Home Assistant configuration
 config/*

@@ -312,20 +312,40 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
             self._last_update = now
         return updated
 
-    async def async_load_history(self) -> None:
-        """Load the history2 records of the last day, which takes a while."""
-        # Not throttled by the refresh that has just fetched the first page.
+    async def async_load_history(self) -> list[RecordAndMetadata]:
+        """
+        Load the records of the last day, which takes a while.
+
+        Areas are updated by the history2 records. The alerts of both history
+        sources are returned, e.g. for backfilling the alert history.
+        """
+        # Not throttled by the refresh that has just fetched them.
+        self._http_replies.pop(OREF_HISTORY_URL, None)
         self._http_replies.pop(OREF_HISTORY2_URL, None)
-        records = await self._async_fetch_history2(window=None)
+        history, history2 = await asyncio.gather(
+            self._async_fetch_url(OREF_HISTORY_URL),
+            self._async_fetch_history2(window=None),
+        )
         now = dt_util.now()
         updated = False
         for record in self._process_history_alerts(
-            records, self._history2_to_record, initial_cutoff=False
+            history2, self._history2_to_record, initial_cutoff=False
         ):
             updated = self._apply_record(record, now) or updated
         if updated:
             self.data = OrefAlertCoordinatorData(MappingProxyType(self._areas))
             self.async_update_listeners()
+        return [
+            self.add_metadata(raw)
+            for raw in itertools.chain(
+                map(
+                    self._history_to_record,
+                    history if isinstance(history, list) else [],
+                ),
+                map(self._history2_to_record, history2),
+            )
+            if category_is_alert(raw.category) and raw.data != SOME_PARTS_OF_THE_COUNTRY
+        ]
 
     def _build_published_data(
         self,
@@ -580,22 +600,25 @@ class OrefAlertDataUpdateCoordinator(DataUpdateCoordinator[OrefAlertCoordinatorD
         initial_cutoff: bool = True,
     ) -> Generator[RecordAndMetadata]:
         """Yield latest history record per area with metadata."""
-        now = dt_util.now()
-        areas = set()
+        # Post initial fetch, take only recent records. alertDate is in local
+        # time and has a fixed format, so it's compared as a string.
+        cutoff = (
+            (dt_util.now(IST) - RECENT_RECORDS_WINDOW).strftime("%Y-%m-%d %H:%M:%S")
+            if initial_cutoff and self._last_update
+            else None
+        )
+        # Records of the same minute might not be ordered by their exact time
+        # (e.g. history2 is ordered by minute), so the latest is picked by time.
+        latest: dict[str, Record] = {}
         for record in records:
-            if record[AREA_FIELD] in areas:
+            raw = payload_to_record(record)
+            if cutoff and raw.alertDate < cutoff:
                 continue
-            areas.add(record[AREA_FIELD])
-            record_meta = self.add_metadata(payload_to_record(record))
-            yield record_meta
-
-            # Post initial fetch, take only recent records.
-            if (
-                initial_cutoff
-                and not self._last_update
-                and (now - record_meta.time) > RECENT_RECORDS_WINDOW
-            ):
-                break
+            current = latest.get(record[AREA_FIELD])
+            if current is None or raw.alertDate > current.alertDate:
+                latest[record[AREA_FIELD]] = raw
+        for raw in latest.values():
+            yield self.add_metadata(raw)
 
     @staticmethod
     def _fix_area_spelling(area: str) -> str:

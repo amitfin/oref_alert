@@ -424,6 +424,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
 
     entry.async_on_unload(_unsub_shutdown)
 
+    async def _async_load_history() -> None:
+        """Load the last day's records, and backfill the alert history."""
+        records = await entry.runtime_data.coordinator.async_load_history()
+        entry.runtime_data.bus_events.backfill(records)
+
     entry.runtime_data.bus_events.start()
 
     try:
@@ -436,7 +441,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrefAlertConfigEntry) ->
         await entry.runtime_data.coordinator.async_config_entry_first_refresh()
         entry.async_create_background_task(
             hass,
-            entry.runtime_data.coordinator.async_load_history(),
+            _async_load_history(),
             f"{DOMAIN} history",
         )
 

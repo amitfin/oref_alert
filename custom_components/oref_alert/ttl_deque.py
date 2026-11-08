@@ -9,11 +9,11 @@ from typing import TYPE_CHECKING
 import homeassistant.util.dt as dt_util
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Generator, Iterable
 
 
 class TTLDeque[T]:
-    """Add items to the beginning of the list and removes items when TTL expires."""
+    """Keep items sorted from newest to oldest, and remove them when TTL expires."""
 
     def __init__(self, ttl: int = 5) -> None:
         """Initialize the deque."""
@@ -22,7 +22,24 @@ class TTLDeque[T]:
 
     def add(self, item: T, time: datetime | None = None) -> None:
         """Add an item."""
-        self._deque.appendleft((time or dt_util.now(), item))
+        time = time or dt_util.now()
+        if self._deque and time < self._deque[0][0]:
+            self.add_many([(item, time)])
+            return
+        self._deque.appendleft((time, item))
+        self._prune()
+
+    def add_many(self, items: Iterable[tuple[T, datetime]]) -> None:
+        """Add items of any time, e.g. older than the existing ones."""
+        if not (entries := [(time, item) for item, time in items]):
+            return
+        self._deque = deque(
+            sorted(
+                [*entries, *self._deque],
+                key=lambda entry: entry[0],
+                reverse=True,
+            )
+        )
         self._prune()
 
     def _prune(self) -> None:

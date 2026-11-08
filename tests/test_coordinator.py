@@ -661,6 +661,96 @@ async def test_history2_payload_updates_areas(
     assert records[0]["channel"] == "website-history"
 
 
+async def test_history2_same_minute_order(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test records of the same minute are ordered by their exact time."""
+    freezer.move_to("2026-10-19 20:32:00+03:00")
+    alert = {
+        "data": "בארי",
+        "date": "19.10.2026",
+        "time": "20:31:05",
+        "dateTime": "2026-10-19T20:31:00",
+        "category": 1,
+        "category_Desc": "ירי רקטות וטילים",
+    }
+    end = {
+        "data": "בארי",
+        "date": "19.10.2026",
+        "time": "20:31:50",
+        "dateTime": "2026-10-19T20:31:00",
+        "category": 13,
+        "category_Desc": "האירוע הסתיים",
+    }
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(OREF_ALERTS_URL, text="")
+    aioclient_mock.get(OREF_HISTORY_URL, text="")
+    aioclient_mock.get(
+        OrefAlertDataUpdateCoordinator._history2_page_url(end),  # noqa: SLF001
+        json={"alarmsGroupedByDate": []},
+    )
+    aioclient_mock.get(
+        OREF_HISTORY2_URL,
+        json={"alarmsGroupedByDate": [{"key": "19.10.2026", "value": [alert, end]}]},
+    )
+    coordinator = create_coordinator(hass)
+    await coordinator.async_refresh()
+
+    record = coordinator.get_record("בארי")
+    assert record is not None
+    assert record["category"] == 13
+    assert record["alertDate"] == "2026-10-19 20:31:50"
+
+
+async def test_history_cutoff(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test all history is read initially, and only recent records afterwards."""
+    freezer.move_to("2026-10-19 20:32:00+03:00")
+    history = [
+        {
+            "alertDate": "2026-10-19 20:31:00",
+            "title": "ירי רקטות וטילים",
+            "data": "בארי",
+            "category": 1,
+        },
+        {
+            "alertDate": "2026-10-19 20:00:00",
+            "title": "ירי רקטות וטילים",
+            "data": "נחל עוז",
+            "category": 1,
+        },
+        {
+            "alertDate": "2026-10-19 19:00:00",
+            "title": "האירוע הסתיים",
+            "data": "אילת",
+            "category": 13,
+        },
+    ]
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(OREF_ALERTS_URL, text="")
+    aioclient_mock.get(OREF_HISTORY2_URL, text="")
+    aioclient_mock.get(OREF_HISTORY_URL, json=history)
+    coordinator = create_coordinator(hass)
+    await coordinator.async_refresh()
+    assert sorted(coordinator.data.areas) == ["אילת", "בארי", "נחל עוז"]
+
+    # Post initial fetch, records after the first old one are skipped.
+    freezer.tick(timedelta(seconds=10))
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(OREF_ALERTS_URL, text="")
+    aioclient_mock.get(OREF_HISTORY2_URL, text="")
+    aioclient_mock.get(
+        OREF_HISTORY_URL, json=[*history[:2], {**history[2], "data": "האון"}]
+    )
+    await coordinator.async_refresh()
+    assert "האון" not in coordinator.data.areas
+
+
 PAGE_SIZE = 200
 
 

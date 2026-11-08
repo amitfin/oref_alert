@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from collections import defaultdict
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Any, Final
 
 import homeassistant.util.dt as dt_util
 from homeassistant.const import ATTR_DATE
@@ -11,6 +12,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 
 from .const import (
+    ATTR_AREA,
     ATTR_TYPE,
     DOMAIN,
     LOGGER,
@@ -19,13 +21,17 @@ from .const import (
     RecordAndMetadata,
     RecordType,
 )
+from .coordinator import DEDUP_WINDOW_SECONDS
 from .ttl_deque import TTLDeque
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable
 
     from . import OrefAlertConfigEntry
     from .coordinator import OrefAlertDataUpdateCoordinator
+
+# Records older than that are not fired as events.
+EVENT_WINDOW: Final = timedelta(minutes=3)
 
 
 class OrefAlertBusEventManager:
@@ -85,8 +91,7 @@ class OrefAlertBusEventManager:
                 self._previous_items.add((area, area_record.raw), area_record.time)
                 if event := self._compose_event(area_record):
                     self.alert_history.add(
-                        {**event, ATTR_DATE: area_record.time.isoformat()},
-                        area_record.time,
+                        self._alert_history_item(event, area_record), area_record.time
                     )
 
     async def async_save(self) -> None:
@@ -112,6 +117,13 @@ class OrefAlertBusEventManager:
             if key not in {ATTR_DATE, ATTR_TYPE}
         }
 
+    @staticmethod
+    def _alert_history_item(
+        event: dict[str, Any], record: RecordAndMetadata
+    ) -> dict[str, Any]:
+        """Return the alert history item of an event."""
+        return {**event, ATTR_DATE: record.time.isoformat()}
+
     @callback
     def _async_update(self) -> None:
         """
@@ -123,7 +135,7 @@ class OrefAlertBusEventManager:
         synchronous, or the triggers will start firing multiple times per
         refresh instead of once.
         """
-        earliest = dt_util.now() - timedelta(minutes=3)
+        earliest = dt_util.now() - EVENT_WINDOW
         for area, record in sorted(
             self._coordinator.data.areas.items(),
             key=lambda item: (item[1].time, item[0]),
@@ -149,7 +161,38 @@ class OrefAlertBusEventManager:
             )
             if record.record_type == RecordType.ALERT:
                 self.alert_history.add(
-                    {**event, ATTR_DATE: record.time.isoformat()}, record.time
+                    self._alert_history_item(event, record), record.time
                 )
                 self._history_records.add(record, record.time)
             self._previous_items.add((area, record.raw), record.time)
+
+    @callback
+    def backfill(self, records: Iterable[RecordAndMetadata]) -> None:
+        """Add older alerts (e.g. of the last day) to the history, without events."""
+        # Newer records are handled by _async_update.
+        earliest = dt_util.now() - EVENT_WINDOW
+        dedup_window = timedelta(seconds=DEDUP_WINDOW_SECONDS)
+        known: defaultdict[tuple[str, int], list[datetime]] = defaultdict(list)
+        for record in self._history_records.items():
+            if record.published_data:
+                key = (record.published_data[ATTR_AREA], record.raw.category)
+                known[key].append(record.time)
+        history: list[tuple[RecordAndMetadata, datetime]] = []
+        alerts: list[tuple[dict[str, Any], datetime]] = []
+        for record in records:
+            if record.record_type != RecordType.ALERT or record.time >= earliest:
+                continue
+            for area, area_record in self._coordinator.area_records(record):
+                key = (area, area_record.raw.category)
+                # The same alert might have been recorded by another channel.
+                if not (event := self._compose_event(area_record)) or any(
+                    abs(area_record.time - time) <= dedup_window for time in known[key]
+                ):
+                    continue
+                known[key].append(area_record.time)
+                history.append((area_record, area_record.time))
+                alerts.append(
+                    (self._alert_history_item(event, area_record), area_record.time)
+                )
+        self._history_records.add_many(history)
+        self.alert_history.add_many(alerts)
