@@ -45,8 +45,11 @@ ENTITY_ID = f"{Platform.SENSOR}.{OREF_ALERT_UNIQUE_ID}"
 
 
 @contextmanager
-def mock_ws(messages: list[WSMessage]) -> Generator[AsyncMock]:
-    """Mock WebSocket connection for testing."""
+def mock_ws(
+    messages: list[WSMessage], connect_released: Event | None = None
+) -> Generator[AsyncMock]:
+    """Mock WebSocket connection for testing (connecting until released)."""
+    connecting = Event()
     messages_processed = Event()
     close_message = WSMessage(type=WSMsgType.CLOSED, data=None, extra=None)
     blocked_receive: asyncio.Future[WSMessage] = (
@@ -64,9 +67,16 @@ def mock_ws(messages: list[WSMessage]) -> Generator[AsyncMock]:
     ws.receive = AsyncMock(side_effect=receive)
     ws.close = AsyncMock(side_effect=lambda: blocked_receive.set_result(close_message))
     ws.messages_processed = messages_processed.wait
+    ws.connecting = connecting.wait
 
-    with patch("aiohttp.ClientSession.ws_connect") as connect:
-        connect.side_effect = [AsyncMock(__aenter__=AsyncMock(return_value=ws))]
+    async def connect(*_: object) -> AsyncMock:
+        connecting.set()
+        if connect_released:
+            await connect_released.wait()
+        return ws
+
+    with patch("aiohttp.ClientSession.ws_connect") as ws_connect:
+        ws_connect.side_effect = [AsyncMock(__aenter__=AsyncMock(side_effect=connect))]
         yield ws
 
 
@@ -270,3 +280,19 @@ async def test_duplicate(hass: HomeAssistant) -> None:
         await ws.messages_processed()
         assert len(tzevaadom.alerts) == 1
         await tzevaadom.stop()
+
+
+async def test_stop_while_connecting(hass: HomeAssistant) -> None:
+    """Test that stop doesn't hang when called while the WS is still connecting."""
+    connect_released = Event()
+    tzevaadom = TzevaAdomNotifications(hass, MockConfigEntry(domain=DOMAIN))
+    with mock_ws([], connect_released) as ws:
+        await tzevaadom.start()
+        await ws.connecting()
+        stop = asyncio.create_task(tzevaadom.stop())
+        await tzevaadom._stop.wait()  # noqa: SLF001
+        connect_released.set()
+        done, _ = await asyncio.wait([stop], timeout=1)
+        if not done:
+            stop.cancel()  # Don't leave a lingering task behind.
+        assert done, "stop() hung since the WS connected after it was called"
