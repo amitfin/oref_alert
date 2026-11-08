@@ -5,7 +5,6 @@ import argparse
 import asyncio
 import json
 import sys
-import zipfile
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
@@ -417,19 +416,19 @@ class OrefMetadata:
         ) as output:
             yaml.dump(conditions, output, sort_keys=False, indent=2, allow_unicode=True)
 
-        # A fixed timestamp keeps the file identical when its content is unchanged.
-        polygon_info = zipfile.ZipInfo(AREA_TO_POLYGON_OUTPUT)
-        polygon_info.compress_type = zipfile.ZIP_DEFLATED
-        with zipfile.ZipFile(
-            f"{self._output_directory / AREA_TO_POLYGON_OUTPUT}.zip",
-            "w",
-        ) as zip_file:
-            zip_file.writestr(
-                polygon_info,
-                json.dumps(
-                    self._area_to_polygon, separators=(",", ":"), ensure_ascii=False
-                ),
-                compresslevel=9,
+        # One area per line, so diffs show which areas changed.
+        # The release workflow replaces this file with a gzip-compressed version.
+        with (self._output_directory / AREA_TO_POLYGON_OUTPUT).open(
+            "w", encoding="utf-8"
+        ) as output:
+            output.write(
+                "{\n"
+                + ",\n".join(
+                    f"{json.dumps(area, ensure_ascii=False)}:"
+                    f"{json.dumps(polygon, separators=(',', ':'))}"
+                    for area, polygon in self._area_to_polygon.items()
+                )
+                + "\n}\n"
             )
 
         with (self._root_directory / TEST_SEGMENTS_FIXTURE).open(

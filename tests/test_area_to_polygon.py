@@ -1,12 +1,50 @@
 """The tests for the area_to_polygon file."""
 
+from __future__ import annotations
+
+import gzip
+from typing import TYPE_CHECKING
+
 import pytest
 from shapely.geometry import Polygon
 
+from custom_components.oref_alert.metadata import area_to_polygon
 from custom_components.oref_alert.metadata.area_to_polygon import (
     async_find_area,
     init_area_to_polygon,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
+@pytest.mark.parametrize(
+    ("write_plain", "write_gz"),
+    [(True, False), (False, True), (True, True)],
+    ids=("plain", "gzip", "both"),
+)
+async def test_init_area_to_polygon_reads_plain_or_gzip(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    write_plain: bool,
+    write_gz: bool,
+) -> None:
+    """Test loading from the plain file (git) or the .gz file (release)."""
+    plain = tmp_path / "polygons.json"
+    gz = tmp_path / "polygons.json.gz"
+    content = b'{\n"Area A":[[1.5,2.5],[3,4]]\n}\n'
+    if write_plain:
+        plain.write_bytes(content)
+    if write_gz:
+        # When both exist, the stale .gz must lose to the plain file.
+        stale = b'{"Area A":[[0,0]]}' if write_plain else content
+        gz.write_bytes(gzip.compress(stale))
+    monkeypatch.setattr(area_to_polygon, "POLYGONS_FILE", plain)
+    monkeypatch.setattr(area_to_polygon, "POLYGONS_GZ_FILE", gz)
+    monkeypatch.setattr(area_to_polygon, "_area_to_polygon", {})
+
+    assert await init_area_to_polygon() == {"Area A": [[1.5, 2.5], [3, 4]]}
 
 
 @pytest.mark.parametrize(

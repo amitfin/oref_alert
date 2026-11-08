@@ -1,30 +1,33 @@
 """Helper for loading area to polygon map."""
 
+import gzip
 import json
-import zipfile
-from io import BytesIO
 from pathlib import Path
+from typing import Final
 
 import aiofiles
 from shapely.geometry import Point, Polygon
+
+# Git holds the plain file. The release ships only the gzip-compressed version.
+POLYGONS_FILE: Final = Path(__file__).with_suffix(".json")
+POLYGONS_GZ_FILE: Final = Path(__file__).with_suffix(".json.gz")
 
 _area_to_polygon: dict[str, list[tuple[float, float]]] = {}
 
 
 async def init_area_to_polygon() -> dict[str, list[tuple[float, float]]]:
-    """Unzip and load the area to polygon map."""
+    """Load the area to polygon map (plain in git, compressed in a release)."""
     global _area_to_polygon  # noqa: PLW0603
     if _area_to_polygon:
         return _area_to_polygon
-    async with aiofiles.open(
-        Path(__file__).with_suffix(".json.zip"), mode="rb"
-    ) as zip_file_raw:
-        zip_raw = await zip_file_raw.read()
-    with (
-        zipfile.ZipFile(BytesIO(zip_raw)) as zip_file,
-        zip_file.open(f"{Path(__file__).stem}.json") as json_file,
-    ):
-        _area_to_polygon = json.load(json_file)
+    # The plain file wins, since the metadata generator only updates it.
+    try:
+        async with aiofiles.open(POLYGONS_FILE, mode="rb") as file:
+            content = await file.read()
+    except FileNotFoundError:
+        async with aiofiles.open(POLYGONS_GZ_FILE, mode="rb") as file:
+            content = gzip.decompress(await file.read())
+    _area_to_polygon = json.loads(content)
     return _area_to_polygon
 
 

@@ -23,6 +23,12 @@ jobs:
           yq -i -o json '.version="${{ github.event.release.tag_name }}"' \
             "${{ github.workspace }}/custom_components/oref_alert/manifest.json"
 
+      - name: Compress the polygons file
+        shell: bash
+        run: |
+          # Replaces the plain file with its .gz version (read by the integration).
+          gzip -9 -n "${{ github.workspace }}/custom_components/oref_alert/metadata/area_to_polygon.json"
+
       - name: ZIP the integration directory
         shell: bash
         run: |
