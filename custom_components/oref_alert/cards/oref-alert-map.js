@@ -31,8 +31,10 @@ const POLYGONS_FETCH_URL = new URL(
 const POLYGONS_FETCH_TIMEOUT_MS = 120_000;
 const POLYGONS_MAX_RETRY_DELAY_MS = 60_000;
 const LEAFLET_ENGINE = Symbol("oref-alert-leaflet-engine");
-// Shared by every copy of this module, so a reloaded one doesn't wrap twice.
+// Shared by every copy of this module, so a reloaded one recognizes the map
+// cards of another and doesn't wrap "ha-map" twice.
 const OREF_MAP_CARD = Symbol.for("oref-alert-map-card");
+const OREF_LOAD_MAP = Symbol.for("oref-alert-map-load-map");
 const MAP_CONFIG_PASSTHROUGH_KEYS = [
   "aspect_ratio",
   "cluster",
@@ -507,10 +509,10 @@ class OrefAlertMap extends HTMLElement {
   static _startMapsOnLeaflet(HaMap) {
     const proto = HaMap?.prototype;
     const loadMap = proto?._loadMap;
-    if (typeof loadMap !== "function" || Object.hasOwn(proto, OREF_MAP_CARD)) {
+    if (typeof loadMap !== "function" || Object.hasOwn(proto, OREF_LOAD_MAP)) {
       return;
     }
-    proto[OREF_MAP_CARD] = true;
+    proto[OREF_LOAD_MAP] = true;
     proto._loadMap = function (...args) {
       if (this.getRootNode()?.host?.[OREF_MAP_CARD]) {
         this._forceLeaflet = true;
@@ -531,10 +533,12 @@ class OrefAlertMap extends HTMLElement {
     }
 
     if (!engine?.leafletMap || !engine.Leaflet) {
+      // A non-Leaflet engine is switched even when "_forceLeaflet" is set, as
+      // we set it ourselves and a newer "ha-map" might not read it. "ha-map"
+      // ignores the call while it's already on the fallback.
       if (
         map._handleEngineFatal &&
-        !map._forceLeaflet &&
-        (engine || map._loading)
+        (engine || (map._loading && !map._forceLeaflet))
       ) {
         map._handleEngineFatal();
       }

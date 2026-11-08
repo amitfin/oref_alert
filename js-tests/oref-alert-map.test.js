@@ -2342,6 +2342,13 @@ describe("oref-alert-map on the engine-based ha-map", () => {
     el._prepareMap();
     expect(innerMap._handleEngineFatal).toHaveBeenCalledTimes(2);
 
+    // A MapLibre engine is still switched when the flag is set, in case a
+    // newer "ha-map" doesn't read it.
+    innerMap._engine = {};
+    innerMap._forceLeaflet = true;
+    el._prepareMap();
+    expect(innerMap._handleEngineFatal).toHaveBeenCalledTimes(3);
+
     // Older Home Assistant versions have no such method.
     innerMap._engine = {};
     innerMap._handleEngineFatal = undefined;
@@ -2515,6 +2522,8 @@ describe("oref-alert-map on the engine-based ha-map", () => {
   });
 });
 
+// Keep this block last: it defines "ha-map" for good, and the card wraps it,
+// so the maps of later tests would be flagged when connected.
 describe("oref-alert-map starts its ha-map on Leaflet", () => {
   async function createCard() {
     await ensureDefined();
