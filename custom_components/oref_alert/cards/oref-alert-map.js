@@ -31,6 +31,8 @@ const POLYGONS_FETCH_URL = new URL(
 const POLYGONS_FETCH_TIMEOUT_MS = 120_000;
 const POLYGONS_MAX_RETRY_DELAY_MS = 60_000;
 const LEAFLET_ENGINE = Symbol("oref-alert-leaflet-engine");
+// Shared by every copy of this module, so a reloaded one doesn't wrap twice.
+const OREF_MAP_CARD = Symbol.for("oref-alert-map-card");
 const MAP_CONFIG_PASSTHROUGH_KEYS = [
   "aspect_ratio",
   "cluster",
@@ -351,6 +353,7 @@ class OrefAlertMap extends HTMLElement {
   async _createMapCard() {
     const helpers = await window.loadCardHelpers();
     const mapCard = await helpers.createCardElement(this._buildMapConfig());
+    mapCard[OREF_MAP_CARD] = true;
     if (this._layout !== undefined) {
       mapCard.layout = this._layout;
     }
@@ -493,6 +496,27 @@ class OrefAlertMap extends HTMLElement {
         leafletMap.setMinZoom(tileLayer.options.minZoom);
       }
     }
+  }
+
+  // Home Assistant 2026.10+ starts "ha-map" on MapLibre and moves to Leaflet
+  // only after a fatal error, so our map was drawn twice. Flagging the maps of
+  // our map cards as already on that fallback before they load starts them on
+  // Leaflet. "_loadMap" is wrapped, since browsers read "connectedCallback"
+  // only at definition. Older versions have no engines and ignore the flag,
+  // and "_prepareMap" still switches a map that loaded without it.
+  static _startMapsOnLeaflet(HaMap) {
+    const proto = HaMap?.prototype;
+    const loadMap = proto?._loadMap;
+    if (typeof loadMap !== "function" || Object.hasOwn(proto, OREF_MAP_CARD)) {
+      return;
+    }
+    proto[OREF_MAP_CARD] = true;
+    proto._loadMap = function (...args) {
+      if (this.getRootNode()?.host?.[OREF_MAP_CARD]) {
+        this._forceLeaflet = true;
+      }
+      return loadMap.apply(this, args);
+    };
   }
 
   // Home Assistant 2026.10 replaced the Leaflet-only "ha-map" with a pluggable
@@ -832,6 +856,10 @@ class OrefAlertMap extends HTMLElement {
     };
   }
 }
+
+customElements
+  .whenDefined("ha-map")
+  .then(() => OrefAlertMap._startMapsOnLeaflet(customElements.get("ha-map")));
 
 const elementTag = "oref-alert-map";
 customElements.define(elementTag, OrefAlertMap);

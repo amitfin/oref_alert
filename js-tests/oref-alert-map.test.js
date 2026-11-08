@@ -2514,3 +2514,73 @@ describe("oref-alert-map on the engine-based ha-map", () => {
     expect(bounds.extend).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("oref-alert-map starts its ha-map on Leaflet", () => {
+  async function createCard() {
+    await ensureDefined();
+    const Card = customElements.get("oref-alert-map");
+    const el = new Card();
+    const { mapCard, innerMap } = createMapCardWithInnerMap();
+    const createCardElement = vi.fn().mockResolvedValue(mapCard);
+    window.loadCardHelpers = vi.fn().mockResolvedValue({ createCardElement });
+    return { Card, el, mapCard, innerMap };
+  }
+
+  test("flags the maps of its map cards before they load", async () => {
+    // Like the engine-based "ha-map": it loads its engine when connected, and
+    // is defined late, as Home Assistant loads it with the map card.
+    const loadMap = vi.fn();
+    class FakeHaMap extends HTMLElement {
+      connectedCallback() {
+        this._loadMap();
+      }
+
+      _loadMap() {
+        loadMap(this._forceLeaflet);
+        return "loading";
+      }
+    }
+    customElements.define("ha-map", FakeHaMap);
+    await waitForTasks();
+
+    const { el, mapCard, innerMap } = await createCard();
+    expect(innerMap).toBeInstanceOf(FakeHaMap);
+    expect(await el._createMapCard()).toBe(mapCard);
+    document.body.appendChild(mapCard);
+    expect(loadMap).toHaveBeenCalledExactlyOnceWith(true);
+    expect(innerMap._loadMap()).toBe("loading");
+
+    // So the map is not switched again while its Leaflet engine loads.
+    innerMap._handleEngineFatal = vi.fn();
+    innerMap._loading = true;
+    el._prepareMap();
+    expect(innerMap._handleEngineFatal).not.toHaveBeenCalled();
+
+    // Other maps are left alone.
+    loadMap.mockClear();
+    const other = createMapCardWithInnerMap();
+    document.body.appendChild(other.mapCard);
+    document.body.appendChild(document.createElement("ha-map"));
+    expect(loadMap.mock.calls).toEqual([[undefined], [undefined]]);
+  });
+
+  test("wraps once and leaves an older ha-map alone", async () => {
+    const { Card } = await createCard();
+    Card._startMapsOnLeaflet(undefined);
+
+    // Before Home Assistant 2026.10 "ha-map" had no engines to choose from.
+    class OldHaMap extends HTMLElement {
+      loadMap() {}
+    }
+    Card._startMapsOnLeaflet(OldHaMap);
+    expect(Object.hasOwn(OldHaMap.prototype, "_loadMap")).toBe(false);
+
+    class NewHaMap extends HTMLElement {
+      _loadMap() {}
+    }
+    Card._startMapsOnLeaflet(NewHaMap);
+    const wrapped = NewHaMap.prototype._loadMap;
+    Card._startMapsOnLeaflet(NewHaMap);
+    expect(NewHaMap.prototype._loadMap).toBe(wrapped);
+  });
+});
