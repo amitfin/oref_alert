@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from aiohttp import WSMessage, WSMsgType
 from homeassistant.const import STATE_OK, Platform
-from pytest_homeassistant_custom_component.common import (
+from pytest_homeassistant.common import (
     MockConfigEntry,
     async_fire_time_changed,
 )

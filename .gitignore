@@ -25,3 +25,6 @@ config/*
 
 # Generated JS polygons card
 custom_components/oref_alert/cards/oref-alert-polygons.js
+
+# Config directory of the hass fixture (pytest-homeassistant), e.g. default blueprints
+tests/testing_config

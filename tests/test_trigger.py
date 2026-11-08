@@ -9,7 +9,7 @@ import voluptuous as vol
 from homeassistant.const import ATTR_LATITUDE, ATTR_LONGITUDE
 from homeassistant.helpers import trigger as trigger_helper
 from homeassistant.setup import async_setup_component
-from pytest_homeassistant_custom_component.common import (
+from pytest_homeassistant.common import (
     MockConfigEntry,
     async_mock_service,
 )
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
     from freezegun.api import FrozenDateTimeFactory
     from homeassistant.core import HomeAssistant
-    from pytest_homeassistant_custom_component.test_util.aiohttp import (
+    from pytest_homeassistant.test_util.aiohttp import (
         AiohttpClientMocker,
     )
 

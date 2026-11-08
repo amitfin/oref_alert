@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.oref_alert.const import CONF_AREAS, DOMAIN
 from custom_components.oref_alert.helpers import get_config_entry

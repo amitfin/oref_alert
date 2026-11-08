@@ -33,6 +33,7 @@
     "hass",
     "homeassistant",
     "hookwrapper",
+    "httpx",
     "ioref",
     "isal",
     "KEEPALIVE",
@@ -60,6 +61,7 @@
     "reasoncodes",
     "Referer",
     "reqs",
+    "respx",
     "selectattr",
     "Tikva",
     "timedelta",
@@ -72,6 +74,6 @@
     "Yeheskel"
   ],
   "ignoreRegExpList": [
-    "[\u0590-\u05FF]+"
+    "[֐-׿]+"
   ]
 }

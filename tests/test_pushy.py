@@ -16,11 +16,11 @@ from aiohttp.client_exceptions import (
 from homeassistant.const import STATE_OFF, STATE_ON, Platform
 from paho.mqtt.client import MQTTMessage
 from paho.mqtt.reasoncodes import ReasonCode
-from pytest_homeassistant_custom_component.common import (
+from pytest_homeassistant.common import (
     MockConfigEntry,
     async_fire_time_changed,
 )
-from pytest_homeassistant_custom_component.test_util.aiohttp import (
+from pytest_homeassistant.test_util.aiohttp import (
     AiohttpClientMockResponse,
 )
 from yarl import URL
@@ -50,10 +50,10 @@ if TYPE_CHECKING:
     from freezegun.api import FrozenDateTimeFactory
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
-    from pytest_homeassistant_custom_component.test_util.aiohttp import (
+    from pytest_homeassistant.test_util.aiohttp import (
         AiohttpClientMocker,
     )
-    from pytest_homeassistant_custom_component.typing import (
+    from pytest_homeassistant.typing import (
         MqttMockPahoClient,
     )
 

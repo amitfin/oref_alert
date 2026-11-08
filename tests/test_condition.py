@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 import voluptuous as vol
 from homeassistant.helpers import condition as condition_helper
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.oref_alert.const import (
     CONF_AREA,
@@ -20,7 +20,7 @@ from .utils import fire_synthetic_alert, mock_urls
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
-    from pytest_homeassistant_custom_component.test_util.aiohttp import (
+    from pytest_homeassistant.test_util.aiohttp import (
         AiohttpClientMocker,
     )
 

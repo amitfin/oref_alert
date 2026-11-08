@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 from homeassistant.const import CONF_NAME, STATE_OFF, STATE_ON, Platform
-from pytest_homeassistant_custom_component.common import (
+from pytest_homeassistant.common import (
     MockConfigEntry,
     async_fire_time_changed,
 )
@@ -33,7 +33,7 @@ from .utils import load_json_fixture, mock_urls
 if TYPE_CHECKING:
     from freezegun.api import FrozenDateTimeFactory
     from homeassistant.core import HomeAssistant
-    from pytest_homeassistant_custom_component.test_util.aiohttp import (
+    from pytest_homeassistant.test_util.aiohttp import (
         AiohttpClientMocker,
     )
 

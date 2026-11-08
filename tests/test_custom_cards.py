@@ -12,7 +12,7 @@ from homeassistant.components.http import (  # type: ignore[attr-defined]
     StaticPathConfig,  # pyright: ignore[reportPrivateImportUsage]
 )
 from homeassistant.setup import async_setup_component
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.oref_alert import custom_cards
 from custom_components.oref_alert.const import CONF_AREAS, DOMAIN
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     import pytest
     from freezegun.api import FrozenDateTimeFactory
     from homeassistant.core import HomeAssistant
-    from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
+    from pytest_homeassistant.typing import ClientSessionGenerator
 
 DEFAULT_OPTIONS: dict[str, list[str]] = {CONF_AREAS: []}
 
