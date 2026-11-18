@@ -37,10 +37,6 @@ Install the integration from the **Marketplace** (**Settings** > **Marketplace**
 
 [![Open your Home Assistant instance and open a repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=amitfin&repository=oref_alert&category=integration)
 
-The integration should also be added to the configuration. This can be done via this My button:
-
-[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=oref_alert)
-
 The setup identifies the area according to the [Home location in the Zones settings](https://my.home-assistant.io/redirect/zones/) (the latitude and longitude coordinate). If the detection fails, the user is asked to select the area manually.
 
 ### Map Card
