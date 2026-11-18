@@ -1,6 +1,6 @@
 # Oref Alert
 
-[![HACS Badge](https://img.shields.io/badge/HACS-Default-31A9F4.svg?style=for-the-badge)](https://github.com/hacs/integration)
+[![Marketplace Badge](https://img.shields.io/badge/Marketplace-Default-31A9F4.svg?style=for-the-badge)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=amitfin&repository=oref_alert&category=integration)
 
 [![GitHub Release](https://img.shields.io/github/release/amitfin/oref_alert.svg?style=for-the-badge&color=blue)](https://github.com/amitfin/oref_alert/releases)
 
@@ -33,13 +33,9 @@ The integration is installed and configured entirely through the UI. Moreover, f
 
 ### Install
 
-[HACS](https://hacs.xyz/) is the preferred and easier way to install the component. When HACS is installed, the integration can be installed using this My button:
+Install the integration from the **Marketplace** (**Settings** > **Marketplace**) by using this My button:
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=amitfin&repository=oref_alert&category=integration)
-
-Otherwise, download `oref_alert.zip` from the [latest release](https://github.com/amitfin/oref_alert/releases), extract and copy the content under `custom_components` directory.
-
-Home Assistant restart is required once the integration files are copied (either by HACS or manually).
+[![Open your Home Assistant instance and open a repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=amitfin&repository=oref_alert&category=integration)
 
 The integration should also be added to the configuration. This can be done via this My button:
 
@@ -683,11 +679,10 @@ mode: parallel
 1. **Delete the configuration:**
    - Open the integration page ([my-link](https://my.home-assistant.io/redirect/integration/?domain=oref_alert)), click the 3‑dot menu (⋮), and select **Delete**.
 
-2. **Remove the integration files:**
-   - If the integration was installed via **HACS**, follow the [official HACS removal instructions](https://www.hacs.xyz/docs/use/repositories/dashboard/#removing-a-repository).
-   - Otherwise, manually delete the integration’s folder `custom_components/oref_alert`.
+2. **Uninstall the integration:**
+   - Open **Settings** > **Marketplace**, select the **Installed** tab, and uninstall it.
 
-📌 A **Home Assistant core restart** is required in both cases to fully apply the removal.
+📌 A **Home Assistant core restart** is required to fully apply the removal.
 
 ## Contributions are welcome!
 
