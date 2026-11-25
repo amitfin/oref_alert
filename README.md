@@ -12,7 +12,7 @@ This [Home Assistant](https://www.home-assistant.io/) integration monitors emerg
 
 The integration is installed and configured entirely through the UI. Moreover, for the common usage of automations and visualization, there is no need to understand or deal with entities or YAML at all.
 
-A demo (in Hebrew) can be found [here](https://youtu.be/GPEcZrTT314).
+A demo (in Hebrew) can be found [here](https://youtu.be/UUAOsY1PnPk).
 
 ## Contents
 
